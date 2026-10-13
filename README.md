@@ -4,6 +4,9 @@ A modern, culturally tailored wedding planning web application built for Indian 
 
 Designed for seamless deployment to **Vercel** with **Google Firebase** backend integration.
 
+- 🚀 **Live Production Site**: [https://shaadi-planner-omega.vercel.app](https://shaadi-planner-omega.vercel.app)
+- 🐙 **GitHub Repository**: [https://github.com/sbehera309/shaadi-planner](https://github.com/sbehera309/shaadi-planner)
+
 ---
 
 ## 🌟 Key Features
