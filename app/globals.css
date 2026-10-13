@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-serif: 'Cinzel', 'Playfair Display', 'Georgia', serif;
+}
+
+body {
+  background-color: #FAF8F5;
+  color: #1F2937;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}
+
+/* Custom festive gradients and borders */
+.bg-mandap-pattern {
+  background-color: #FAF8F5;
+  background-image: radial-gradient(#D4AF37 0.75px, transparent 0.75px), radial-gradient(#D4AF37 0.75px, #FAF8F5 0.75px);
+  background-size: 30px 30px;
+  background-position: 0 0, 15px 15px;
+  background-opacity: 0.15;
+}
+
+.gold-shimmer {
+  background: linear-gradient(135deg, #FFE494 0%, #D4AF37 50%, #A67C1E 100%);
+}
+
+.crimson-gradient {
+  background: linear-gradient(135deg, #7F1D1D 0%, #991B1B 50%, #5F1414 100%);
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F3F4F6;
+}
+::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9CA3AF;
+}
