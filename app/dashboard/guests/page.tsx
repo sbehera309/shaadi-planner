@@ -268,7 +268,17 @@ export default function GuestsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100">
-              {filteredGuests.map((guest) => (
+              {filteredGuests.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center">
+                    <p className="text-sm font-semibold text-stone-700">No guests added yet</p>
+                    <p className="text-xs text-stone-400 mt-1">
+                      Add families to track RSVPs, side tags (Bride vs Groom), and dietary preferences.
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                filteredGuests.map((guest) => (
                 <tr key={guest.id} className="hover:bg-stone-50/70 transition-colors">
                   {/* Guest Name & Details */}
                   <td className="py-3.5 px-4">
@@ -392,8 +402,9 @@ export default function GuestsPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
-            </tbody>
+              ))
+            )}
+          </tbody>
           </table>
         </div>
       </div>

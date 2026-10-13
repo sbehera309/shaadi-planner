@@ -28,10 +28,10 @@ export default function BudgetPage() {
   const [formData, setFormData] = useState({
     title: '',
     category: 'Venue & Catering' as BudgetItem['category'],
-    estimatedCost: 100000,
-    actualCost: 100000,
-    paidAmount: 50000,
-    dueDate: '2026-11-15',
+    estimatedCost: 5000,
+    actualCost: 5000,
+    paidAmount: 2000,
+    dueDate: '2026-10-15',
     paidBy: 'split_50_50' as BudgetItem['paidBy'],
     status: 'partial' as BudgetItem['status'],
   });
@@ -41,10 +41,10 @@ export default function BudgetPage() {
     setFormData({
       title: '',
       category: 'Venue & Catering',
-      estimatedCost: 100000,
-      actualCost: 100000,
+      estimatedCost: 5000,
+      actualCost: 5000,
       paidAmount: 0,
-      dueDate: '2026-11-15',
+      dueDate: '2026-10-15',
       paidBy: 'split_50_50',
       status: 'pending',
     });
@@ -86,9 +86,9 @@ export default function BudgetPage() {
   };
 
   const formatCurr = (val: number) => {
-    return new Intl.NumberFormat('en-IN', {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: wedding.currency,
+      currency: wedding.currency || 'USD',
       maximumFractionDigits: 0,
     }).format(val);
   };
@@ -278,7 +278,17 @@ export default function BudgetPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100">
-              {filteredItems.map((item) => {
+              {filteredItems.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center">
+                    <p className="text-sm font-semibold text-stone-700">No expenses recorded yet</p>
+                    <p className="text-xs text-stone-400 mt-1">
+                      Click "Add Expense Item" to track vendor deposits, venue fees, and family split payments.
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                filteredItems.map((item) => {
                 const pending = item.actualCost - item.paidAmount;
                 return (
                   <tr key={item.id} className="hover:bg-stone-50/70 transition-colors">
@@ -358,8 +368,9 @@ export default function BudgetPage() {
                     </td>
                   </tr>
                 );
-              })}
-            </tbody>
+              })
+            )}
+          </tbody>
           </table>
         </div>
       </div>

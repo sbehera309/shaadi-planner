@@ -50,7 +50,7 @@ export default function LandingPage() {
     {
       icon: Gift,
       title: 'Shagun & Lifafa (Gift) Ledger',
-      desc: 'Log cash envelopes, gold/silver coins, past reciprocity records ("They gave ₹11k in 2023"), and thank-you dispatches.',
+      desc: 'Log cash envelopes, gold/silver coins, past reciprocity records ("They gave $501 in 2023"), and thank-you dispatches.',
       color: 'from-emerald-600 to-teal-600',
     },
     {
@@ -143,7 +143,7 @@ export default function LandingPage() {
           <div className="px-5 py-2.5 rounded-full bg-white border border-stone-200/80 shadow-xs inline-flex items-center gap-3 text-xs text-stone-600">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
             <span>
-              Preloaded with <strong>{wedding.brideName} & {wedding.groomName}</strong>'s Udaipur Royal Wedding
+              Wedding Profile: <strong>{wedding.brideName} & {wedding.groomName}</strong> ({wedding.city})
             </span>
             <span className="text-stone-300">•</span>
             <span className="text-amber-800 font-semibold">{wedding.hashtag}</span>

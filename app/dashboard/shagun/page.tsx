@@ -87,9 +87,9 @@ export default function ShagunPage() {
   };
 
   const formatCurr = (val: number) => {
-    return new Intl.NumberFormat('en-IN', {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: wedding.currency,
+      currency: wedding.currency || 'USD',
       maximumFractionDigits: 0,
     }).format(val);
   };
@@ -183,7 +183,7 @@ export default function ShagunPage() {
             className="px-3 py-1.5 rounded-xl border border-stone-200 bg-white text-stone-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 font-medium"
           >
             <option value="all">All Gifts</option>
-            <option value="cash_lifafa">Cash Lifafa (₹ Envelope)</option>
+            <option value="cash_lifafa">Cash Lifafa ($ Envelope)</option>
             <option value="gold_silver">Gold / Silver Item</option>
             <option value="physical_gift">Physical Gift</option>
           </select>
@@ -206,7 +206,17 @@ export default function ShagunPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100">
-              {filteredRecords.map((rec) => (
+              {filteredRecords.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center">
+                    <p className="text-sm font-semibold text-stone-700">No gifts or cash lifafas logged yet</p>
+                    <p className="text-xs text-stone-400 mt-1">
+                      Log cash envelopes, gold keepsakes, and family reciprocity notes as you receive gifts.
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                filteredRecords.map((rec) => (
                 <tr key={rec.id} className="hover:bg-stone-50/70 transition-colors">
                   <td className="py-3.5 px-4">
                     <div className="font-semibold text-stone-900">{rec.giverName}</div>
@@ -298,8 +308,9 @@ export default function ShagunPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
-            </tbody>
+              ))
+            )}
+          </tbody>
           </table>
         </div>
       </div>
@@ -357,7 +368,7 @@ export default function ShagunPage() {
                 onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
                 className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 bg-white"
               >
-                <option value="cash_lifafa">Cash Lifafa (₹ Envelope)</option>
+                <option value="cash_lifafa">Cash Lifafa ($ Envelope)</option>
                 <option value="gold_silver">Gold / Silver Keepsake</option>
                 <option value="physical_gift">Physical Gift</option>
                 <option value="voucher">Gift Voucher</option>
@@ -365,7 +376,7 @@ export default function ShagunPage() {
             </div>
             <div>
               <label className="font-semibold text-stone-700 block mb-1">
-                {formData.type === 'cash_lifafa' ? 'Cash Amount (INR) *' : 'Estimated Value'}
+                {formData.type === 'cash_lifafa' ? 'Cash Amount ($ USD) *' : 'Estimated Value ($)'}
               </label>
               <input
                 type="number"
@@ -385,7 +396,7 @@ export default function ShagunPage() {
                 type="text"
                 value={formData.giftDescription}
                 onChange={(e) => setFormData({ ...formData, giftDescription: e.target.value })}
-                placeholder="e.g. 10g 24K Gold Coin, Silver dinner set"
+                placeholder="e.g. 10g 24K Gold Coin, Silver keepsake"
                 className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
               />
             </div>
@@ -408,7 +419,7 @@ export default function ShagunPage() {
                 type="text"
                 value={formData.city}
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                placeholder="e.g. Ahmedabad, Mumbai"
+                placeholder="e.g. Edison, NJ or San Jose, CA"
                 className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
               />
             </div>
@@ -422,7 +433,7 @@ export default function ShagunPage() {
               type="text"
               value={formData.pastGivenRecord}
               onChange={(e) => setFormData({ ...formData, pastGivenRecord: e.target.value })}
-              placeholder="e.g. Papa gave ₹21,000 at their son's wedding in 2023"
+              placeholder="e.g. Family gave $501 at their daughter's wedding in 2024"
               className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
             />
           </div>

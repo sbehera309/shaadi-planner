@@ -132,7 +132,7 @@ export interface ShagunRecord {
   amount?: number; // In currency
   giftDescription?: string;
   receivedAtEvent: string; // Event ID or name
-  pastGivenRecord?: string; // e.g. "They gave ₹11,000 at Rohit's wedding"
+  pastGivenRecord?: string; // e.g. "They gave $501 at Rohit's wedding"
   thankYouSent: boolean;
   date: string;
 }

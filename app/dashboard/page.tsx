@@ -18,14 +18,14 @@ import {
 } from 'lucide-react';
 
 export default function DashboardOverviewPage() {
-  const { wedding, events, guests, budgetItems, vendors, shagunRecords, rooms } = useWedding();
+  const { wedding, events, guests, budgetItems, vendors, shagunRecords, rooms, loadSampleTemplate } = useWedding();
 
   // Budget calculations
-  const totalTargetBudget = wedding.targetBudget;
+  const totalTargetBudget = wedding.targetBudget || 150000;
   const totalActualCost = budgetItems.reduce((acc, curr) => acc + curr.actualCost, 0);
   const totalPaid = budgetItems.reduce((acc, curr) => acc + curr.paidAmount, 0);
   const totalPending = totalActualCost - totalPaid;
-  const budgetConsumedPct = Math.round((totalActualCost / totalTargetBudget) * 100);
+  const budgetConsumedPct = totalTargetBudget > 0 ? Math.round((totalActualCost / totalTargetBudget) * 100) : 0;
 
   // Guest calculations
   const totalHeadcount = guests.reduce((acc, g) => acc + g.adultsCount + g.kidsCount, 0);
@@ -45,11 +45,11 @@ export default function DashboardOverviewPage() {
   // Vendors
   const confirmedVendors = vendors.filter((v) => v.status === 'confirmed').length;
 
-  // Format currency
+  // Format currency in USD (en-US)
   const formatCurr = (val: number) => {
-    return new Intl.NumberFormat('en-IN', {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: wedding.currency,
+      currency: wedding.currency || 'USD',
       maximumFractionDigits: 0,
     }).format(val);
   };
@@ -214,58 +214,84 @@ export default function DashboardOverviewPage() {
             </Link>
           </div>
 
-          <div className="space-y-4">
-            {events.map((event) => (
-              <div
-                key={event.id}
-                className="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs hover:border-amber-400/80 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-              >
-                <div className="space-y-1.5 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-700 border border-stone-200">
-                      {event.type}
-                    </span>
-                    {event.muhuratTime && (
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
-                        ✨ {event.muhuratTime}
+          {events.length === 0 ? (
+            <div className="bg-white p-8 rounded-3xl border border-dashed border-stone-300 text-center space-y-3">
+              <div className="w-12 h-12 bg-amber-50 text-amber-700 rounded-2xl flex items-center justify-center mx-auto">
+                <CalendarDays className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-bold text-stone-900 font-serif">No ceremonies scheduled yet</h3>
+              <p className="text-xs text-stone-500 max-w-sm mx-auto">
+                Start clean by scheduling your Indian-American wedding ceremonies (e.g. Sangeet, Haldi, Baraat with city permit, Pheras, or Reception).
+              </p>
+              <div className="pt-2 flex flex-wrap justify-center gap-2.5">
+                <Link
+                  href="/dashboard/itinerary"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-rose-700 text-white font-semibold text-xs shadow-sm hover:opacity-95"
+                >
+                  + Add First Ceremony
+                </Link>
+                <button
+                  onClick={loadSampleTemplate}
+                  className="px-4 py-2 rounded-xl bg-stone-100 hover:bg-amber-100 text-stone-700 hover:text-amber-900 font-semibold text-xs transition-colors border border-stone-200"
+                >
+                  ✨ Load USA Wedding Template (Optional)
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {events.map((event) => (
+                <div
+                  key={event.id}
+                  className="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs hover:border-amber-400/80 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                >
+                  <div className="space-y-1.5 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-700 border border-stone-200">
+                        {event.type}
                       </span>
+                      {event.muhuratTime && (
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                          ✨ {event.muhuratTime}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="font-semibold text-base text-stone-900">{event.name}</h3>
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-stone-500">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5 text-stone-400" />
+                        {new Date(event.date).toLocaleDateString('en-US', {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric',
+                        })}{' '}
+                        • {event.startTime} - {event.endTime}
+                      </span>
+                      <span>•</span>
+                      <span className="text-stone-700 font-medium">{event.venueName}</span>
+                    </div>
+                    <p className="text-xs text-rose-800 font-medium mt-1">
+                      👗 Dress Code: {event.dressCode}
+                    </p>
+                    {event.checklist && event.checklist.length > 0 && (
+                      <div className="flex items-center gap-1.5 text-[11px] text-amber-900 bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-200/70 inline-flex mt-1 font-medium">
+                        <span>📦</span>
+                        <span>
+                          {event.checklist.filter((c) => c.isArranged).length}/{event.checklist.length} Essentials Arranged (e.g. Baraat ride, samagri, saafas)
+                        </span>
+                      </div>
                     )}
                   </div>
-                  <h3 className="font-semibold text-base text-stone-900">{event.name}</h3>
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-stone-500">
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-stone-400" />
-                      {new Date(event.date).toLocaleDateString('en-US', {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric',
-                      })}{' '}
-                      • {event.startTime} - {event.endTime}
-                    </span>
-                    <span>•</span>
-                    <span className="text-stone-700 font-medium">{event.venueName}</span>
-                  </div>
-                  <p className="text-xs text-rose-800 font-medium mt-1">
-                    👗 Dress Code: {event.dressCode}
-                  </p>
-                  {event.checklist && event.checklist.length > 0 && (
-                    <div className="flex items-center gap-1.5 text-[11px] text-amber-900 bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-200/70 inline-flex mt-1 font-medium">
-                      <span>📦</span>
-                      <span>
-                        {event.checklist.filter((c) => c.isArranged).length}/{event.checklist.length} Essentials Arranged (e.g. Baraat ride, samagri, saafas)
-                      </span>
-                    </div>
-                  )}
-                </div>
 
-                <div className="sm:text-right shrink-0 border-t sm:border-t-0 pt-3 sm:pt-0 border-stone-100">
-                  <div className="text-xs text-stone-400">Coordinator</div>
-                  <div className="text-xs font-semibold text-stone-800">{event.coordinatorName}</div>
-                  <div className="text-xs text-stone-500">{event.coordinatorPhone}</div>
+                  <div className="sm:text-right shrink-0 border-t sm:border-t-0 pt-3 sm:pt-0 border-stone-100">
+                    <div className="text-xs text-stone-400">Coordinator</div>
+                    <div className="text-xs font-semibold text-stone-800">{event.coordinatorName}</div>
+                    <div className="text-xs text-stone-500">{event.coordinatorPhone}</div>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right Column (1 Col): Quick Actions & Family Split Preview */}

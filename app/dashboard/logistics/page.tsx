@@ -108,49 +108,57 @@ export default function LogisticsPage() {
             </div>
             <div>
               <h2 className="text-base font-bold text-stone-900 font-serif">
-                Airport & Railway Pickups Required ({pickupGuests.length} Families)
+                Airport & Transit Pickups Required ({pickupGuests.length} Families)
               </h2>
               <p className="text-xs text-stone-500">
-                Guests requiring cab coordination upon arrival in Udaipur
+                Guests requiring airport shuttles (e.g. EWR, JFK, LGA, ORD, SFO) upon arrival
               </p>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {pickupGuests.map((g) => (
-            <div
-              key={g.id}
-              className="p-4 rounded-xl border border-stone-200 bg-stone-50/60 flex flex-col justify-between text-xs space-y-2"
-            >
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-stone-900">{g.name}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px]">
-                    {g.adultsCount + g.kidsCount} Pax
-                  </span>
-                </div>
-                <div className="text-stone-500 text-[11px] mt-0.5">{g.familyGroup} • From {g.city}</div>
-                {g.hotelAssigned && (
-                  <div className="mt-1 text-stone-700 font-medium text-[11px]">
-                    🏨 Drop-off: {g.hotelAssigned} {g.roomNumber}
+        {pickupGuests.length === 0 ? (
+          <div className="p-8 text-center bg-stone-50/60 rounded-xl border border-stone-200">
+            <p className="text-xs text-stone-500">
+              No airport pickups requested yet. When guests indicate they need an airport shuttle in their RSVP, they will appear here.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {pickupGuests.map((g) => (
+              <div
+                key={g.id}
+                className="p-4 rounded-xl border border-stone-200 bg-stone-50/60 flex flex-col justify-between text-xs space-y-2"
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-stone-900">{g.name}</span>
+                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px]">
+                      {g.adultsCount + g.kidsCount} Pax
+                    </span>
                   </div>
-                )}
-              </div>
+                  <div className="text-stone-500 text-[11px] mt-0.5">{g.familyGroup} • From {g.city}</div>
+                  {g.hotelAssigned && (
+                    <div className="mt-1 text-stone-700 font-medium text-[11px]">
+                      🏨 Drop-off: {g.hotelAssigned} {g.roomNumber}
+                    </div>
+                  )}
+                </div>
 
-              <div className="pt-2 border-t border-stone-200/60 flex items-center justify-between text-[11px]">
-                <a
-                  href={`tel:${g.phone}`}
-                  className="flex items-center gap-1 text-rose-700 font-semibold hover:underline"
-                >
-                  <Phone className="w-3 h-3" />
-                  <span>{g.phone}</span>
-                </a>
-                <span className="text-stone-400">Diet: {g.dietaryPreference}</span>
+                <div className="pt-2 border-t border-stone-200/60 flex items-center justify-between text-[11px]">
+                  <a
+                    href={`tel:${g.phone}`}
+                    className="flex items-center gap-1 text-rose-700 font-semibold hover:underline"
+                  >
+                    <Phone className="w-3 h-3" />
+                    <span>{g.phone}</span>
+                  </a>
+                  <span className="text-stone-400">Diet: {g.dietaryPreference}</span>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Hotel Room Inventory Matrix */}
@@ -159,7 +167,24 @@ export default function LogisticsPage() {
           Hotel Room Allocation Matrix ({rooms.length} Rooms)
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {rooms.length === 0 ? (
+          <div className="bg-white p-12 rounded-3xl border border-dashed border-stone-300 text-center space-y-3">
+            <div className="w-12 h-12 bg-amber-50 text-amber-700 rounded-2xl flex items-center justify-center mx-auto">
+              <Hotel className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-stone-900 font-serif">No hotel room blocks added yet</h3>
+            <p className="text-xs text-stone-500 max-w-sm mx-auto">
+              Track room blocks at your wedding hotel (e.g. Hyatt, Marriott, Hilton), group booking codes, and occupant assignments.
+            </p>
+            <button
+              onClick={handleOpenAdd}
+              className="px-4 py-2 rounded-xl bg-stone-900 hover:bg-black text-white font-semibold text-xs shadow-sm mt-2"
+            >
+              + Add Room Block
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {rooms.map((room) => {
             const assignedGuests = guests.filter((g) => room.assignedGuestIds.includes(g.id));
             const totalAssignedPax = assignedGuests.reduce(
@@ -285,7 +310,8 @@ export default function LogisticsPage() {
             );
           })}
         </div>
-      </div>
+      )}
+    </div>
 
       {/* Add / Edit Room Modal */}
       <Modal

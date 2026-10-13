@@ -152,75 +152,85 @@ export default function PublicWeddingInvitePage({
           </div>
 
           <div className="space-y-6">
-            {events.map((ev, index) => (
-              <div
-                key={ev.id}
-                className="bg-white rounded-3xl border border-stone-200/80 shadow-md hover:shadow-xl transition-all overflow-hidden"
-              >
-                <div className={`p-6 sm:p-8 bg-gradient-to-r ${ev.bannerGradient} text-white`}>
-                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                    <span className="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-white/20 backdrop-blur-md">
-                      Ceremony {index + 1}: {ev.type.toUpperCase()}
-                    </span>
-                    {ev.muhuratTime && (
-                      <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-400 text-stone-950 shadow-sm">
-                        ✨ Auspicious Muhurat: {ev.muhuratTime}
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="text-2xl sm:text-3xl font-bold font-serif">{ev.name}</h3>
-                </div>
-
-                <div className="p-6 sm:p-8 space-y-6">
-                  <p className="text-sm text-stone-600 leading-relaxed">{ev.description}</p>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                    <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-200/60 flex items-start gap-3">
-                      <Clock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-                      <div>
-                        <strong className="block text-stone-900 font-semibold mb-0.5">
-                          Date & Timing
-                        </strong>
-                        <span className="text-stone-600 block">
-                          {new Date(ev.date).toLocaleDateString('en-US', {
-                            weekday: 'long',
-                            month: 'long',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })}
-                        </span>
-                        <span className="font-bold text-amber-900 block mt-0.5">
-                          {ev.startTime} – {ev.endTime}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="p-4 rounded-2xl bg-rose-50/50 border border-rose-200/60 flex items-start gap-3">
-                      <MapPin className="w-5 h-5 text-rose-700 shrink-0 mt-0.5" />
-                      <div>
-                        <strong className="block text-stone-900 font-semibold mb-0.5">
-                          Venue & Address
-                        </strong>
-                        <span className="font-bold text-stone-800 block">{ev.venueName}</span>
-                        <span className="text-stone-500 block truncate">{ev.venueAddress}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Dress Code Highlight */}
-                  <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-100/60 to-rose-100/60 border border-amber-200 flex items-center justify-between gap-4">
-                    <div>
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-rose-900 block">
-                        👗 Dress Code & Color Palette
-                      </span>
-                      <span className="text-xs font-semibold text-stone-800 mt-0.5 block">
-                        {ev.dressCode}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+            {events.length === 0 ? (
+              <div className="p-12 text-center bg-white rounded-3xl border border-dashed border-stone-300 space-y-2">
+                <Sparkles className="w-8 h-8 text-amber-500 mx-auto" />
+                <h3 className="font-serif text-lg font-bold text-stone-900">Ceremony Details Coming Soon</h3>
+                <p className="text-xs text-stone-500 max-w-sm mx-auto">
+                  The couple is finalizing the ceremony schedule and muhurat timings. Please check back shortly or submit your general RSVP below!
+                </p>
               </div>
-            ))}
+            ) : (
+              events.map((ev, index) => (
+                <div
+                  key={ev.id}
+                  className="bg-white rounded-3xl border border-stone-200/80 shadow-md hover:shadow-xl transition-all overflow-hidden"
+                >
+                  <div className={`p-6 sm:p-8 bg-gradient-to-r ${ev.bannerGradient} text-white`}>
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                      <span className="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-white/20 backdrop-blur-md">
+                        Ceremony {index + 1}: {ev.type.toUpperCase()}
+                      </span>
+                      {ev.muhuratTime && (
+                        <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-400 text-stone-950 shadow-sm">
+                          ✨ Auspicious Muhurat: {ev.muhuratTime}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-2xl sm:text-3xl font-bold font-serif">{ev.name}</h3>
+                  </div>
+
+                  <div className="p-6 sm:p-8 space-y-6">
+                    <p className="text-sm text-stone-600 leading-relaxed">{ev.description}</p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                      <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-200/60 flex items-start gap-3">
+                        <Clock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                        <div>
+                          <strong className="block text-stone-900 font-semibold mb-0.5">
+                            Date & Timing
+                          </strong>
+                          <span className="text-stone-600 block">
+                            {new Date(ev.date).toLocaleDateString('en-US', {
+                              weekday: 'long',
+                              month: 'long',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })}
+                          </span>
+                          <span className="font-bold text-amber-900 block mt-0.5">
+                            {ev.startTime} – {ev.endTime}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-rose-50/50 border border-rose-200/60 flex items-start gap-3">
+                        <MapPin className="w-5 h-5 text-rose-700 shrink-0 mt-0.5" />
+                        <div>
+                          <strong className="block text-stone-900 font-semibold mb-0.5">
+                            Venue & Address
+                          </strong>
+                          <span className="font-bold text-stone-800 block">{ev.venueName}</span>
+                          <span className="text-stone-500 block truncate">{ev.venueAddress}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Dress Code Highlight */}
+                    <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-100/60 to-rose-100/60 border border-amber-200 flex items-center justify-between gap-4">
+                      <div>
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-rose-900 block">
+                          👗 Dress Code & Color Palette
+                        </span>
+                        <span className="text-xs font-semibold text-stone-800 mt-0.5 block">
+                          {ev.dressCode}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </section>
 
@@ -283,7 +293,7 @@ export default function PublicWeddingInvitePage({
                       required
                       value={rsvpForm.phone}
                       onChange={(e) => setRsvpForm({ ...rsvpForm, phone: e.target.value })}
-                      placeholder="+91 98765 43210"
+                      placeholder="(555) 234-5678"
                       className="w-full px-4 py-2.5 rounded-xl border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-rose-500"
                     />
                   </div>
@@ -351,37 +361,39 @@ export default function PublicWeddingInvitePage({
                 </div>
 
                 {/* Sub-Event checkboxes */}
-                <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200 space-y-3">
-                  <span className="font-bold text-stone-800 block text-xs">
-                    Which ceremonies will you be attending?
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {events.map((ev) => (
-                      <label
-                        key={ev.id}
-                        className="flex items-center gap-2 p-2 rounded-lg bg-white border border-stone-200 cursor-pointer hover:border-rose-400 transition-colors"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={rsvpForm.attendingEvents[ev.id] ?? true}
-                          onChange={(e) =>
-                            setRsvpForm({
-                              ...rsvpForm,
-                              attendingEvents: {
-                                ...rsvpForm.attendingEvents,
-                                [ev.id]: e.target.checked,
-                              },
-                            })
-                          }
-                          className="rounded-sm border-stone-300 text-rose-600 focus:ring-rose-500"
-                        />
-                        <span className="font-medium text-stone-800 text-[11px] truncate">
-                          {ev.name}
-                        </span>
-                      </label>
-                    ))}
+                {events.length > 0 && (
+                  <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200 space-y-3">
+                    <span className="font-bold text-stone-800 block text-xs">
+                      Which ceremonies will you be attending?
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {events.map((ev) => (
+                        <label
+                          key={ev.id}
+                          className="flex items-center gap-2 p-2 rounded-lg bg-white border border-stone-200 cursor-pointer hover:border-rose-400 transition-colors"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={rsvpForm.attendingEvents[ev.id] ?? true}
+                            onChange={(e) =>
+                              setRsvpForm({
+                                ...rsvpForm,
+                                attendingEvents: {
+                                  ...rsvpForm.attendingEvents,
+                                  [ev.id]: e.target.checked,
+                                },
+                              })
+                            }
+                            className="rounded-sm border-stone-300 text-rose-600 focus:ring-rose-500"
+                          />
+                          <span className="font-medium text-stone-800 text-[11px] truncate">
+                            {ev.name}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div>
                   <label className="font-semibold text-stone-700 block mb-1">
@@ -408,33 +420,33 @@ export default function PublicWeddingInvitePage({
           </div>
         </section>
 
-        {/* Section 3: Guest FAQs & Emergency Help */}
+        {/* Section 3: Guest FAQs & Travel Help */}
         <section className="bg-stone-100 rounded-3xl p-8 sm:p-10 border border-stone-200 space-y-6">
           <div className="text-center space-y-1">
             <h3 className="text-xl font-bold font-serif text-stone-900">
-              Guest Assistance & Information
+              Guest Assistance & Travel Information
             </h3>
             <p className="text-xs text-stone-500">
-              Frequently asked questions for your stay in Udaipur
+              Frequently asked questions for your stay in {wedding.city}
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div className="bg-white p-4 rounded-2xl border border-stone-200">
               <span className="font-bold text-stone-900 block mb-1">
-                ☀️ Weather & Packing Guide
+                ☀️ Weather & Attire Guide
               </span>
               <p className="text-stone-600 leading-relaxed">
-                Udaipur evenings by Lake Pichola can have a cool desert breeze. Light shawls for evening Sangeet & Reception are recommended.
+                Ceremonies will take place across climate-controlled ballrooms and scenic mandap settings. Formal Indian ethnic wear (lehengas, sherwanis, sarees, kurtas) or formal evening wear is warmly recommended.
               </p>
             </div>
 
             <div className="bg-white p-4 rounded-2xl border border-stone-200">
               <span className="font-bold text-stone-900 block mb-1">
-                🚕 Airport Transfers & Shuttles
+                🚗 Travel, Parking & Airport Access
               </span>
               <p className="text-stone-600 leading-relaxed">
-                Shuttle cars will be operating between Maharana Pratap Airport (UDR) and the hotel. Share your flight details with our coordinators.
+                Complimentary parking and valet are arranged at the venue. Out-of-town guests arriving via major airport hubs can contact the wedding hospitality coordinators for shuttle transfers.
               </p>
             </div>
           </div>
@@ -444,7 +456,7 @@ export default function PublicWeddingInvitePage({
       {/* Footer */}
       <footer className="border-t border-stone-300 py-8 text-center text-xs text-stone-500 space-y-2">
         <p className="font-serif font-semibold text-stone-700">
-          #AaravKiAnanya • Shubh Vivah 2026
+          {wedding.hashtag} • Shubh Vivah {new Date(wedding.startDate).getFullYear()}
         </p>
         <p>Built with love using ShaadiSutra Wedding Platform</p>
       </footer>

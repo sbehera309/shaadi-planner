@@ -20,6 +20,7 @@ import {
   initialVendors,
   initialShagunRecords,
   initialRooms,
+  sampleUsaWeddingTemplate,
 } from './mockData';
 import { isFirebaseConfigured, db } from './firebase';
 import { doc, setDoc } from 'firebase/firestore';
@@ -74,20 +75,21 @@ interface WeddingContextType {
   assignGuestToRoom: (roomId: string, guestId: string) => void;
   removeGuestFromRoom: (roomId: string, guestId: string) => void;
 
-  // Reset to initial demo data
+  // Template & Reset
   resetToDefaultData: () => void;
+  loadSampleTemplate: () => void;
 }
 
 const WeddingContext = createContext<WeddingContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
-  PROFILE: 'shaadi_profile_v1',
-  EVENTS: 'shaadi_events_v1',
-  GUESTS: 'shaadi_guests_v1',
-  BUDGET: 'shaadi_budget_v1',
-  VENDORS: 'shaadi_vendors_v1',
-  SHAGUN: 'shaadi_shagun_v1',
-  ROOMS: 'shaadi_rooms_v1',
+  PROFILE: 'shaadi_v3_usa_profile',
+  EVENTS: 'shaadi_v3_usa_events',
+  GUESTS: 'shaadi_v3_usa_guests',
+  BUDGET: 'shaadi_v3_usa_budget',
+  VENDORS: 'shaadi_v3_usa_vendors',
+  SHAGUN: 'shaadi_v3_usa_shagun',
+  ROOMS: 'shaadi_v3_usa_rooms',
 };
 
 export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -345,6 +347,16 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     localStorage.clear();
   };
 
+  const loadSampleTemplate = () => {
+    setWedding(sampleUsaWeddingTemplate.wedding);
+    setEvents(sampleUsaWeddingTemplate.events);
+    setGuests(sampleUsaWeddingTemplate.guests);
+    setBudgetItems(sampleUsaWeddingTemplate.budgetItems);
+    setVendors(sampleUsaWeddingTemplate.vendors);
+    setShagunRecords(sampleUsaWeddingTemplate.shagunRecords);
+    setRooms(sampleUsaWeddingTemplate.rooms);
+  };
+
   return (
     <WeddingContext.Provider
       value={{
@@ -383,6 +395,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         assignGuestToRoom,
         removeGuestFromRoom,
         resetToDefaultData,
+        loadSampleTemplate,
       }}
     >
       {children}

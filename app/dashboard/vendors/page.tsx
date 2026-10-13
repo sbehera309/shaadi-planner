@@ -98,9 +98,9 @@ export default function VendorsPage() {
   };
 
   const formatCurr = (val: number) => {
-    return new Intl.NumberFormat('en-IN', {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: wedding.currency,
+      currency: wedding.currency || 'USD',
       maximumFractionDigits: 0,
     }).format(val);
   };
@@ -127,8 +127,25 @@ export default function VendorsPage() {
       </div>
 
       {/* Vendor Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {vendors.map((vendor) => {
+      {vendors.length === 0 ? (
+        <div className="bg-white p-12 rounded-3xl border border-dashed border-stone-300 text-center space-y-3">
+          <div className="w-12 h-12 bg-amber-50 text-amber-700 rounded-2xl flex items-center justify-center mx-auto">
+            <Briefcase className="w-6 h-6" />
+          </div>
+          <h2 className="text-base font-bold text-stone-900 font-serif">No vendors added yet</h2>
+          <p className="text-xs text-stone-500 max-w-sm mx-auto">
+            Keep track of your contracts, agreed fees, and contacts for Pandit ji, MUA, Photo/Video, and DJs.
+          </p>
+          <button
+            onClick={handleOpenAdd}
+            className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs shadow-sm mt-2"
+          >
+            + Add First Vendor
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {vendors.map((vendor) => {
           const balance = vendor.agreedAmount - vendor.depositPaid;
           return (
             <div
@@ -215,7 +232,8 @@ export default function VendorsPage() {
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
 
       {/* Add / Edit Vendor Modal */}
       <Modal

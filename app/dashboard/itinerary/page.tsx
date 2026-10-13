@@ -32,6 +32,7 @@ export default function ItineraryPage() {
     addChecklistItem,
     toggleChecklistItem,
     deleteChecklistItem,
+    loadSampleTemplate,
   } = useWedding();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -204,8 +205,33 @@ export default function ItineraryPage() {
       </div>
 
       {/* Events Timeline List */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {events.map((event, index) => {
+      {events.length === 0 ? (
+        <div className="bg-white p-12 rounded-3xl border border-dashed border-stone-300 text-center space-y-4">
+          <div className="w-16 h-16 bg-amber-50 text-amber-700 rounded-3xl flex items-center justify-center mx-auto">
+            <CalendarDays className="w-8 h-8" />
+          </div>
+          <h2 className="text-lg font-bold text-stone-900 font-serif">No Ceremonies Scheduled Yet</h2>
+          <p className="text-xs text-stone-500 max-w-md mx-auto leading-relaxed">
+            Your wedding itinerary is currently clean. Add your ceremonies (Sangeet, Haldi, Baraat & Pheras, Reception) along with event essentials (car/horse, dhol squad, havan samagri).
+          </p>
+          <div className="pt-2 flex flex-wrap justify-center gap-3">
+            <button
+              onClick={handleOpenAddEvent}
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-rose-700 text-white font-semibold text-xs shadow-sm hover:opacity-95"
+            >
+              + Add First Ceremony
+            </button>
+            <button
+              onClick={loadSampleTemplate}
+              className="px-5 py-2.5 rounded-xl bg-stone-100 hover:bg-amber-100 text-stone-700 hover:text-amber-900 font-semibold text-xs border border-stone-200 transition-colors"
+            >
+              ✨ Load USA Wedding Template (Optional)
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {events.map((event, index) => {
           const checklist = event.checklist || [];
           const totalItems = checklist.length;
           const arrangedItems = checklist.filter((item) => item.isArranged).length;
@@ -438,7 +464,8 @@ export default function ItineraryPage() {
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
 
       {/* Add / Edit Event Modal */}
       <Modal
