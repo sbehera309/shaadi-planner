@@ -9,292 +9,16 @@ import {
   ArrowRight,
   ArrowLeft,
   X,
-  Music,
   Heart,
   PartyPopper,
-  Flame,
-  Award,
-  Plus,
-  HelpCircle,
-  Clock,
 } from 'lucide-react';
 import { SubEventType, RequirementCategory, EventChecklistItem, WeddingEvent } from '@/lib/types';
+import { EVENT_BLUEPRINTS, EventBlueprint } from '@/lib/eventBlueprints';
 
 interface GettingStartedWizardProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-interface EventBlueprint {
-  type: SubEventType;
-  name: string;
-  defaultTime: { start: string; end: string };
-  bannerGradient: string;
-  description: string;
-  dressCode: string;
-  colorTheme: string;
-  venueType: string;
-  keyDecisions: {
-    title: string;
-    category: RequirementCategory;
-    notes?: string;
-  }[];
-}
-
-const EVENT_BLUEPRINTS: Record<SubEventType, EventBlueprint> = {
-  sangeet: {
-    type: 'sangeet',
-    name: 'Sangeet & Garba Celebration Night',
-    defaultTime: { start: '18:30', end: '23:30' },
-    bannerGradient: 'from-amber-600 via-rose-700 to-purple-800',
-    description: 'High-energy music and family dance performances, DJ beats, live Chaat stations, and cocktails.',
-    dressCode: 'Glamorous Indo-Western, Lehengas & Kurta Sets with Mirror Work',
-    colorTheme: '#D97706',
-    venueType: 'Ballroom with Hardwood Dance Floor & Sound Permit',
-    keyDecisions: [
-      {
-        title: 'Decide Venue with Large Dance Floor & Amplified Sound Permit',
-        category: 'Decor, Props & Staging',
-        notes: 'Check curfew hours for live DJ & sound limits in USA municipal zones',
-      },
-      {
-        title: 'Hire Sangeet DJ, Sound System, Intelligent Lighting & Live Dhol Squad',
-        category: 'Music, Sound & FX',
-        notes: 'Include wireless mics for speeches and family MCs',
-      },
-      {
-        title: 'Confirm Food Vendor: Live Chaat Counter, Indo-Fusion Appetizers & Open Bar',
-        category: 'Food, Drinks & Favors',
-      },
-      {
-        title: 'Book Staging & LED Wall Decor with Custom Dance Floor Monogram',
-        category: 'Decor, Props & Staging',
-      },
-      {
-        title: 'Assign Sangeet Choreographer & Finalize Family Performance Order',
-        category: 'Music, Sound & FX',
-      },
-    ],
-  },
-  mehendi: {
-    type: 'mehendi',
-    name: 'Mehndi Ceremony & Lounge',
-    defaultTime: { start: '13:00', end: '17:00' },
-    bannerGradient: 'from-emerald-700 to-teal-800',
-    description: 'Intimate Henna ritual with folk songs, colorful lounge seating, and festive refreshments.',
-    dressCode: 'Bright Jewel Tones: Parrot Green, Fuchsia Pink & Mustard',
-    colorTheme: '#059669',
-    venueType: 'Garden Terrace or Boutique Banquet Lounge',
-    keyDecisions: [
-      {
-        title: 'Book Bridal Henna Artist & 2+ Fast Henna Artists for Guests',
-        category: 'Attire, Saafa & Jewellery',
-        notes: 'Estimate ~5-8 mins per guest hand to prevent long queues',
-      },
-      {
-        title: 'Design Mehndi Lounge Decor: Low Seating, Bolsters & Floral Swing',
-        category: 'Decor, Props & Staging',
-      },
-      {
-        title: 'Arrange Refreshments: Masala Chai, Mocktails & Street Snacks',
-        category: 'Food, Drinks & Favors',
-      },
-      {
-        title: 'Curate Traditional Dholki Songs & Acoustic Indian Music Playlist',
-        category: 'Music, Sound & FX',
-      },
-      {
-        title: 'Prepare Guest Favors: Floral Jewelry, Bangles & Embroidered Potlis',
-        category: 'Food, Drinks & Favors',
-      },
-    ],
-  },
-  haldi: {
-    type: 'haldi',
-    name: 'Haldi & Chooda Blessing Ritual',
-    defaultTime: { start: '10:00', end: '12:30' },
-    bannerGradient: 'from-amber-500 to-orange-600',
-    description: 'Auspicious turmeric application with flower shower, morning brunch, and emotional blessings.',
-    dressCode: 'Sunshine Yellow, Ochre & Floral Prints',
-    colorTheme: '#F59E0B',
-    venueType: 'Courtyard, Lawn or Poolside Area with Wash Stations',
-    keyDecisions: [
-      {
-        title: 'Procure Organic Ubtan / Turmeric Paste, Rosewater & Traditional Brass Urli Bowl',
-        category: 'Puja Samagri & Rituals',
-      },
-      {
-        title: 'Order Fresh Marigold Petal Baskets for Floral Splash Photos',
-        category: 'Decor, Props & Staging',
-      },
-      {
-        title: 'Book Yellow Floral Backdrop & Splash-Safe Flooring Mats',
-        category: 'Decor, Props & Staging',
-      },
-      {
-        title: 'Arrange Breakfast / Brunch Catering with South/North Indian Specialties',
-        category: 'Food, Drinks & Favors',
-      },
-      {
-        title: 'Designate Changing Room & Towels for Couple Post-Haldi',
-        category: 'Transport & Entry',
-      },
-    ],
-  },
-  pheras: {
-    type: 'pheras',
-    name: 'Baraat, Mandap Ceremony & Pheras (Wedding Day)',
-    defaultTime: { start: '15:30', end: '20:30' },
-    bannerGradient: 'from-rose-800 via-crimson-800 to-red-900',
-    description: 'Grand groom Baraat procession, Milni, Vedic Mandap ceremony with sacred fire pheras and vows.',
-    dressCode: 'Regal Traditional Heritage: Royal Crimson, Maroon, Gold & Ivory Sherwanis',
-    colorTheme: '#DC2626',
-    venueType: 'Grand Mandap Lawn or Palace Castle Grounds',
-    keyDecisions: [
-      {
-        title: 'Baraat Transport Decision: Decorated Horse (Ghodi) or Vintage Car + City Street Permit',
-        category: 'Transport & Entry',
-        notes: 'Crucial in USA: verify local town permit for street/parking procession',
-      },
-      {
-        title: 'Hire Live Baraat Dhol Players & Mobile Sound Truck',
-        category: 'Music, Sound & FX',
-      },
-      {
-        title: 'Order Matching Saafas (Turbans) for Ladkewale & Book Tying Specialist',
-        category: 'Attire, Saafa & Jewellery',
-      },
-      {
-        title: 'Consult Pandit Ji & Arrange Vedic Havan Kund Samagri Kit (Ghee, Camphor, Coconut)',
-        category: 'Puja Samagri & Rituals',
-      },
-      {
-        title: 'Order Fresh Lotus & Rose Varmalas (Jaimala Garlands)',
-        category: 'Puja Samagri & Rituals',
-      },
-      {
-        title: 'Assign Trusted Family Keeper for Mangalsutra, Sindoor Box & Wedding Rings',
-        category: 'Attire, Saafa & Jewellery',
-      },
-      {
-        title: 'Confirm Pure Vegetarian Traditional Wedding Feast Catering',
-        category: 'Food, Drinks & Favors',
-      },
-    ],
-  },
-  reception: {
-    type: 'reception',
-    name: 'Black-Tie Grand Wedding Reception',
-    defaultTime: { start: '19:00', end: '00:30' },
-    bannerGradient: 'from-stone-900 via-zinc-900 to-slate-950',
-    description: 'Formal speeches, grand couple entrance, multi-course dinner banquet, open bar, and all-night dancing.',
-    dressCode: 'Black Tie Tuxedos, Sleek Suits & Designer Evening Gowns / Lehengas',
-    colorTheme: '#1F2937',
-    venueType: 'Luxury Hotel Ballroom / Country Club Estate',
-    keyDecisions: [
-      {
-        title: 'Book Luxury Ballroom Venue & Design Table Seating Chart',
-        category: 'Decor, Props & Staging',
-      },
-      {
-        title: 'Finalize 4-Course Gourmet Dinner Banquet & Top-Shelf Open Bar Package',
-        category: 'Food, Drinks & Favors',
-      },
-      {
-        title: 'Order Custom 3-Tier Wedding Cake & Cake Table Floral Staging',
-        category: 'Food, Drinks & Favors',
-      },
-      {
-        title: 'Hire Reception DJ, MC for Grand Entrances, First Dance & Toasts',
-        category: 'Music, Sound & FX',
-      },
-      {
-        title: 'Coordinate Photographer / Videographer for Sunset Couple Portraits',
-        category: 'Decor, Props & Staging',
-      },
-    ],
-  },
-  roka: {
-    type: 'roka',
-    name: 'Roka & Sagan Ceremony',
-    defaultTime: { start: '11:00', end: '15:00' },
-    bannerGradient: 'from-amber-700 to-yellow-800',
-    description: 'Intimate family formalization of the match with Chunni ceremony, dry fruit hampers, and lunch.',
-    dressCode: 'Semi-Formal Traditional / Smart Ethnic',
-    colorTheme: '#B45309',
-    venueType: 'Private Dining Room, Banquet Lounge or Family Residence',
-    keyDecisions: [
-      {
-        title: 'Select Intimate Venue or Private Dining Hall for Close Families',
-        category: 'Decor, Props & Staging',
-      },
-      {
-        title: 'Prepare Gift Baskets: Silver Coins, Dry Fruits, Mithai & Sagan Envelopes',
-        category: 'Food, Drinks & Favors',
-      },
-      {
-        title: 'Coordinate Chunni & Shagun Ritual Blessings with Elders',
-        category: 'Puja Samagri & Rituals',
-      },
-    ],
-  },
-  baraat: {
-    type: 'baraat',
-    name: 'Standalone Baraat Procession',
-    defaultTime: { start: '14:30', end: '16:00' },
-    bannerGradient: 'from-orange-700 to-amber-900',
-    description: 'High-energy procession with groom transport, music, and welcoming milni.',
-    dressCode: 'Sherwanis & Festive Attire',
-    colorTheme: '#C2410C',
-    venueType: 'Hotel Entrance Driveway or Designated Street Route',
-    keyDecisions: [
-      {
-        title: 'Secure Municipality & Venue Permission for Outdoor Baraat Procession',
-        category: 'Transport & Entry',
-      },
-      {
-        title: 'Book Dhol Squad & Portable Sound System Truck',
-        category: 'Music, Sound & FX',
-      },
-    ],
-  },
-  vidaai: {
-    type: 'vidaai',
-    name: 'Vidaai & Doli Farewell',
-    defaultTime: { start: '20:30', end: '21:30' },
-    bannerGradient: 'from-rose-950 to-stone-900',
-    description: 'Emotional bride farewell ceremony with rice tossing ritual and getaway vehicle.',
-    dressCode: 'Wedding Ceremony Attire',
-    colorTheme: '#4C0519',
-    venueType: 'Mandap Venue Exit / Portico',
-    keyDecisions: [
-      {
-        title: 'Prepare Rice / Puffed Grain Baskets for Traditional Tossing Ritual',
-        category: 'Puja Samagri & Rituals',
-      },
-      {
-        title: 'Arrange Decorated Farewell Getaway Car (Doli Vehicle)',
-        category: 'Transport & Entry',
-      },
-    ],
-  },
-  custom: {
-    type: 'custom',
-    name: 'Custom Celebration',
-    defaultTime: { start: '18:00', end: '22:00' },
-    bannerGradient: 'from-stone-800 to-stone-950',
-    description: 'Personalized wedding gathering or dinner.',
-    dressCode: 'Festive Attire',
-    colorTheme: '#374151',
-    venueType: 'Private Venue',
-    keyDecisions: [
-      {
-        title: 'Reserve Venue & Plan Catering Menu',
-        category: 'Food, Drinks & Favors',
-      },
-    ],
-  },
-};
 
 export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
   isOpen,
@@ -332,10 +56,14 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
     const initial: any = {};
     (['mehendi', 'sangeet', 'haldi', 'pheras', 'reception', 'roka'] as SubEventType[]).forEach((type) => {
       const blueprint = EVENT_BLUEPRINTS[type];
-      initial[type] = blueprint.keyDecisions.map((d) => ({
-        ...d,
-        checked: true,
-      }));
+      if (blueprint) {
+        initial[type] = blueprint.decisions.map((d) => ({
+          title: d.title,
+          category: d.category,
+          checked: true,
+          notes: d.tip || d.description,
+        }));
+      }
     });
     return initial;
   });
@@ -354,10 +82,17 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
       // Initialize decisions for newly selected event if not present
       if (!decisionsByEvent[type]) {
         const bp = EVENT_BLUEPRINTS[type];
-        setDecisionsByEvent((prev) => ({
-          ...prev,
-          [type]: bp.keyDecisions.map((d) => ({ ...d, checked: true })),
-        }));
+        if (bp) {
+          setDecisionsByEvent((prev) => ({
+            ...prev,
+            [type]: bp.decisions.map((d) => ({
+              title: d.title,
+              category: d.category,
+              checked: true,
+              notes: d.tip || d.description,
+            })),
+          }));
+        }
       }
     }
   };
@@ -384,7 +119,12 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
     // Build the events list from the selected blueprints and decisions
     const builtEvents: Array<Omit<WeddingEvent, 'id' | 'weddingId'>> = selectedEventTypes.map((type, idx) => {
       const bp = EVENT_BLUEPRINTS[type];
-      const decisions = decisionsByEvent[type] || bp.keyDecisions.map((d) => ({ ...d, checked: true }));
+      const decisions = decisionsByEvent[type] || bp.decisions.map((d) => ({
+        title: d.title,
+        category: d.category,
+        checked: true,
+        notes: d.tip,
+      }));
 
       const checklistItems: EventChecklistItem[] = decisions
         .filter((d) => d.checked)
@@ -606,6 +346,7 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {(['mehendi', 'sangeet', 'haldi', 'pheras', 'reception', 'roka'] as SubEventType[]).map((type) => {
                   const bp = EVENT_BLUEPRINTS[type];
+                  if (!bp) return null;
                   const isSelected = selectedEventTypes.includes(type);
 
                   return (
@@ -639,7 +380,7 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
                       <div className="mt-3 pt-3 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-500">
                         <span>🕒 {bp.defaultTime.start} - {bp.defaultTime.end}</span>
                         <span className="font-medium text-rose-800">
-                          {bp.keyDecisions.length} Critical Decisions
+                          {bp.decisions.length} Critical Decisions
                         </span>
                       </div>
                     </div>
@@ -665,7 +406,13 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
               <div className="space-y-5">
                 {selectedEventTypes.map((type) => {
                   const bp = EVENT_BLUEPRINTS[type];
-                  const decisions = decisionsByEvent[type] || bp.keyDecisions.map((d) => ({ ...d, checked: true }));
+                  if (!bp) return null;
+                  const decisions = decisionsByEvent[type] || bp.decisions.map((d) => ({
+                    title: d.title,
+                    category: d.category,
+                    checked: true,
+                    notes: d.tip,
+                  }));
 
                   return (
                     <div

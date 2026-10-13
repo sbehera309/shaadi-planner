@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useWedding } from '@/lib/store';
 import { WeddingEvent, SubEventType, EventChecklistItem, RequirementCategory } from '@/lib/types';
 import { Modal } from '@/components/Modal';
+import { EventPlanningWizard } from '@/components/EventPlanningWizard';
 import {
   CalendarDays,
   Plus,
@@ -37,6 +38,7 @@ export default function ItineraryPage() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<WeddingEvent | null>(null);
+  const [eventToPlan, setEventToPlan] = useState<WeddingEvent | null>(null);
 
   // Expanded checklist section state per event
   const [expandedChecklists, setExpandedChecklists] = useState<Record<string, boolean>>({
@@ -250,23 +252,33 @@ export default function ItineraryPage() {
                     <span className="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-white/20 backdrop-blur-xs text-white">
                       Ceremony {index + 1}: {event.type.toUpperCase()}
                     </span>
-                    <div className="flex items-center gap-1.5 bg-black/20 rounded-lg p-1">
+                    <div className="flex items-center gap-2">
                       <button
-                        onClick={() => handleOpenEditEvent(event)}
-                        className="p-1 hover:bg-white/20 rounded text-white/90 hover:text-white transition-colors"
-                        title="Edit ceremony"
+                        onClick={() => setEventToPlan(event)}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 text-stone-900 text-xs font-bold transition-all shadow-xs"
+                        title="Open step-by-step guided planning for this ceremony"
                       >
-                        <Edit2 className="w-3.5 h-3.5" />
+                        <Sparkles className="w-3.5 h-3.5 text-amber-950" />
+                        <span>Plan Decisions</span>
                       </button>
-                      <button
-                        onClick={() => {
-                          if (confirm(`Delete "${event.name}"?`)) deleteEvent(event.id);
-                        }}
-                        className="p-1 hover:bg-rose-500/40 rounded text-white/90 hover:text-rose-200 transition-colors"
-                        title="Delete ceremony"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-1 bg-black/20 rounded-lg p-1">
+                        <button
+                          onClick={() => handleOpenEditEvent(event)}
+                          className="p-1 hover:bg-white/20 rounded text-white/90 hover:text-white transition-colors"
+                          title="Edit ceremony"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Delete "${event.name}"?`)) deleteEvent(event.id);
+                          }}
+                          className="p-1 hover:bg-rose-500/40 rounded text-white/90 hover:text-rose-200 transition-colors"
+                          title="Delete ceremony"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                   <h2 className="text-xl font-bold font-serif">{event.name}</h2>
@@ -724,6 +736,12 @@ export default function ItineraryPage() {
           </div>
         </form>
       </Modal>
+
+      <EventPlanningWizard
+        event={eventToPlan}
+        isOpen={!!eventToPlan}
+        onClose={() => setEventToPlan(null)}
+      />
     </div>
   );
 }
