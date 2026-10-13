@@ -1,22 +1,7 @@
 import { WeddingProfile, WeddingEvent, Guest, BudgetItem, Vendor, ShagunRecord, RoomAllocation } from './types';
 
-// Default clean & unconfigured profile for new weddings until user creates one
-export const initialWeddingProfile: WeddingProfile = {
-  id: 'w-new',
-  ownerId: 'new-user',
-  brideName: '',
-  groomName: '',
-  slug: '',
-  startDate: '',
-  endDate: '',
-  city: '',
-  venueName: '',
-  currency: 'USD',
-  targetBudget: 0,
-  story: '',
-  hashtag: '',
-  isConfigured: false,
-};
+// No default wedding profile — user will be prompted to create their own
+export const initialWeddingProfile: WeddingProfile | null = null;
 
 // Start completely clean & minimal as requested
 export const initialEvents: WeddingEvent[] = [];

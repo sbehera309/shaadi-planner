@@ -61,17 +61,7 @@ export default function PublicWeddingInvitePage({
     setRsvpSubmitted(true);
   };
 
-  // Countdown calculation
-  const calculateDaysLeft = () => {
-    const target = new Date(wedding.startDate).getTime();
-    const today = new Date().getTime();
-    const diff = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
-    return diff > 0 ? diff : 0;
-  };
-
-  const daysLeft = calculateDaysLeft();
-
-  if (!wedding.isConfigured || !wedding.brideName) {
+  if (!wedding || !wedding.isConfigured || !wedding.brideName) {
     return (
       <div className="min-h-screen bg-[#FAF6F0] flex items-center justify-center p-6 text-center">
         <div className="bg-white p-10 rounded-3xl border border-stone-200 shadow-xl max-w-md w-full space-y-4">
@@ -92,6 +82,18 @@ export default function PublicWeddingInvitePage({
       </div>
     );
   }
+
+  // Countdown calculation
+  const calculateDaysLeft = () => {
+    if (!wedding.startDate) return 0;
+    const target = new Date(wedding.startDate).getTime();
+    const today = new Date().getTime();
+    const diff = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+    return diff > 0 ? diff : 0;
+  };
+
+  const daysLeft = calculateDaysLeft();
+
 
   return (
     <div className="min-h-screen bg-[#FAF6F0] text-stone-800 font-sans selection:bg-rose-200">

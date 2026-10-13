@@ -76,7 +76,7 @@ export const EditWeddingModal: React.FC<EditWeddingModalProps> = ({ isOpen, onCl
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={wedding.isConfigured ? 'Edit Wedding Details' : 'Set Up Your Wedding Profile'}
+      title={wedding?.isConfigured ? 'Edit Wedding Details' : 'Set Up Your Wedding Profile'}
       maxWidth="lg"
     >
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
@@ -207,7 +207,7 @@ export const EditWeddingModal: React.FC<EditWeddingModalProps> = ({ isOpen, onCl
             className="px-5 py-2 rounded-xl bg-gradient-to-r from-rose-700 to-amber-700 hover:opacity-95 text-white font-semibold shadow-md flex items-center gap-1.5"
           >
             <Heart className="w-3.5 h-3.5" />
-            <span>{wedding.isConfigured ? 'Save Changes' : 'Create Wedding'}</span>
+            <span>{wedding?.isConfigured ? 'Save Changes' : 'Create Wedding Profile'}</span>
           </button>
         </div>
       </form>

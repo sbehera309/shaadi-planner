@@ -85,7 +85,7 @@ export default function LandingPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          {wedding.isConfigured && wedding.slug && (
+          {wedding && wedding.isConfigured && wedding.slug && (
             <Link
               href={`/invite/${wedding.slug}`}
               target="_blank"
@@ -130,7 +130,7 @@ export default function LandingPage() {
             <span>Launch Planner Dashboard</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
-          {wedding.isConfigured && wedding.slug ? (
+          {wedding && wedding.isConfigured && wedding.slug ? (
             <Link
               href={`/invite/${wedding.slug}`}
               className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-white border border-stone-300 text-stone-800 font-bold text-sm shadow-sm hover:bg-stone-50 transition-all flex items-center justify-center gap-2"

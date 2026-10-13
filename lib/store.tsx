@@ -26,7 +26,7 @@ import { isFirebaseConfigured, db } from './firebase';
 import { doc, setDoc } from 'firebase/firestore';
 
 interface WeddingContextType {
-  wedding: WeddingProfile;
+  wedding: WeddingProfile | null;
   events: WeddingEvent[];
   guests: Guest[];
   budgetItems: BudgetItem[];
@@ -36,6 +36,7 @@ interface WeddingContextType {
   isDemoMode: boolean;
 
   // Wedding Profile
+  createWeddingProfile: (profile: Omit<WeddingProfile, 'id' | 'ownerId'>) => void;
   updateWeddingProfile: (profile: Partial<WeddingProfile>) => void;
 
   // Events & Checklist
@@ -83,17 +84,17 @@ interface WeddingContextType {
 const WeddingContext = createContext<WeddingContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
-  PROFILE: 'shaadi_v4_clean_profile',
-  EVENTS: 'shaadi_v4_clean_events',
-  GUESTS: 'shaadi_v4_clean_guests',
-  BUDGET: 'shaadi_v4_clean_budget',
-  VENDORS: 'shaadi_v4_clean_vendors',
-  SHAGUN: 'shaadi_v4_clean_shagun',
-  ROOMS: 'shaadi_v4_clean_rooms',
+  PROFILE: 'shaadi_v5_noprofile_profile',
+  EVENTS: 'shaadi_v5_noprofile_events',
+  GUESTS: 'shaadi_v5_noprofile_guests',
+  BUDGET: 'shaadi_v5_noprofile_budget',
+  VENDORS: 'shaadi_v5_noprofile_vendors',
+  SHAGUN: 'shaadi_v5_noprofile_shagun',
+  ROOMS: 'shaadi_v5_noprofile_rooms',
 };
 
 export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [wedding, setWedding] = useState<WeddingProfile>(initialWeddingProfile);
+  const [wedding, setWedding] = useState<WeddingProfile | null>(initialWeddingProfile);
   const [events, setEvents] = useState<WeddingEvent[]>(initialEvents);
   const [guests, setGuests] = useState<Guest[]>(initialGuests);
   const [budgetItems, setBudgetItems] = useState<BudgetItem[]>(initialBudgetItems);
@@ -113,7 +114,20 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const savedShagun = localStorage.getItem(STORAGE_KEYS.SHAGUN);
       const savedRooms = localStorage.getItem(STORAGE_KEYS.ROOMS);
 
-      if (savedProfile) setWedding(JSON.parse(savedProfile));
+      if (savedProfile) {
+        try {
+          const parsed = JSON.parse(savedProfile);
+          if (parsed && (parsed.brideName || parsed.groomName)) {
+            setWedding(parsed);
+          } else {
+            setWedding(null);
+          }
+        } catch {
+          setWedding(null);
+        }
+      } else {
+        setWedding(null);
+      }
       if (savedEvents) setEvents(JSON.parse(savedEvents));
       if (savedGuests) setGuests(JSON.parse(savedGuests));
       if (savedBudget) setBudgetItems(JSON.parse(savedBudget));
@@ -130,7 +144,11 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     if (!mounted) return;
     try {
-      localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(wedding));
+      if (wedding) {
+        localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(wedding));
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.PROFILE);
+      }
       localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(events));
       localStorage.setItem(STORAGE_KEYS.GUESTS, JSON.stringify(guests));
       localStorage.setItem(STORAGE_KEYS.BUDGET, JSON.stringify(budgetItems));
@@ -139,7 +157,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(rooms));
 
       // Optional Firestore sync when configured
-      if (isFirebaseConfigured && db) {
+      if (isFirebaseConfigured && db && wedding) {
         setDoc(doc(db, 'weddings', wedding.id), wedding, { merge: true }).catch(() => {});
       }
     } catch (e) {
@@ -147,11 +165,49 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [mounted, wedding, events, guests, budgetItems, vendors, shagunRecords, rooms]);
 
+  const createWeddingProfile = (profileData: Omit<WeddingProfile, 'id' | 'ownerId'>) => {
+    const bride = profileData.brideName.trim();
+    const groom = profileData.groomName.trim();
+    const generatedSlug =
+      profileData.slug ||
+      (groom && bride
+        ? `${groom.toLowerCase()}-weds-${bride.toLowerCase()}`.replace(/[^a-z0-9]+/g, '-')
+        : 'our-wedding');
+
+    const newProfile: WeddingProfile = {
+      ...profileData,
+      id: `w-${Date.now()}`,
+      ownerId: 'user',
+      brideName: bride,
+      groomName: groom,
+      slug: generatedSlug,
+      isConfigured: true,
+      currency: profileData.currency || 'USD',
+    };
+    setWedding(newProfile);
+  };
+
   const updateWeddingProfile = (profile: Partial<WeddingProfile>) => {
     setWedding((prev) => {
-      const updated = { ...prev, ...profile, isConfigured: true };
+      const base: WeddingProfile = prev || {
+        id: `w-${Date.now()}`,
+        ownerId: 'user',
+        brideName: '',
+        groomName: '',
+        slug: '',
+        startDate: '',
+        endDate: '',
+        city: '',
+        venueName: '',
+        currency: 'USD',
+        targetBudget: 0,
+        story: '',
+        hashtag: '',
+        isConfigured: true,
+      };
+      const updated = { ...base, ...profile, isConfigured: true };
       if (!updated.slug && updated.brideName && updated.groomName) {
-        updated.slug = `${updated.groomName.toLowerCase()}-weds-${updated.brideName.toLowerCase()}`.replace(/\s+/g, '-');
+        updated.slug = `${updated.groomName.toLowerCase()}-weds-${updated.brideName.toLowerCase()}`.replace(/[^a-z0-9]+/g, '-');
       }
       return updated;
     });
@@ -161,7 +217,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const newEvent: WeddingEvent = {
       ...eventData,
       id: `e-${Date.now()}`,
-      weddingId: wedding.id,
+      weddingId: wedding?.id || 'w-current',
     };
     setEvents((prev) => [...prev, newEvent]);
   };
@@ -218,7 +274,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const newGuest: Guest = {
       ...guestData,
       id: `g-${Date.now()}`,
-      weddingId: wedding.id,
+      weddingId: wedding?.id || 'w-current',
     };
     setGuests((prev) => [...prev, newGuest]);
   };
@@ -250,7 +306,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const newItem: BudgetItem = {
       ...itemData,
       id: `b-${Date.now()}`,
-      weddingId: wedding.id,
+      weddingId: wedding?.id || 'w-current',
     };
     setBudgetItems((prev) => [...prev, newItem]);
   };
@@ -267,7 +323,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const newVendor: Vendor = {
       ...vendorData,
       id: `v-${Date.now()}`,
-      weddingId: wedding.id,
+      weddingId: wedding?.id || 'w-current',
     };
     setVendors((prev) => [...prev, newVendor]);
   };
@@ -284,7 +340,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const newRecord: ShagunRecord = {
       ...recordData,
       id: `s-${Date.now()}`,
-      weddingId: wedding.id,
+      weddingId: wedding?.id || 'w-current',
     };
     setShagunRecords((prev) => [newRecord, ...prev]);
   };
@@ -307,7 +363,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const newRoom: RoomAllocation = {
       ...roomData,
       id: `r-${Date.now()}`,
-      weddingId: wedding.id,
+      weddingId: wedding?.id || 'w-current',
     };
     setRooms((prev) => [...prev, newRoom]);
   };
@@ -374,6 +430,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         shagunRecords,
         rooms,
         isDemoMode: !isFirebaseConfigured,
+        createWeddingProfile,
         updateWeddingProfile,
         addEvent,
         updateEvent,

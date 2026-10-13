@@ -51,7 +51,7 @@ export const Sidebar: React.FC = () => {
         </div>
 
         {/* Couple Card */}
-        {wedding.isConfigured && wedding.brideName ? (
+        {wedding && wedding.isConfigured && wedding.brideName ? (
           <div className="px-4 py-3.5 mx-3 my-3 rounded-xl bg-stone-800/60 border border-stone-700/50">
             <div className="flex items-center justify-between text-xs font-medium text-amber-400 mb-1">
               <span className="flex items-center gap-1.5">
@@ -111,7 +111,7 @@ export const Sidebar: React.FC = () => {
       </nav>
 
         {/* Guest Invitation Quick Link */}
-        {wedding.isConfigured && wedding.slug && (
+        {wedding && wedding.isConfigured && wedding.slug && (
           <div className="p-4 border-t border-stone-800">
             <Link
               href={`/invite/${wedding.slug}`}

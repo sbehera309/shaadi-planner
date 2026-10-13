@@ -11,6 +11,7 @@ export const Navbar: React.FC = () => {
 
   // Calculate days left
   const calculateDaysLeft = () => {
+    if (!wedding || !wedding.startDate) return 0;
     const target = new Date(wedding.startDate).getTime();
     const today = new Date().getTime();
     const diff = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
@@ -20,7 +21,7 @@ export const Navbar: React.FC = () => {
   const daysLeft = calculateDaysLeft();
 
   const handleShare = () => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && wedding?.slug) {
       const url = `${window.location.origin}/invite/${wedding.slug}`;
       navigator.clipboard.writeText(url);
       setCopied(true);
@@ -35,7 +36,7 @@ export const Navbar: React.FC = () => {
       <header className="h-16 bg-white border-b border-stone-200 px-6 flex items-center justify-between shrink-0 sticky top-0 z-20 shadow-sm">
         {/* Left: Venue & Dates */}
         <div className="flex items-center gap-4">
-          {wedding.isConfigured && wedding.startDate ? (
+          {wedding && wedding.isConfigured && wedding.startDate ? (
             <div className="flex items-center gap-2 text-stone-600 text-sm">
               <Calendar className="w-4 h-4 text-amber-600" />
               <span className="font-medium text-stone-900">
@@ -63,7 +64,7 @@ export const Navbar: React.FC = () => {
         {/* Right: Countdown, Mode badge, and Action buttons */}
         <div className="flex items-center gap-3">
           {/* Countdown Pill */}
-          {wedding.isConfigured && wedding.startDate && (
+          {wedding && wedding.isConfigured && wedding.startDate && (
             <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-900">
               <span>⏳</span>
               <span>{daysLeft} Days to Shubh Vivah</span>
@@ -91,7 +92,7 @@ export const Navbar: React.FC = () => {
           </button>
 
           {/* Copy Invite Link or Setup Wedding */}
-          {wedding.isConfigured ? (
+          {wedding && wedding.isConfigured ? (
             <button
               onClick={handleShare}
               className="flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-700 hover:bg-rose-800 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors"

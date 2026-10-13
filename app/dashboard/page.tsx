@@ -23,7 +23,7 @@ export default function DashboardOverviewPage() {
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
 
   // Budget calculations
-  const totalTargetBudget = wedding.targetBudget || 150000;
+  const totalTargetBudget = wedding?.targetBudget || 0;
   const totalActualCost = budgetItems.reduce((acc, curr) => acc + curr.actualCost, 0);
   const totalPaid = budgetItems.reduce((acc, curr) => acc + curr.paidAmount, 0);
   const totalPending = totalActualCost - totalPaid;
@@ -51,7 +51,7 @@ export default function DashboardOverviewPage() {
   const formatCurr = (val: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: wedding.currency || 'USD',
+      currency: wedding?.currency || 'USD',
       maximumFractionDigits: 0,
     }).format(val);
   };
@@ -60,7 +60,7 @@ export default function DashboardOverviewPage() {
     <div className="space-y-8 animate-in fade-in duration-300">
       {/* Top Banner */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-stone-900 via-rose-950 to-amber-950 p-8 text-white shadow-xl border border-amber-900/40">
-        {wedding.isConfigured && wedding.brideName ? (
+        {wedding && wedding.isConfigured && wedding.brideName ? (
           <div className="relative z-10 max-w-2xl">
             <div className="flex items-center justify-between gap-4 mb-3">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold border border-amber-500/30">
@@ -126,6 +126,57 @@ export default function DashboardOverviewPage() {
         {/* Decorative gold emblem ring */}
         <div className="absolute right-0 top-0 bottom-0 w-96 bg-radial from-amber-500/10 to-transparent pointer-events-none opacity-50" />
       </div>
+
+      {/* Profile Creation Prompt when no wedding is configured */}
+      {(!wedding || !wedding.isConfigured) && (
+        <div className="bg-gradient-to-br from-amber-50/90 via-orange-50/50 to-rose-50/80 rounded-3xl p-6 sm:p-8 border border-amber-200/80 shadow-md">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-2 max-w-xl">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-800 text-xs font-bold border border-amber-500/20">
+                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                <span>Quick Setup Checklist</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold font-serif text-stone-900">
+                Create Your Wedding Profile to Unlock All Features
+              </h2>
+              <p className="text-stone-600 text-xs sm:text-sm leading-relaxed">
+                ShaadiSutra lets you customize traditional Indian wedding events in the USA (Mehendi, Sangeet, Haldi, Baraat & Shaadi, Reception), split budgets between Ladkewale & Ladkiwale in USD, and generate personalized digital guest invites.
+              </p>
+              <div className="pt-2 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div className="p-3 rounded-xl bg-white/80 border border-amber-200/60 shadow-xs flex items-center gap-2.5">
+                  <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-bold flex items-center justify-center shrink-0">1</span>
+                  <span className="font-medium text-stone-800">Bride & Groom Info</span>
+                </div>
+                <div className="p-3 rounded-xl bg-white/80 border border-amber-200/60 shadow-xs flex items-center gap-2.5">
+                  <span className="w-6 h-6 rounded-full bg-rose-100 text-rose-800 font-bold flex items-center justify-center shrink-0">2</span>
+                  <span className="font-medium text-stone-800">USA Venue & Dates</span>
+                </div>
+                <div className="p-3 rounded-xl bg-white/80 border border-amber-200/60 shadow-xs flex items-center gap-2.5">
+                  <span className="w-6 h-6 rounded-full bg-purple-100 text-purple-800 font-bold flex items-center justify-center shrink-0">3</span>
+                  <span className="font-medium text-stone-800">USD Budget & Events</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row md:flex-col gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(true)}
+                className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-600 to-rose-700 hover:from-amber-700 hover:to-rose-800 text-white font-bold text-xs shadow-md shadow-rose-900/20 transition-all flex items-center justify-center gap-2"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>+ Create Wedding Profile</span>
+              </button>
+              <button
+                type="button"
+                onClick={loadSampleTemplate}
+                className="px-5 py-2.5 rounded-xl bg-white hover:bg-stone-50 text-stone-700 hover:text-stone-900 text-xs font-semibold border border-stone-300 transition-colors shadow-xs flex items-center justify-center gap-2"
+              >
+                <span>✨ Load USA Wedding Template</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -382,7 +433,7 @@ export default function DashboardOverviewPage() {
                 <ArrowUpRight className="w-4 h-4 text-stone-400 group-hover:text-amber-700 transition-colors" />
               </Link>
 
-              {wedding.isConfigured && wedding.slug ? (
+              {wedding && wedding.isConfigured && wedding.slug ? (
                 <Link
                   href={`/invite/${wedding.slug}`}
                   target="_blank"

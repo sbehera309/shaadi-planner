@@ -89,7 +89,7 @@ export default function ShagunPage() {
   const formatCurr = (val: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: wedding.currency || 'USD',
+      currency: wedding?.currency || 'USD',
       maximumFractionDigits: 0,
     }).format(val);
   };

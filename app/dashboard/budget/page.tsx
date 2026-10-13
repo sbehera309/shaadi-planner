@@ -88,13 +88,13 @@ export default function BudgetPage() {
   const formatCurr = (val: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: wedding.currency || 'USD',
+      currency: wedding?.currency || 'USD',
       maximumFractionDigits: 0,
     }).format(val);
   };
 
   // Calculations
-  const totalTarget = wedding.targetBudget;
+  const totalTarget = wedding?.targetBudget || 0;
   const totalCommitted = budgetItems.reduce((acc, b) => acc + b.actualCost, 0);
   const totalPaid = budgetItems.reduce((acc, b) => acc + b.paidAmount, 0);
   const totalPending = totalCommitted - totalPaid;
