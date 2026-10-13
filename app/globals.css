@@ -6,10 +6,16 @@
   --font-serif: 'Cinzel', 'Playfair Display', 'Georgia', serif;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   background-color: #FAF8F5;
   color: #1F2937;
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
 }
 
 /* Custom festive gradients and borders */
@@ -31,8 +37,8 @@ body {
 
 /* Custom subtle scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: #F3F4F6;

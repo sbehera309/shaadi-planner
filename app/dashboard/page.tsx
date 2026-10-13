@@ -58,9 +58,9 @@ export default function DashboardOverviewPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
-      {/* Top Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-stone-900 via-rose-950 to-amber-950 p-8 text-white shadow-xl border border-amber-900/40">
-        {wedding && wedding.isConfigured && wedding.brideName ? (
+      {/* Top Banner / Onboarding Hero */}
+      {wedding && wedding.isConfigured && wedding.brideName ? (
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-stone-900 via-rose-950 to-amber-950 p-6 sm:p-8 text-white shadow-xl border border-amber-900/40">
           <div className="relative z-10 max-w-2xl">
             <div className="flex items-center justify-between gap-4 mb-3">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold border border-amber-500/30">
@@ -69,7 +69,7 @@ export default function DashboardOverviewPage() {
               </div>
               <button
                 onClick={() => setIsEditModalOpen(true)}
-                className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-amber-200 text-xs font-medium border border-white/20 transition-colors"
+                className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-amber-200 text-xs font-medium border border-white/20 transition-colors"
               >
                 ✏️ Edit Profile
               </button>
@@ -80,98 +80,55 @@ export default function DashboardOverviewPage() {
             <p className="mt-2 text-stone-300 text-sm leading-relaxed">
               {wedding.venueName} {wedding.city && `• ${wedding.city}`}
             </p>
-            <div className="mt-6 flex flex-wrap gap-3 text-xs">
+            <div className="mt-6 flex flex-wrap gap-2.5 text-xs">
               {wedding.hashtag && (
-                <span className="px-3 py-1.5 rounded-lg bg-stone-800/80 border border-stone-700/80">
+                <span className="px-3 py-1.5 rounded-xl bg-stone-800/80 border border-stone-700/80 font-medium">
                   🏷️ <strong className="text-amber-200">{wedding.hashtag}</strong>
                 </span>
               )}
-              <span className="px-3 py-1.5 rounded-lg bg-stone-800/80 border border-stone-700/80">
+              <span className="px-3 py-1.5 rounded-xl bg-stone-800/80 border border-stone-700/80 font-medium">
                 📅 {events.length} Festive Sub-Events
               </span>
-              <span className="px-3 py-1.5 rounded-lg bg-stone-800/80 border border-stone-700/80">
+              <span className="px-3 py-1.5 rounded-xl bg-stone-800/80 border border-stone-700/80 font-medium">
                 👥 {totalHeadcount} Total Expected Guests
               </span>
             </div>
           </div>
-        ) : (
-          <div className="relative z-10 max-w-2xl space-y-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold border border-amber-500/30">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Welcome to ShaadiSutra</span>
+          {/* Decorative gold emblem ring */}
+          <div className="absolute right-0 top-0 bottom-0 w-96 bg-radial from-amber-500/10 to-transparent pointer-events-none opacity-50" />
+        </div>
+      ) : (
+        <div className="bg-white rounded-3xl p-6 sm:p-10 border border-stone-200 shadow-sm relative overflow-hidden">
+          <div className="max-w-3xl space-y-4">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold">
+              <Sparkles className="w-3.5 h-3.5 text-rose-600" />
+              <span>Welcome to ShaadiSutra • Indian Wedding Planner</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold font-serif tracking-tight text-amber-100">
-              Welcome! Let's Plan Your Wedding
+
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold font-serif text-stone-900 tracking-tight">
+              Plan Your Dream Wedding Celebration
             </h1>
-            <p className="text-stone-300 text-xs sm:text-sm leading-relaxed">
-              No wedding has been created yet. Personalize your planner with bride & groom names, wedding dates, and venue, or explore with our USA Indian wedding template.
+
+            <p className="text-stone-600 text-sm sm:text-base leading-relaxed max-w-2xl">
+              Organize multi-day ceremonies (Sangeet, Haldi, Baraat & Pheras, Reception), split expenses between Ladkewale & Ladkiwale in USD, track guest dietary preferences (Jain & Strict Veg), and generate digital invitations.
             </p>
-            <div className="pt-2 flex flex-wrap gap-3">
-              <button
-                onClick={() => setIsEditModalOpen(true)}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-rose-600 text-white font-bold text-xs shadow-md hover:opacity-95"
-              >
-                + Create Wedding Profile
-              </button>
-              <button
-                onClick={loadSampleTemplate}
-                className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-amber-200 text-xs font-semibold border border-white/20 transition-colors"
-              >
-                ✨ Load USA Wedding Template (Optional)
-              </button>
-            </div>
-          </div>
-        )}
 
-        {/* Decorative gold emblem ring */}
-        <div className="absolute right-0 top-0 bottom-0 w-96 bg-radial from-amber-500/10 to-transparent pointer-events-none opacity-50" />
-      </div>
-
-      {/* Profile Creation Prompt when no wedding is configured */}
-      {(!wedding || !wedding.isConfigured) && (
-        <div className="bg-gradient-to-br from-amber-50/90 via-orange-50/50 to-rose-50/80 rounded-3xl p-6 sm:p-8 border border-amber-200/80 shadow-md">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2 max-w-xl">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-800 text-xs font-bold border border-amber-500/20">
-                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                <span>Quick Setup Checklist</span>
-              </div>
-              <h2 className="text-xl sm:text-2xl font-bold font-serif text-stone-900">
-                Create Your Wedding Profile to Unlock All Features
-              </h2>
-              <p className="text-stone-600 text-xs sm:text-sm leading-relaxed">
-                ShaadiSutra lets you customize traditional Indian wedding events in the USA (Mehendi, Sangeet, Haldi, Baraat & Shaadi, Reception), split budgets between Ladkewale & Ladkiwale in USD, and generate personalized digital guest invites.
-              </p>
-              <div className="pt-2 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                <div className="p-3 rounded-xl bg-white/80 border border-amber-200/60 shadow-xs flex items-center gap-2.5">
-                  <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-bold flex items-center justify-center shrink-0">1</span>
-                  <span className="font-medium text-stone-800">Bride & Groom Info</span>
-                </div>
-                <div className="p-3 rounded-xl bg-white/80 border border-amber-200/60 shadow-xs flex items-center gap-2.5">
-                  <span className="w-6 h-6 rounded-full bg-rose-100 text-rose-800 font-bold flex items-center justify-center shrink-0">2</span>
-                  <span className="font-medium text-stone-800">USA Venue & Dates</span>
-                </div>
-                <div className="p-3 rounded-xl bg-white/80 border border-amber-200/60 shadow-xs flex items-center gap-2.5">
-                  <span className="w-6 h-6 rounded-full bg-purple-100 text-purple-800 font-bold flex items-center justify-center shrink-0">3</span>
-                  <span className="font-medium text-stone-800">USD Budget & Events</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row md:flex-col gap-3 shrink-0">
+            <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <button
                 type="button"
                 onClick={() => setIsEditModalOpen(true)}
-                className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-600 to-rose-700 hover:from-amber-700 hover:to-rose-800 text-white font-bold text-xs shadow-md shadow-rose-900/20 transition-all flex items-center justify-center gap-2"
+                className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-rose-700 to-amber-700 hover:from-rose-800 hover:to-amber-800 text-white font-bold text-sm shadow-md shadow-rose-900/20 transition-all flex items-center justify-center gap-2"
               >
                 <Sparkles className="w-4 h-4" />
-                <span>+ Create Wedding Profile</span>
+                <span>+ Create Your Wedding Profile</span>
               </button>
+
               <button
                 type="button"
                 onClick={loadSampleTemplate}
-                className="px-5 py-2.5 rounded-xl bg-white hover:bg-stone-50 text-stone-700 hover:text-stone-900 text-xs font-semibold border border-stone-300 transition-colors shadow-xs flex items-center justify-center gap-2"
+                className="px-5 py-3 rounded-xl bg-stone-50 hover:bg-stone-100 text-stone-700 hover:text-stone-900 font-semibold text-sm border border-stone-300 transition-colors flex items-center justify-center gap-2"
               >
-                <span>✨ Load USA Wedding Template</span>
+                <span>✨ Load Sample Wedding Template</span>
               </button>
             </div>
           </div>
@@ -183,29 +140,29 @@ export default function DashboardOverviewPage() {
         {/* Metric 1: Budget */}
         <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-xs hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+            <span className="text-xs font-bold uppercase tracking-wider text-stone-600">
               Budget Allocated
             </span>
-            <div className="p-2.5 rounded-xl bg-amber-50 text-amber-600">
+            <div className="p-2.5 rounded-xl bg-amber-50 text-amber-700">
               <Wallet className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-2xl font-bold text-stone-900">{formatCurr(totalActualCost)}</div>
-            <div className="mt-1 text-xs text-stone-500 flex items-center justify-between">
+            <div className="text-3xl font-extrabold text-stone-900 tracking-tight">{formatCurr(totalActualCost)}</div>
+            <div className="mt-1.5 text-xs text-stone-600 font-medium flex items-center justify-between">
               <span>Target: {formatCurr(totalTargetBudget)}</span>
-              <span className="font-semibold text-amber-700">{budgetConsumedPct}%</span>
+              <span className="font-bold text-amber-800">{budgetConsumedPct}%</span>
             </div>
             {/* Progress bar */}
-            <div className="mt-2 w-full bg-stone-100 h-2 rounded-full overflow-hidden">
+            <div className="mt-2.5 w-full bg-stone-100 h-2 rounded-full overflow-hidden">
               <div
-                className="bg-gradient-to-r from-amber-500 to-rose-600 h-full rounded-full"
+                className="bg-gradient-to-r from-amber-500 to-rose-600 h-full rounded-full transition-all"
                 style={{ width: `${Math.min(budgetConsumedPct, 100)}%` }}
               />
             </div>
-            <div className="mt-2 text-xs text-stone-600 flex justify-between">
-              <span>Paid: <strong className="text-emerald-700">{formatCurr(totalPaid)}</strong></span>
-              <span>Due: <strong className="text-rose-700">{formatCurr(totalPending)}</strong></span>
+            <div className="mt-2.5 text-xs text-stone-600 flex justify-between font-medium">
+              <span>Paid: <strong className="text-emerald-800 font-bold">{formatCurr(totalPaid)}</strong></span>
+              <span>Due: <strong className="text-rose-800 font-bold">{formatCurr(totalPending)}</strong></span>
             </div>
           </div>
         </div>
@@ -213,28 +170,30 @@ export default function DashboardOverviewPage() {
         {/* Metric 2: Guests */}
         <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-xs hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+            <span className="text-xs font-bold uppercase tracking-wider text-stone-600">
               Guests & Families
             </span>
-            <div className="p-2.5 rounded-xl bg-rose-50 text-rose-600">
+            <div className="p-2.5 rounded-xl bg-rose-50 text-rose-700">
               <Users className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-2xl font-bold text-stone-900">{totalHeadcount} <span className="text-sm font-normal text-stone-500">invites</span></div>
-            <p className="mt-1 text-xs text-stone-500">
+            <div className="text-3xl font-extrabold text-stone-900 tracking-tight">
+              {totalHeadcount} <span className="text-sm font-semibold text-stone-500">invites</span>
+            </div>
+            <p className="mt-1.5 text-xs text-stone-600 font-medium">
               {guests.length} invitation units
             </p>
             {/* Side Distribution */}
-            <div className="mt-3 flex items-center gap-1.5 text-xs">
-              <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200">
+            <div className="mt-3 flex items-center gap-2 text-xs">
+              <span className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-800 border border-rose-200 font-semibold">
                 Bride: {brideHeadcount}
               </span>
-              <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
+              <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 font-semibold">
                 Groom: {groomHeadcount}
               </span>
               {mutualHeadcount > 0 && (
-                <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200">
+                <span className="px-2.5 py-1 rounded-lg bg-purple-50 text-purple-800 border border-purple-200 font-semibold">
                   Mutual: {mutualHeadcount}
                 </span>
               )}
@@ -245,21 +204,21 @@ export default function DashboardOverviewPage() {
         {/* Metric 3: Shagun Lifafas */}
         <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-xs hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+            <span className="text-xs font-bold uppercase tracking-wider text-stone-600">
               Shagun & Lifafa
             </span>
-            <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600">
+            <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-700">
               <Gift className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-2xl font-bold text-stone-900">{formatCurr(totalCashShagun)}</div>
-            <div className="mt-1 text-xs text-stone-500">
+            <div className="text-3xl font-extrabold text-stone-900 tracking-tight">{formatCurr(totalCashShagun)}</div>
+            <div className="mt-1.5 text-xs text-stone-600 font-medium">
               {totalGiftsCount} gifts logged
             </div>
-            <div className="mt-3 flex items-center justify-between text-xs">
+            <div className="mt-3 flex items-center justify-between text-xs font-medium">
               <span className="text-stone-600">Thank-yous pending:</span>
-              <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full font-semibold">
+              <span className="px-2.5 py-0.5 bg-amber-100 text-amber-900 rounded-full font-bold">
                 {thankYouPending}
               </span>
             </div>
@@ -269,21 +228,21 @@ export default function DashboardOverviewPage() {
         {/* Metric 4: Logistics & Vendors */}
         <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-xs hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+            <span className="text-xs font-bold uppercase tracking-wider text-stone-600">
               Vendors & Rooms
             </span>
-            <div className="p-2.5 rounded-xl bg-purple-50 text-purple-600">
+            <div className="p-2.5 rounded-xl bg-purple-50 text-purple-700">
               <CheckCircle2 className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-2xl font-bold text-stone-900">
+            <div className="text-3xl font-extrabold text-stone-900 tracking-tight">
               {confirmedVendors} / {vendors.length}
             </div>
-            <p className="mt-1 text-xs text-stone-500">Key wedding vendors confirmed</p>
-            <div className="mt-3 flex items-center justify-between text-xs">
+            <p className="mt-1.5 text-xs text-stone-600 font-medium">Key wedding vendors confirmed</p>
+            <div className="mt-3 flex items-center justify-between text-xs font-medium">
               <span className="text-stone-600">Hotel Rooms Blocked:</span>
-              <span className="font-semibold text-stone-800">{rooms.length} suites</span>
+              <span className="font-bold text-stone-900">{rooms.length} suites</span>
             </div>
           </div>
         </div>

@@ -1,0 +1,17 @@
+{
+  "name": "ShaadiSutra — Indian Wedding Planner",
+  "short_name": "ShaadiSutra",
+  "description": "Culturally crafted Indian wedding management app in the USA",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#FAF8F5",
+  "theme_color": "#881337",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

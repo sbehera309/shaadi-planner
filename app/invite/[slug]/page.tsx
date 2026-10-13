@@ -302,7 +302,7 @@ export default function PublicWeddingInvitePage({
                     required
                     value={rsvpForm.name}
                     onChange={(e) => setRsvpForm({ ...rsvpForm, name: e.target.value })}
-                    placeholder="e.g. Vikram & Priya Singhania"
+                    placeholder="e.g. Vikram & Neha Singhania"
                     className="w-full px-4 py-2.5 rounded-xl border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-rose-500"
                   />
                 </div>

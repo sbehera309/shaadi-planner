@@ -252,12 +252,106 @@ export default function GuestsPage() {
         </span>
       </div>
 
-      {/* Guest Table */}
-      <div className="bg-white rounded-2xl border border-stone-200 shadow-xs overflow-hidden">
+      {/* Mobile Guest Cards View */}
+      <div className="sm:hidden space-y-3">
+        {filteredGuests.length === 0 ? (
+          <div className="bg-white p-8 rounded-2xl border border-stone-200 text-center">
+            <p className="text-sm font-semibold text-stone-700">No guests added yet</p>
+            <p className="text-xs text-stone-400 mt-1">
+              Add families to track RSVPs, side tags, and dietary preferences.
+            </p>
+          </div>
+        ) : (
+          filteredGuests.map((guest) => (
+            <div key={guest.id} className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h4 className="font-bold text-stone-900 text-sm">{guest.name}</h4>
+                  <p className="text-xs text-stone-500 font-medium">{guest.familyGroup}</p>
+                  <p className="text-[11px] text-stone-400 mt-0.5">{guest.phone} {guest.city && `• ${guest.city}`}</p>
+                </div>
+                <span
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                    guest.side === 'bride'
+                      ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                      : guest.side === 'groom'
+                      ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                      : 'bg-purple-100 text-purple-800 border border-purple-200'
+                  }`}
+                >
+                  {guest.side === 'bride' ? 'Bride' : guest.side === 'groom' ? 'Groom' : 'Mutual'}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="px-2.5 py-1 rounded-lg bg-stone-100 text-stone-700 font-semibold">
+                  👥 {guest.adultsCount + guest.kidsCount} ({guest.adultsCount}A {guest.kidsCount > 0 ? `+ ${guest.kidsCount}K` : ''})
+                </span>
+                <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 font-semibold">
+                  🍽️ {guest.dietaryPreference}
+                </span>
+                {guest.needsPickup && (
+                  <span className="px-2.5 py-1 rounded-lg bg-orange-100 text-orange-800 font-bold">
+                    ✈️ Airport Pickup
+                  </span>
+                )}
+                {guest.hotelAssigned && (
+                  <span className="px-2.5 py-1 rounded-lg bg-stone-100 text-stone-700 font-medium">
+                    🏨 {guest.hotelAssigned} {guest.roomNumber ? `#${guest.roomNumber}` : ''}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-stone-100 text-xs">
+                <div className="flex flex-wrap gap-1">
+                  {events.map((ev) => {
+                    const status = guest.eventRsvps[ev.id] || 'attending';
+                    return (
+                      <span
+                        key={ev.id}
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                          status === 'attending'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                            : status === 'declined'
+                            ? 'bg-rose-50 text-rose-700 border-rose-300 line-through'
+                            : 'bg-amber-50 text-amber-700 border-amber-300'
+                        }`}
+                      >
+                        {ev.type.slice(0, 3).toUpperCase()}
+                      </span>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => handleOpenEdit(guest)}
+                    className="p-1.5 px-3 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold text-xs transition-colors"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm(`Remove "${guest.name}" from guest list?`)) {
+                        deleteGuest(guest.id);
+                      }
+                    }}
+                    className="p-1.5 px-2.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Guest Table */}
+      <div className="hidden sm:block bg-white rounded-2xl border border-stone-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-stone-50 border-b border-stone-200 text-stone-500 font-semibold uppercase tracking-wider">
+              <tr className="bg-stone-100/90 border-b border-stone-200 text-stone-700 font-bold uppercase tracking-wider">
                 <th className="py-3 px-4">Guest / Family Unit</th>
                 <th className="py-3 px-4">Side</th>
                 <th className="py-3 px-4">Headcount</th>

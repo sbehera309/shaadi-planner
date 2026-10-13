@@ -190,12 +190,113 @@ export default function ShagunPage() {
         </div>
       </div>
 
-      {/* Shagun Table */}
-      <div className="bg-white rounded-2xl border border-stone-200 shadow-xs overflow-hidden">
+      {/* Mobile Shagun Card List */}
+      <div className="sm:hidden space-y-3">
+        {filteredRecords.length === 0 ? (
+          <div className="bg-white p-8 rounded-2xl border border-stone-200 text-center">
+            <p className="text-sm font-semibold text-stone-700">No gifts or cash lifafas logged yet</p>
+            <p className="text-xs text-stone-400 mt-1">
+              Log cash envelopes, gold keepsakes, and family reciprocity notes as you receive gifts.
+            </p>
+          </div>
+        ) : (
+          filteredRecords.map((rec) => (
+            <div key={rec.id} className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h4 className="font-bold text-stone-900 text-sm">{rec.giverName}</h4>
+                  <p className="text-xs text-stone-500 font-medium">{rec.relationship} {rec.city && `• ${rec.city}`}</p>
+                </div>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    rec.side === 'bride'
+                      ? 'bg-rose-100 text-rose-800'
+                      : rec.side === 'groom'
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-purple-100 text-purple-800'
+                  }`}
+                >
+                  {rec.side === 'bride' ? 'Bride Side' : 'Groom Side'}
+                </span>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-stone-50 text-xs flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] text-stone-500 block">Received At</span>
+                  <span className="font-semibold text-stone-800">{rec.receivedAtEvent}</span>
+                </div>
+                <div className="text-right">
+                  {rec.type === 'cash_lifafa' ? (
+                    <span className="font-extrabold text-emerald-700 text-base">
+                      {formatCurr(rec.amount || 0)}
+                    </span>
+                  ) : (
+                    <span className="font-bold text-amber-800 text-xs">
+                      ✨ {rec.giftDescription || 'Keepsake'}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {rec.pastGivenRecord && (
+                <div className="text-xs text-stone-700 bg-amber-50/90 p-2.5 rounded-xl border border-amber-200/60">
+                  <span className="font-semibold text-amber-900 block text-[10px]">Family Ledger / Past Given:</span>
+                  <span>{rec.pastGivenRecord}</span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between pt-2 border-t border-stone-100 text-xs">
+                <button
+                  onClick={() => toggleShagunThankYou(rec.id)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                    rec.thankYouSent
+                      ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                      : 'bg-amber-100 text-amber-900 hover:bg-amber-200'
+                  }`}
+                >
+                  {rec.thankYouSent ? (
+                    <>
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Thank You Sent</span>
+                    </>
+                  ) : (
+                    <>
+                      <Clock className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Thank You Pending</span>
+                    </>
+                  )}
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleOpenEdit(rec)}
+                    className="p-1.5 px-3 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold text-xs transition-colors"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm(`Delete shagun entry for "${rec.giverName}"?`)) {
+                        deleteShagunRecord(rec.id);
+                      }
+                    }}
+                    className="p-1.5 px-2.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Shagun Table */}
+      <div className="hidden sm:block bg-white rounded-2xl border border-stone-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-stone-50 border-b border-stone-200 text-stone-500 font-semibold uppercase tracking-wider">
+              <tr className="bg-stone-100/90 border-b border-stone-200 text-stone-700 font-bold uppercase tracking-wider">
                 <th className="py-3 px-4">Relative / Giver</th>
                 <th className="py-3 px-4">Side</th>
                 <th className="py-3 px-4">Gift / Amount</th>

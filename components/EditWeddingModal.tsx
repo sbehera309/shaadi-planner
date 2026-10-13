@@ -95,7 +95,7 @@ export const EditWeddingModal: React.FC<EditWeddingModalProps> = ({ isOpen, onCl
               required
               value={form.brideName}
               onChange={(e) => setForm({ ...form, brideName: e.target.value })}
-              placeholder="e.g. Priya Patel"
+              placeholder="e.g. Ananya Sharma"
               className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-rose-500"
             />
           </div>
@@ -106,7 +106,7 @@ export const EditWeddingModal: React.FC<EditWeddingModalProps> = ({ isOpen, onCl
               required
               value={form.groomName}
               onChange={(e) => setForm({ ...form, groomName: e.target.value })}
-              placeholder="e.g. Rohan Shah"
+              placeholder="e.g. Arjun Mehta"
               className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-rose-500"
             />
           </div>
@@ -177,7 +177,7 @@ export const EditWeddingModal: React.FC<EditWeddingModalProps> = ({ isOpen, onCl
               type="text"
               value={form.hashtag}
               onChange={(e) => setForm({ ...form, hashtag: e.target.value })}
-              placeholder="e.g. #PriyaKiShaadi"
+              placeholder="e.g. #ArjunKiAnanya"
               className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-rose-500"
             />
           </div>

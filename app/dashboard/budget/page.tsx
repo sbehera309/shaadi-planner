@@ -261,12 +261,94 @@ export default function BudgetPage() {
         </div>
       </div>
 
-      {/* Expenses Table */}
-      <div className="bg-white rounded-2xl border border-stone-200 shadow-xs overflow-hidden">
+      {/* Mobile Expenses Card List */}
+      <div className="sm:hidden space-y-3">
+        {filteredItems.length === 0 ? (
+          <div className="bg-white p-8 rounded-2xl border border-stone-200 text-center">
+            <p className="text-sm font-semibold text-stone-700">No expenses recorded yet</p>
+            <p className="text-xs text-stone-400 mt-1">
+              Click "Add Expense Item" to track vendor deposits and family split payments.
+            </p>
+          </div>
+        ) : (
+          filteredItems.map((item) => {
+            const pending = item.actualCost - item.paidAmount;
+            return (
+              <div key={item.id} className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h4 className="font-bold text-stone-900 text-sm">{item.title}</h4>
+                    <p className="text-xs text-stone-500 font-medium">{item.category}</p>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      item.paidBy === 'bride_side'
+                        ? 'bg-rose-100 text-rose-800'
+                        : item.paidBy === 'groom_side'
+                        ? 'bg-blue-100 text-blue-800'
+                        : item.paidBy === 'split_50_50'
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-purple-100 text-purple-800'
+                    }`}
+                  >
+                    {item.paidBy.replace('_', ' ').toUpperCase()}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-stone-50 text-xs">
+                  <div>
+                    <span className="text-stone-500 block text-[10px]">Total Cost</span>
+                    <strong className="text-stone-900 text-sm">{formatCurr(item.actualCost)}</strong>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-emerald-700 font-bold block">Paid: {formatCurr(item.paidAmount)}</span>
+                    <span className="text-rose-700 font-semibold text-[11px] block">Due: {formatCurr(pending)}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-stone-100 text-xs">
+                  <span
+                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                      item.status === 'paid'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : item.status === 'partial'
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-rose-100 text-rose-800'
+                    }`}
+                  >
+                    {item.status.toUpperCase()}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleOpenEdit(item)}
+                      className="p-1.5 px-3 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold text-xs transition-colors"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Delete "${item.title}"?`)) {
+                          deleteBudgetItem(item.id);
+                        }
+                      }}
+                      className="p-1.5 px-2.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Desktop Expenses Table */}
+      <div className="hidden sm:block bg-white rounded-2xl border border-stone-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-stone-50 border-b border-stone-200 text-stone-500 font-semibold uppercase tracking-wider">
+              <tr className="bg-stone-100/90 border-b border-stone-200 text-stone-700 font-bold uppercase tracking-wider">
                 <th className="py-3 px-4">Item / Description</th>
                 <th className="py-3 px-4">Category</th>
                 <th className="py-3 px-4">Cost</th>

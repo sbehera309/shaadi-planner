@@ -24,9 +24,9 @@ export const sampleUsaWeddingTemplate: {
   wedding: {
     id: 'w-usa-101',
     ownerId: 'new-user',
-    brideName: 'Priya Patel',
-    groomName: 'Rohan Shah',
-    slug: 'rohan-weds-priya',
+    brideName: 'Ananya Sharma',
+    groomName: 'Arjun Mehta',
+    slug: 'arjun-weds-ananya',
     startDate: '2026-10-24',
     endDate: '2026-10-25',
     city: 'New Jersey / New York Metro, USA',
@@ -34,7 +34,7 @@ export const sampleUsaWeddingTemplate: {
     currency: 'USD',
     targetBudget: 150000,
     story: 'From meeting in college in the US to planning our traditional Indian wedding celebration with family and friends.',
-    hashtag: '#RohanKiPriya',
+    hashtag: '#ArjunKiAnanya',
     coverImage: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1600&q=80',
     isConfigured: true,
   },
@@ -67,7 +67,7 @@ export const sampleUsaWeddingTemplate: {
           id: 'c-102',
           title: 'Bridal Henna Artist & Guest Mehndi Booths',
           category: 'Attire, Saafa & Jewellery' as const,
-          assignedTo: 'Henna by Priya Studio',
+          assignedTo: 'Divine Henna Artistry',
           isArranged: true,
         },
         {
@@ -189,7 +189,7 @@ export const sampleUsaWeddingTemplate: {
       colorTheme: '#1F2937',
       bannerGradient: 'from-slate-800 to-zinc-950',
       description: 'Formal speeches, couple first dance, 4-course banquet dinner, open bar, and dancing.',
-      coordinatorName: 'Priya Patel & Rohan Shah',
+      coordinatorName: 'Ananya Sharma & Arjun Mehta',
       coordinatorPhone: '+1 (555) 234-5678',
       checklist: [
         {
