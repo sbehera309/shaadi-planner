@@ -71,6 +71,28 @@ export default function PublicWeddingInvitePage({
 
   const daysLeft = calculateDaysLeft();
 
+  if (!wedding.isConfigured || !wedding.brideName) {
+    return (
+      <div className="min-h-screen bg-[#FAF6F0] flex items-center justify-center p-6 text-center">
+        <div className="bg-white p-10 rounded-3xl border border-stone-200 shadow-xl max-w-md w-full space-y-4">
+          <div className="w-16 h-16 bg-amber-50 text-amber-700 rounded-3xl flex items-center justify-center mx-auto shadow-inner">
+            <Sparkles className="w-8 h-8" />
+          </div>
+          <h1 className="text-2xl font-bold font-serif text-stone-900">No Wedding Published Yet</h1>
+          <p className="text-xs text-stone-600 leading-relaxed">
+            This wedding celebration link has not been set up or published yet. Please configure your wedding profile in the dashboard to generate your interactive guest invitation and RSVP.
+          </p>
+          <a
+            href="/dashboard"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-rose-700 to-amber-700 text-white font-semibold text-xs shadow-md shadow-rose-900/20 hover:opacity-95 transition-all w-full"
+          >
+            <span>Open Planner Dashboard</span>
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#FAF6F0] text-stone-800 font-sans selection:bg-rose-200">
       {/* Top Auspicious Sloka / Shubh Vivah Tagline */}

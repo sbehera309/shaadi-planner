@@ -16,10 +16,13 @@ import {
   HeartHandshake,
 } from 'lucide-react';
 import { useWedding } from '@/lib/store';
+import { EditWeddingModal } from './EditWeddingModal';
 
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
   const { wedding } = useWedding();
+
+  const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
 
   const navItems = [
     { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
@@ -32,34 +35,58 @@ export const Sidebar: React.FC = () => {
   ];
 
   return (
-    <aside className="w-64 bg-stone-900 text-stone-100 flex flex-col min-h-screen border-r border-stone-800 shrink-0">
-      {/* Brand Header */}
-      <div className="p-6 border-b border-stone-800">
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 via-rose-600 to-amber-300 flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
-            <HeartHandshake className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="font-bold text-lg text-amber-100 tracking-wide font-serif">ShaadiSutra</h1>
-            <p className="text-xs text-stone-400">Wedding Operating System</p>
-          </div>
-        </Link>
-      </div>
+    <>
+      <aside className="w-64 bg-stone-900 text-stone-100 flex flex-col min-h-screen border-r border-stone-800 shrink-0">
+        {/* Brand Header */}
+        <div className="p-6 border-b border-stone-800">
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 via-rose-600 to-amber-300 flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
+              <HeartHandshake className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="font-bold text-lg text-amber-100 tracking-wide font-serif">ShaadiSutra</h1>
+              <p className="text-xs text-stone-400">Wedding Operating System</p>
+            </div>
+          </Link>
+        </div>
 
-      {/* Couple Card */}
-      <div className="px-4 py-4 mx-3 my-3 rounded-xl bg-stone-800/60 border border-stone-700/50">
-        <div className="flex items-center gap-2 text-xs font-medium text-amber-400 mb-1">
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Active Wedding</span>
-        </div>
-        <p className="text-sm font-semibold text-white truncate">
-          {wedding.brideName} & {wedding.groomName}
-        </p>
-        <p className="text-xs text-stone-400 truncate">{wedding.city}</p>
-        <div className="mt-2 text-xs inline-block bg-rose-950/80 text-rose-300 px-2 py-0.5 rounded-full border border-rose-800/60">
-          {wedding.hashtag}
-        </div>
-      </div>
+        {/* Couple Card */}
+        {wedding.isConfigured && wedding.brideName ? (
+          <div className="px-4 py-3.5 mx-3 my-3 rounded-xl bg-stone-800/60 border border-stone-700/50">
+            <div className="flex items-center justify-between text-xs font-medium text-amber-400 mb-1">
+              <span className="flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Active Wedding</span>
+              </span>
+              <button
+                onClick={() => setIsEditModalOpen(true)}
+                className="text-[10px] text-stone-400 hover:text-amber-300 underline"
+              >
+                Edit
+              </button>
+            </div>
+            <p className="text-sm font-semibold text-white truncate">
+              {wedding.brideName} & {wedding.groomName}
+            </p>
+            {wedding.city && <p className="text-xs text-stone-400 truncate">{wedding.city}</p>}
+            {wedding.hashtag && (
+              <div className="mt-2 text-xs inline-block bg-rose-950/80 text-rose-300 px-2 py-0.5 rounded-full border border-rose-800/60">
+                {wedding.hashtag}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="px-4 py-3.5 mx-3 my-3 rounded-xl bg-stone-800/40 border border-dashed border-stone-700/60 text-center">
+            <p className="text-xs font-semibold text-stone-300">No Wedding Profile</p>
+            <p className="text-[11px] text-stone-500 mt-0.5">Start by setting up your wedding</p>
+            <button
+              onClick={() => setIsEditModalOpen(true)}
+              className="mt-2 w-full py-1.5 px-3 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-semibold transition-colors"
+            >
+              + Create Wedding
+            </button>
+          </div>
+        )}
 
       {/* Navigation Links */}
       <nav className="flex-1 px-3 py-2 space-y-1">
@@ -83,20 +110,28 @@ export const Sidebar: React.FC = () => {
         })}
       </nav>
 
-      {/* Guest Invitation Quick Link */}
-      <div className="p-4 border-t border-stone-800">
-        <Link
-          href={`/invite/${wedding.slug}`}
-          target="_blank"
-          className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-amber-600 to-rose-600 text-white font-medium text-xs hover:opacity-95 shadow-md shadow-rose-900/30 transition-all group"
-        >
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-amber-200" />
-            <span>Public Guest Invite</span>
+        {/* Guest Invitation Quick Link */}
+        {wedding.isConfigured && wedding.slug && (
+          <div className="p-4 border-t border-stone-800">
+            <Link
+              href={`/invite/${wedding.slug}`}
+              target="_blank"
+              className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-amber-600 to-rose-600 text-white font-medium text-xs hover:opacity-95 shadow-md shadow-rose-900/30 transition-all group"
+            >
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-200" />
+                <span>Public Guest Invite</span>
+              </div>
+              <ExternalLink className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            </Link>
           </div>
-          <ExternalLink className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-        </Link>
-      </div>
-    </aside>
+        )}
+      </aside>
+
+      <EditWeddingModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+      />
+    </>
   );
 };

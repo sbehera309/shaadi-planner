@@ -165,4 +165,5 @@ export interface WeddingProfile {
   story: string;
   hashtag: string;
   coverImage?: string;
+  isConfigured?: boolean;
 }

@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useWedding } from '@/lib/store';
+import { EditWeddingModal } from '@/components/EditWeddingModal';
 import {
   CalendarDays,
   Users,
@@ -19,6 +20,7 @@ import {
 
 export default function DashboardOverviewPage() {
   const { wedding, events, guests, budgetItems, vendors, shagunRecords, rooms, loadSampleTemplate } = useWedding();
+  const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
 
   // Budget calculations
   const totalTargetBudget = wedding.targetBudget || 150000;
@@ -58,29 +60,68 @@ export default function DashboardOverviewPage() {
     <div className="space-y-8 animate-in fade-in duration-300">
       {/* Top Banner */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-stone-900 via-rose-950 to-amber-950 p-8 text-white shadow-xl border border-amber-900/40">
-        <div className="relative z-10 max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold mb-3 border border-amber-500/30">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Royal Wedding Planning HQ</span>
+        {wedding.isConfigured && wedding.brideName ? (
+          <div className="relative z-10 max-w-2xl">
+            <div className="flex items-center justify-between gap-4 mb-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold border border-amber-500/30">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Wedding Planning HQ</span>
+              </div>
+              <button
+                onClick={() => setIsEditModalOpen(true)}
+                className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-amber-200 text-xs font-medium border border-white/20 transition-colors"
+              >
+                ✏️ Edit Profile
+              </button>
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-bold font-serif tracking-tight text-amber-100">
+              {wedding.brideName} & {wedding.groomName}
+            </h1>
+            <p className="mt-2 text-stone-300 text-sm leading-relaxed">
+              {wedding.venueName} {wedding.city && `• ${wedding.city}`}
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3 text-xs">
+              {wedding.hashtag && (
+                <span className="px-3 py-1.5 rounded-lg bg-stone-800/80 border border-stone-700/80">
+                  🏷️ <strong className="text-amber-200">{wedding.hashtag}</strong>
+                </span>
+              )}
+              <span className="px-3 py-1.5 rounded-lg bg-stone-800/80 border border-stone-700/80">
+                📅 {events.length} Festive Sub-Events
+              </span>
+              <span className="px-3 py-1.5 rounded-lg bg-stone-800/80 border border-stone-700/80">
+                👥 {totalHeadcount} Total Expected Guests
+              </span>
+            </div>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold font-serif tracking-tight text-amber-100">
-            {wedding.brideName} & {wedding.groomName}
-          </h1>
-          <p className="mt-2 text-stone-300 text-sm leading-relaxed">
-            {wedding.venueName} • {wedding.city}
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3 text-xs">
-            <span className="px-3 py-1.5 rounded-lg bg-stone-800/80 border border-stone-700/80">
-              🏷️ <strong className="text-amber-200">{wedding.hashtag}</strong>
-            </span>
-            <span className="px-3 py-1.5 rounded-lg bg-stone-800/80 border border-stone-700/80">
-              📅 {events.length} Festive Sub-Events
-            </span>
-            <span className="px-3 py-1.5 rounded-lg bg-stone-800/80 border border-stone-700/80">
-              👥 {totalHeadcount} Total Expected Guests
-            </span>
+        ) : (
+          <div className="relative z-10 max-w-2xl space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold border border-amber-500/30">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Welcome to ShaadiSutra</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold font-serif tracking-tight text-amber-100">
+              Welcome! Let's Plan Your Wedding
+            </h1>
+            <p className="text-stone-300 text-xs sm:text-sm leading-relaxed">
+              No wedding has been created yet. Personalize your planner with bride & groom names, wedding dates, and venue, or explore with our USA Indian wedding template.
+            </p>
+            <div className="pt-2 flex flex-wrap gap-3">
+              <button
+                onClick={() => setIsEditModalOpen(true)}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-rose-600 text-white font-bold text-xs shadow-md hover:opacity-95"
+              >
+                + Create Wedding Profile
+              </button>
+              <button
+                onClick={loadSampleTemplate}
+                className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-amber-200 text-xs font-semibold border border-white/20 transition-colors"
+              >
+                ✨ Load USA Wedding Template (Optional)
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Decorative gold emblem ring */}
         <div className="absolute right-0 top-0 bottom-0 w-96 bg-radial from-amber-500/10 to-transparent pointer-events-none opacity-50" />
@@ -341,19 +382,35 @@ export default function DashboardOverviewPage() {
                 <ArrowUpRight className="w-4 h-4 text-stone-400 group-hover:text-amber-700 transition-colors" />
               </Link>
 
-              <Link
-                href={`/invite/${wedding.slug}`}
-                target="_blank"
-                className="flex items-center justify-between p-3 rounded-xl bg-stone-50 hover:bg-purple-50/70 border border-stone-200 hover:border-purple-200 text-stone-800 text-xs font-medium transition-all group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-lg bg-purple-100 text-purple-700">
-                    <Sparkles className="w-4 h-4" />
+              {wedding.isConfigured && wedding.slug ? (
+                <Link
+                  href={`/invite/${wedding.slug}`}
+                  target="_blank"
+                  className="flex items-center justify-between p-3 rounded-xl bg-stone-50 hover:bg-purple-50/70 border border-stone-200 hover:border-purple-200 text-stone-800 text-xs font-medium transition-all group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 rounded-lg bg-purple-100 text-purple-700">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <span>Preview Guest E-Invite</span>
                   </div>
-                  <span>Preview Guest E-Invite</span>
-                </div>
-                <ArrowUpRight className="w-4 h-4 text-stone-400 group-hover:text-purple-700 transition-colors" />
-              </Link>
+                  <ArrowUpRight className="w-4 h-4 text-stone-400 group-hover:text-purple-700 transition-colors" />
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-stone-50 hover:bg-purple-50/70 border border-stone-200 hover:border-purple-200 text-stone-800 text-xs font-medium transition-all group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 rounded-lg bg-purple-100 text-purple-700">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <span>Set Up Wedding Profile</span>
+                  </div>
+                  <ArrowUpRight className="w-4 h-4 text-stone-400 group-hover:text-purple-700 transition-colors" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -409,6 +466,11 @@ export default function DashboardOverviewPage() {
           </div>
         </div>
       </div>
+
+      <EditWeddingModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+      />
     </div>
   );
 }

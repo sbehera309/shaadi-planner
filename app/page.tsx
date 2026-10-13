@@ -85,14 +85,16 @@ export default function LandingPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Link
-            href={`/invite/${wedding.slug}`}
-            target="_blank"
-            className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-stone-700 hover:text-rose-700 hover:bg-stone-100 transition-colors"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-            <span>Preview Guest E-Invite</span>
-          </Link>
+          {wedding.isConfigured && wedding.slug && (
+            <Link
+              href={`/invite/${wedding.slug}`}
+              target="_blank"
+              className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-stone-700 hover:text-rose-700 hover:bg-stone-100 transition-colors"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+              <span>Preview Guest E-Invite</span>
+            </Link>
+          )}
           <Link
             href="/dashboard"
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-700 to-amber-700 hover:opacity-95 text-white font-semibold text-xs shadow-md shadow-rose-900/20 transition-all"
@@ -128,26 +130,24 @@ export default function LandingPage() {
             <span>Launch Planner Dashboard</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
-          <Link
-            href={`/invite/${wedding.slug}`}
-            className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-white border border-stone-300 text-stone-800 font-bold text-sm shadow-sm hover:bg-stone-50 transition-all flex items-center justify-center gap-2"
-          >
-            <Sparkles className="w-4 h-4 text-amber-600" />
-            <span>View Guest Website & RSVP</span>
-            <ExternalLink className="w-3.5 h-3.5 text-stone-400" />
-          </Link>
-        </div>
-
-        {/* Live Wedding Status Pill */}
-        <div className="pt-8 flex justify-center">
-          <div className="px-5 py-2.5 rounded-full bg-white border border-stone-200/80 shadow-xs inline-flex items-center gap-3 text-xs text-stone-600">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>
-              Wedding Profile: <strong>{wedding.brideName} & {wedding.groomName}</strong> ({wedding.city})
-            </span>
-            <span className="text-stone-300">•</span>
-            <span className="text-amber-800 font-semibold">{wedding.hashtag}</span>
-          </div>
+          {wedding.isConfigured && wedding.slug ? (
+            <Link
+              href={`/invite/${wedding.slug}`}
+              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-white border border-stone-300 text-stone-800 font-bold text-sm shadow-sm hover:bg-stone-50 transition-all flex items-center justify-center gap-2"
+            >
+              <Sparkles className="w-4 h-4 text-amber-600" />
+              <span>View Guest Website & RSVP</span>
+              <ExternalLink className="w-3.5 h-3.5 text-stone-400" />
+            </Link>
+          ) : (
+            <Link
+              href="/dashboard"
+              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-white border border-stone-300 text-stone-800 font-bold text-sm shadow-sm hover:bg-stone-50 transition-all flex items-center justify-center gap-2"
+            >
+              <Sparkles className="w-4 h-4 text-amber-600" />
+              <span>Start Clean Wedding Plan</span>
+            </Link>
+          )}
         </div>
       </section>
 

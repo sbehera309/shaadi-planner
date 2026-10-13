@@ -83,13 +83,13 @@ interface WeddingContextType {
 const WeddingContext = createContext<WeddingContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
-  PROFILE: 'shaadi_v3_usa_profile',
-  EVENTS: 'shaadi_v3_usa_events',
-  GUESTS: 'shaadi_v3_usa_guests',
-  BUDGET: 'shaadi_v3_usa_budget',
-  VENDORS: 'shaadi_v3_usa_vendors',
-  SHAGUN: 'shaadi_v3_usa_shagun',
-  ROOMS: 'shaadi_v3_usa_rooms',
+  PROFILE: 'shaadi_v4_clean_profile',
+  EVENTS: 'shaadi_v4_clean_events',
+  GUESTS: 'shaadi_v4_clean_guests',
+  BUDGET: 'shaadi_v4_clean_budget',
+  VENDORS: 'shaadi_v4_clean_vendors',
+  SHAGUN: 'shaadi_v4_clean_shagun',
+  ROOMS: 'shaadi_v4_clean_rooms',
 };
 
 export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -148,7 +148,13 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [mounted, wedding, events, guests, budgetItems, vendors, shagunRecords, rooms]);
 
   const updateWeddingProfile = (profile: Partial<WeddingProfile>) => {
-    setWedding((prev) => ({ ...prev, ...profile }));
+    setWedding((prev) => {
+      const updated = { ...prev, ...profile, isConfigured: true };
+      if (!updated.slug && updated.brideName && updated.groomName) {
+        updated.slug = `${updated.groomName.toLowerCase()}-weds-${updated.brideName.toLowerCase()}`.replace(/\s+/g, '-');
+      }
+      return updated;
+    });
   };
 
   const addEvent = (eventData: Omit<WeddingEvent, 'id' | 'weddingId'>) => {

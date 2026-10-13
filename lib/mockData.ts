@@ -1,21 +1,21 @@
 import { WeddingProfile, WeddingEvent, Guest, BudgetItem, Vendor, ShagunRecord, RoomAllocation } from './types';
 
-// Default clean & minimal profile for new weddings in the USA (in USD)
+// Default clean & unconfigured profile for new weddings until user creates one
 export const initialWeddingProfile: WeddingProfile = {
-  id: 'w-usa-101',
+  id: 'w-new',
   ownerId: 'new-user',
-  brideName: 'Priya Patel',
-  groomName: 'Rohan Shah',
-  slug: 'rohan-weds-priya',
-  startDate: '2026-10-24',
-  endDate: '2026-10-25',
-  city: 'New Jersey / New York Metro, USA',
-  venueName: 'The Legacy Castle & Hyatt Regency',
+  brideName: '',
+  groomName: '',
+  slug: '',
+  startDate: '',
+  endDate: '',
+  city: '',
+  venueName: '',
   currency: 'USD',
-  targetBudget: 150000, // $150,000 USD
-  story: 'From meeting in college in the US to planning our traditional Indian wedding celebration with family and friends.',
-  hashtag: '#RohanKiPriya',
-  coverImage: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1600&q=80',
+  targetBudget: 0,
+  story: '',
+  hashtag: '',
+  isConfigured: false,
 };
 
 // Start completely clean & minimal as requested
@@ -37,7 +37,21 @@ export const sampleUsaWeddingTemplate: {
   rooms: RoomAllocation[];
 } = {
   wedding: {
-    ...initialWeddingProfile,
+    id: 'w-usa-101',
+    ownerId: 'new-user',
+    brideName: 'Priya Patel',
+    groomName: 'Rohan Shah',
+    slug: 'rohan-weds-priya',
+    startDate: '2026-10-24',
+    endDate: '2026-10-25',
+    city: 'New Jersey / New York Metro, USA',
+    venueName: 'The Legacy Castle & Hyatt Regency',
+    currency: 'USD',
+    targetBudget: 150000,
+    story: 'From meeting in college in the US to planning our traditional Indian wedding celebration with family and friends.',
+    hashtag: '#RohanKiPriya',
+    coverImage: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1600&q=80',
+    isConfigured: true,
   },
   events: [
     {
