@@ -38,6 +38,10 @@ interface WeddingContextType {
   // Wedding Profile
   createWeddingProfile: (profile: Omit<WeddingProfile, 'id' | 'ownerId'>) => void;
   updateWeddingProfile: (profile: Partial<WeddingProfile>) => void;
+  initializeGuidedWedding: (data: {
+    profile: Omit<WeddingProfile, 'id' | 'ownerId'>;
+    events: Array<Omit<WeddingEvent, 'id' | 'weddingId'>>;
+  }) => void;
 
   // Events & Checklist
   addEvent: (event: Omit<WeddingEvent, 'id' | 'weddingId'>) => void;
@@ -211,6 +215,40 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
       return updated;
     });
+  };
+
+  const initializeGuidedWedding = (data: {
+    profile: Omit<WeddingProfile, 'id' | 'ownerId'>;
+    events: Array<Omit<WeddingEvent, 'id' | 'weddingId'>>;
+  }) => {
+    const weddingId = `w-${Date.now()}`;
+    const bride = data.profile.brideName.trim();
+    const groom = data.profile.groomName.trim();
+    const slug =
+      data.profile.slug ||
+      (groom && bride
+        ? `${groom.toLowerCase()}-weds-${bride.toLowerCase()}`.replace(/[^a-z0-9]+/g, '-')
+        : 'our-wedding');
+
+    const newProfile: WeddingProfile = {
+      ...data.profile,
+      id: weddingId,
+      ownerId: 'user',
+      brideName: bride,
+      groomName: groom,
+      slug,
+      isConfigured: true,
+      currency: 'USD',
+    };
+
+    const newEvents: WeddingEvent[] = data.events.map((ev, index) => ({
+      ...ev,
+      id: `e-${Date.now()}-${index}`,
+      weddingId,
+    }));
+
+    setWedding(newProfile);
+    setEvents(newEvents);
   };
 
   const addEvent = (eventData: Omit<WeddingEvent, 'id' | 'weddingId'>) => {
@@ -432,6 +470,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         isDemoMode: !isFirebaseConfigured,
         createWeddingProfile,
         updateWeddingProfile,
+        initializeGuidedWedding,
         addEvent,
         updateEvent,
         deleteEvent,

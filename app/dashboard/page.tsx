@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useWedding } from '@/lib/store';
 import { EditWeddingModal } from '@/components/EditWeddingModal';
+import { GettingStartedWizard } from '@/components/GettingStartedWizard';
 import {
   CalendarDays,
   Users,
@@ -21,6 +22,7 @@ import {
 export default function DashboardOverviewPage() {
   const { wedding, events, guests, budgetItems, vendors, shagunRecords, rooms, loadSampleTemplate } = useWedding();
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+  const [isWizardOpen, setIsWizardOpen] = React.useState(false);
 
   // Budget calculations
   const totalTargetBudget = wedding?.targetBudget || 0;
@@ -116,19 +118,27 @@ export default function DashboardOverviewPage() {
             <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <button
                 type="button"
-                onClick={() => setIsEditModalOpen(true)}
-                className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-rose-700 to-amber-700 hover:from-rose-800 hover:to-amber-800 text-white font-bold text-sm shadow-md shadow-rose-900/20 transition-all flex items-center justify-center gap-2"
+                onClick={() => setIsWizardOpen(true)}
+                className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-rose-700 via-rose-800 to-amber-700 hover:from-rose-800 hover:to-amber-800 text-white font-bold text-sm shadow-md shadow-rose-900/25 transition-all flex items-center justify-center gap-2"
               >
-                <Sparkles className="w-4 h-4" />
-                <span>+ Create Your Wedding Profile</span>
+                <Sparkles className="w-4 h-4 text-amber-300" />
+                <span>✨ Launch Getting Started Guide</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(true)}
+                className="px-5 py-3.5 rounded-xl bg-white hover:bg-stone-50 text-stone-800 font-semibold text-sm border border-stone-300 transition-colors flex items-center justify-center gap-2"
+              >
+                <span>+ Manual Setup</span>
               </button>
 
               <button
                 type="button"
                 onClick={loadSampleTemplate}
-                className="px-5 py-3 rounded-xl bg-stone-50 hover:bg-stone-100 text-stone-700 hover:text-stone-900 font-semibold text-sm border border-stone-300 transition-colors flex items-center justify-center gap-2"
+                className="px-4 py-3.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-medium text-xs transition-colors flex items-center justify-center gap-1.5"
               >
-                <span>✨ Load Sample Wedding Template</span>
+                <span>Sample Template</span>
               </button>
             </div>
           </div>
@@ -480,6 +490,11 @@ export default function DashboardOverviewPage() {
       <EditWeddingModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
+      />
+
+      <GettingStartedWizard
+        isOpen={isWizardOpen}
+        onClose={() => setIsWizardOpen(false)}
       />
     </div>
   );
