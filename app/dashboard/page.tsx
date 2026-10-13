@@ -248,6 +248,14 @@ export default function DashboardOverviewPage() {
                   <p className="text-xs text-rose-800 font-medium mt-1">
                     👗 Dress Code: {event.dressCode}
                   </p>
+                  {event.checklist && event.checklist.length > 0 && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-amber-900 bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-200/70 inline-flex mt-1 font-medium">
+                      <span>📦</span>
+                      <span>
+                        {event.checklist.filter((c) => c.isArranged).length}/{event.checklist.length} Essentials Arranged (e.g. Baraat ride, samagri, saafas)
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="sm:text-right shrink-0 border-t sm:border-t-0 pt-3 sm:pt-0 border-stone-100">

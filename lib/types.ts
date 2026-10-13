@@ -15,6 +15,23 @@ export type SubEventType =
   | 'reception' 
   | 'custom';
 
+export type RequirementCategory =
+  | 'Transport & Entry'
+  | 'Puja Samagri & Rituals'
+  | 'Decor, Props & Staging'
+  | 'Music, Sound & FX'
+  | 'Attire, Saafa & Jewellery'
+  | 'Food, Drinks & Favors';
+
+export interface EventChecklistItem {
+  id: string;
+  title: string;
+  category: RequirementCategory;
+  assignedTo?: string; // e.g. "Groom's Brother", "Decor Vendor", "Planner"
+  isArranged: boolean;
+  notes?: string;
+}
+
 export interface WeddingEvent {
   id: string;
   weddingId: string;
@@ -33,6 +50,7 @@ export interface WeddingEvent {
   description: string;
   coordinatorName: string;
   coordinatorPhone: string;
+  checklist: EventChecklistItem[];
 }
 
 export interface Guest {

@@ -10,6 +10,7 @@ import {
   ShagunRecord,
   RoomAllocation,
   RsvpStatus,
+  EventChecklistItem,
 } from './types';
 import {
   initialWeddingProfile,
@@ -36,10 +37,13 @@ interface WeddingContextType {
   // Wedding Profile
   updateWeddingProfile: (profile: Partial<WeddingProfile>) => void;
 
-  // Events
+  // Events & Checklist
   addEvent: (event: Omit<WeddingEvent, 'id' | 'weddingId'>) => void;
   updateEvent: (id: string, event: Partial<WeddingEvent>) => void;
   deleteEvent: (id: string) => void;
+  addChecklistItem: (eventId: string, item: Omit<EventChecklistItem, 'id'>) => void;
+  toggleChecklistItem: (eventId: string, itemId: string) => void;
+  deleteChecklistItem: (eventId: string, itemId: string) => void;
 
   // Guests
   addGuest: (guest: Omit<Guest, 'id' | 'weddingId'>) => void;
@@ -160,6 +164,46 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const deleteEvent = (id: string) => {
     setEvents((prev) => prev.filter((ev) => ev.id !== id));
+  };
+
+  const addChecklistItem = (eventId: string, item: Omit<EventChecklistItem, 'id'>) => {
+    const newItem: EventChecklistItem = {
+      ...item,
+      id: `c-${Date.now()}`,
+    };
+    setEvents((prev) =>
+      prev.map((ev) =>
+        ev.id === eventId
+          ? { ...ev, checklist: [...(ev.checklist || []), newItem] }
+          : ev
+      )
+    );
+  };
+
+  const toggleChecklistItem = (eventId: string, itemId: string) => {
+    setEvents((prev) =>
+      prev.map((ev) => {
+        if (ev.id !== eventId) return ev;
+        return {
+          ...ev,
+          checklist: (ev.checklist || []).map((c) =>
+            c.id === itemId ? { ...c, isArranged: !c.isArranged } : c
+          ),
+        };
+      })
+    );
+  };
+
+  const deleteChecklistItem = (eventId: string, itemId: string) => {
+    setEvents((prev) =>
+      prev.map((ev) => {
+        if (ev.id !== eventId) return ev;
+        return {
+          ...ev,
+          checklist: (ev.checklist || []).filter((c) => c.id !== itemId),
+        };
+      })
+    );
   };
 
   const addGuest = (guestData: Omit<Guest, 'id' | 'weddingId'>) => {
@@ -316,6 +360,9 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addEvent,
         updateEvent,
         deleteEvent,
+        addChecklistItem,
+        toggleChecklistItem,
+        deleteChecklistItem,
         addGuest,
         updateGuest,
         deleteGuest,
