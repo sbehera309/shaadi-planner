@@ -1,5 +1,6 @@
 import './globals.css';
 import { WeddingProvider } from '@/lib/store';
+import { AuthProvider } from '@/lib/authContext';
 import type { Metadata, Viewport } from 'next';
 
 export const viewport: Viewport = {
@@ -34,7 +35,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen antialiased bg-[#FAF8F5] text-slate-800 selection:bg-rose-100 selection:text-rose-900">
-        <WeddingProvider>{children}</WeddingProvider>
+        <AuthProvider>
+          <WeddingProvider>{children}</WeddingProvider>
+        </AuthProvider>
       </body>
     </html>
   );

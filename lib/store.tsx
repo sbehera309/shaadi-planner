@@ -161,9 +161,19 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       localStorage.setItem(STORAGE_KEYS.SHAGUN, JSON.stringify(shagunRecords));
       localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(rooms));
 
-      // Optional Firestore sync when configured
+      // Real-time Cloud Firestore sync when configured
       if (isFirebaseConfigured && db && wedding) {
-        setDoc(doc(db, 'weddings', wedding.id), wedding, { merge: true }).catch(() => {});
+        const cloudData = {
+          profile: wedding,
+          events,
+          guests,
+          budgetItems,
+          vendors,
+          shagunRecords,
+          rooms,
+          updatedAt: new Date().toISOString(),
+        };
+        setDoc(doc(db, 'weddings', wedding.id), cloudData, { merge: true }).catch(() => {});
       }
     } catch (e) {
       console.error('Failed to sync changes:', e);

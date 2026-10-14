@@ -2,8 +2,10 @@
 
 import React, { useState } from 'react';
 import { useWedding } from '@/lib/store';
+import { useAuth } from '@/lib/authContext';
 import { EditWeddingModal } from './EditWeddingModal';
-import { Calendar, Share2, Check, RefreshCw, Database, Menu } from 'lucide-react';
+import { AuthModal } from './AuthModal';
+import { Calendar, Share2, Check, RefreshCw, Database, Menu, LogIn, LogOut, User as UserIcon, Cloud, CloudOff } from 'lucide-react';
 
 interface NavbarProps {
   onOpenMobileMenu?: () => void;
@@ -11,7 +13,10 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
   const { wedding, isDemoMode, resetToDefaultData } = useWedding();
+  const { user, logout, isFirebaseConfigured } = useAuth();
   const [copied, setCopied] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   // Calculate days left
   const calculateDaysLeft = () => {
@@ -75,7 +80,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
           )}
         </div>
 
-        {/* Right: Countdown, Mode badge, and Action buttons */}
+        {/* Right: Countdown, Cloud Sync badge, Auth button & Actions */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {/* Countdown Pill */}
           {wedding && wedding.isConfigured && wedding.startDate && (
@@ -86,11 +91,89 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
             </div>
           )}
 
-          {/* Database Badge - hide on small mobile to avoid crowding */}
-          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-stone-100 text-stone-700 border border-stone-200 shrink-0">
-            <Database className="w-3.5 h-3.5 text-stone-500" />
-            <span>{isDemoMode ? 'Local Storage' : 'Firebase Connected'}</span>
+          {/* Cloud Sync Status Badge */}
+          <div
+            className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border shrink-0 ${
+              user
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                : isFirebaseConfigured
+                ? 'bg-amber-50 text-amber-900 border-amber-200'
+                : 'bg-stone-100 text-stone-700 border-stone-200'
+            }`}
+            title={
+              user
+                ? `Signed in as ${user.email} (Cloud Sync Active)`
+                : isFirebaseConfigured
+                ? 'Firebase configured. Sign in to sync across devices.'
+                : 'Using Local Storage'
+            }
+          >
+            {user ? (
+              <Cloud className="w-3.5 h-3.5 text-emerald-600" />
+            ) : isFirebaseConfigured ? (
+              <Database className="w-3.5 h-3.5 text-amber-600" />
+            ) : (
+              <CloudOff className="w-3.5 h-3.5 text-stone-400" />
+            )}
+            <span>
+              {user ? 'Cloud Synced' : isFirebaseConfigured ? 'Firebase Ready' : 'Local Storage'}
+            </span>
           </div>
+
+          {/* User Profile or Sign In Button */}
+          {user ? (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="flex items-center gap-2 p-1 pl-2 pr-2.5 rounded-full border border-stone-200 hover:border-stone-300 hover:bg-stone-50 transition-all text-xs"
+              >
+                {user.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt={user.displayName || 'User'}
+                    className="w-6 h-6 rounded-full object-cover border border-stone-200"
+                  />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-rose-950 text-white flex items-center justify-center font-bold text-[10px]">
+                    {(user.displayName || user.email || 'U')[0].toUpperCase()}
+                  </div>
+                )}
+                <span className="font-semibold text-stone-700 max-w-[100px] truncate hidden sm:inline">
+                  {user.displayName?.split(' ')[0] || user.email?.split('@')[0]}
+                </span>
+              </button>
+
+              {isUserMenuOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-stone-200 py-2 z-50 text-xs animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-3 py-2 border-b border-stone-100">
+                    <p className="font-semibold text-stone-800 truncate">{user.displayName || 'Vivaah Couple'}</p>
+                    <p className="text-stone-500 text-[11px] truncate">{user.email}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      logout();
+                    }}
+                    className="w-full text-left px-3 py-2 text-rose-700 hover:bg-rose-50 flex items-center gap-2 font-medium"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsAuthModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-stone-300 hover:border-stone-400 hover:bg-stone-50 text-stone-700 text-xs font-semibold transition-all shadow-2xs"
+            >
+              <LogIn className="w-3.5 h-3.5 text-stone-500" />
+              <span>Sign In</span>
+            </button>
+          )}
 
           {/* Reset Clean State button */}
           <button
@@ -141,6 +224,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
       <EditWeddingModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
+      />
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
       />
     </>
   );
