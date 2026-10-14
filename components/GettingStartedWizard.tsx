@@ -389,20 +389,20 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl shadow-2xl border border-stone-200 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center p-0 sm:p-6 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border-t sm:border border-stone-200 w-full max-w-4xl h-[100dvh] sm:h-auto sm:max-h-[90vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
         {/* Wizard Header with Progress Bar */}
-        <div className="p-5 sm:p-6 border-b border-stone-100 bg-stone-50/70 shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-600 flex items-center justify-center text-white shadow-xs">
+        <div className="p-4 sm:p-6 pt-[max(1.25rem,env(safe-area-inset-top))] sm:pt-6 border-b border-stone-100 bg-stone-50/95 backdrop-blur-sm shrink-0 z-10">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-600 flex items-center justify-center text-white shadow-xs shrink-0">
                 <Sparkles className="w-4 h-4" />
               </div>
-              <div>
-                <h2 className="font-bold text-base sm:text-lg text-stone-900 font-serif">
+              <div className="min-w-0">
+                <h2 className="font-bold text-base sm:text-lg text-stone-900 font-serif truncate">
                   Wedding Planning Starter Guide
                 </h2>
-                <p className="text-xs text-stone-500 font-medium">
+                <p className="text-xs text-stone-500 font-medium truncate">
                   Step {currentStep} of 3:{' '}
                   {currentStep === 1
                     ? 'Couple & Celebration Window'
@@ -415,7 +415,7 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
 
             <button
               onClick={onClose}
-              className="p-2 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-200/50 transition-colors"
+              className="w-10 h-10 rounded-full bg-stone-200/80 hover:bg-stone-300 active:bg-stone-400 flex items-center justify-center text-stone-700 transition-colors shrink-0"
               aria-label="Close guide"
             >
               <X className="w-5 h-5" />
@@ -423,7 +423,7 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
           </div>
 
           {/* Stepper Progress bar */}
-          <div className="mt-4 grid grid-cols-3 gap-2">
+          <div className="mt-3.5 grid grid-cols-3 gap-2">
             <div className={`h-1.5 rounded-full transition-all ${currentStep >= 1 ? 'bg-rose-700' : 'bg-stone-200'}`} />
             <div className={`h-1.5 rounded-full transition-all ${currentStep >= 2 ? 'bg-rose-700' : 'bg-stone-200'}`} />
             <div className={`h-1.5 rounded-full transition-all ${currentStep >= 3 ? 'bg-rose-700' : 'bg-stone-200'}`} />
@@ -1121,12 +1121,12 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
         </div>
 
         {/* Wizard Footer Controls */}
-        <div className="p-4 sm:p-6 border-t border-stone-200 bg-stone-50 flex items-center justify-between shrink-0">
+        <div className="p-4 sm:p-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-6 border-t border-stone-200 bg-white sm:bg-stone-50 flex items-center justify-between gap-3 shrink-0 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] sm:shadow-none z-20">
           {currentStep > 1 ? (
             <button
               type="button"
               onClick={() => setCurrentStep((prev) => (prev - 1) as any)}
-              className="px-5 py-2.5 rounded-xl border border-stone-300 bg-white hover:bg-stone-100 text-stone-700 font-semibold text-xs transition-colors flex items-center gap-1.5"
+              className="h-12 sm:h-10 px-4 sm:px-5 rounded-xl border border-stone-300 bg-white hover:bg-stone-100 active:bg-stone-200 text-stone-700 font-bold text-xs sm:text-sm transition-colors flex items-center gap-1.5 shrink-0"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Back</span>
@@ -1135,7 +1135,7 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 rounded-xl text-stone-500 hover:text-stone-700 font-semibold text-xs transition-colors"
+              className="h-12 sm:h-10 px-4 rounded-xl text-stone-500 hover:text-stone-700 active:bg-stone-100 font-semibold text-xs sm:text-sm transition-colors shrink-0"
             >
               Cancel
             </button>
@@ -1153,19 +1153,19 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
                 }
                 setCurrentStep((prev) => (prev + 1) as any);
               }}
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-rose-700 to-amber-700 hover:from-rose-800 hover:to-amber-800 text-white font-bold text-xs shadow-md shadow-rose-900/20 transition-all flex items-center gap-2"
+              className="h-12 sm:h-10 px-6 sm:px-7 rounded-xl bg-gradient-to-r from-rose-700 via-rose-800 to-amber-700 hover:opacity-95 active:scale-98 text-white font-bold text-xs sm:text-sm shadow-md shadow-rose-900/25 transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial"
             >
-              <span>Next: {currentStep === 1 ? 'Choose Celebrations' : 'Review Event Checklists'}</span>
+              <span>Next: {currentStep === 1 ? 'Choose Celebrations' : 'Review Checklists'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           ) : (
             <button
               type="button"
               onClick={handleFinishWizard}
-              className="px-7 py-3 rounded-xl bg-gradient-to-r from-emerald-700 via-rose-700 to-amber-700 hover:opacity-95 text-white font-bold text-sm shadow-lg shadow-rose-900/20 transition-all flex items-center gap-2"
+              className="h-12 sm:h-11 px-6 sm:px-8 rounded-xl bg-gradient-to-r from-emerald-700 via-rose-700 to-amber-700 hover:opacity-95 active:scale-98 text-white font-bold text-xs sm:text-sm shadow-lg shadow-rose-900/25 transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial"
             >
-              <Sparkles className="w-4 h-4 text-amber-200" />
-              <span>Generate My Custom Wedding Plan</span>
+              <Sparkles className="w-4 h-4 text-amber-200 shrink-0" />
+              <span>Generate Wedding Plan</span>
             </button>
           )}
         </div>

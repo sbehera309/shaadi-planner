@@ -207,28 +207,28 @@ export const EventPlanningWizard: React.FC<EventPlanningWizardProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl shadow-2xl border border-stone-200 w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center p-0 sm:p-6 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border-t sm:border border-stone-200 w-full max-w-3xl h-[100dvh] sm:h-auto sm:max-h-[90vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
         {/* Header with event theme gradient */}
-        <div className={`p-5 sm:p-6 bg-gradient-to-r ${blueprint?.bannerGradient || 'from-rose-800 to-amber-800'} text-white shrink-0`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-xs">
+        <div className={`p-4 sm:p-6 pt-[max(1.25rem,env(safe-area-inset-top))] sm:pt-6 bg-gradient-to-r ${blueprint?.bannerGradient || 'from-rose-800 to-amber-800'} text-white shrink-0 z-10`}>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-xs shrink-0">
                 {event.type.toUpperCase()} GUIDE
               </span>
-              <span className="text-xs text-white/80">• Step {currentStep} of 4</span>
+              <span className="text-xs text-white/80 shrink-0">• Step {currentStep} of 4</span>
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-xl hover:bg-white/20 text-white transition-colors"
+              className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 active:bg-white/40 flex items-center justify-center text-white transition-colors shrink-0"
               aria-label="Close planning assistant"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          <h2 className="text-xl sm:text-2xl font-bold font-serif mt-2">{event.name}</h2>
-          <p className="text-xs text-white/90 mt-1 max-w-xl leading-relaxed">
+          <h2 className="text-xl sm:text-2xl font-bold font-serif mt-2 truncate">{event.name}</h2>
+          <p className="text-xs text-white/90 mt-1 max-w-xl leading-relaxed line-clamp-2">
             {blueprint?.tagline || 'Plan this celebration step-by-step: venue, food, music, and key decision checklist.'}
           </p>
 
@@ -644,12 +644,12 @@ export const EventPlanningWizard: React.FC<EventPlanningWizardProps> = ({
         </div>
 
         {/* Footer controls */}
-        <div className="p-4 sm:p-6 border-t border-stone-200 bg-stone-50 flex items-center justify-between shrink-0">
+        <div className="p-4 sm:p-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-6 border-t border-stone-200 bg-white sm:bg-stone-50 flex items-center justify-between gap-3 shrink-0 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] sm:shadow-none z-20">
           {currentStep > 1 ? (
             <button
               type="button"
               onClick={() => setCurrentStep((prev) => (prev - 1) as any)}
-              className="px-4 py-2.5 rounded-xl border border-stone-300 bg-white hover:bg-stone-100 text-stone-700 font-semibold text-xs transition-colors flex items-center gap-1.5"
+              className="h-12 sm:h-10 px-4 sm:px-5 rounded-xl border border-stone-300 bg-white hover:bg-stone-100 active:bg-stone-200 text-stone-700 font-bold text-xs sm:text-sm transition-colors flex items-center gap-1.5 shrink-0"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Back</span>
@@ -658,7 +658,7 @@ export const EventPlanningWizard: React.FC<EventPlanningWizardProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl text-stone-500 hover:text-stone-700 font-semibold text-xs transition-colors"
+              className="h-12 sm:h-10 px-4 rounded-xl text-stone-500 hover:text-stone-700 active:bg-stone-100 font-semibold text-xs sm:text-sm transition-colors shrink-0"
             >
               Cancel
             </button>
@@ -668,7 +668,7 @@ export const EventPlanningWizard: React.FC<EventPlanningWizardProps> = ({
             <button
               type="button"
               onClick={() => setCurrentStep((prev) => (prev + 1) as any)}
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-rose-700 to-amber-700 hover:from-rose-800 hover:to-amber-800 text-white font-bold text-xs shadow-md shadow-rose-900/20 transition-all flex items-center gap-2"
+              className="h-12 sm:h-10 px-6 sm:px-7 rounded-xl bg-gradient-to-r from-rose-700 via-rose-800 to-amber-700 hover:opacity-95 active:scale-98 text-white font-bold text-xs sm:text-sm shadow-md shadow-rose-900/25 transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial"
             >
               <span>Next Step</span>
               <ArrowRight className="w-4 h-4" />
@@ -677,10 +677,10 @@ export const EventPlanningWizard: React.FC<EventPlanningWizardProps> = ({
             <button
               type="button"
               onClick={handleSaveEventPlan}
-              className="px-7 py-3 rounded-xl bg-gradient-to-r from-emerald-700 via-rose-700 to-amber-700 hover:opacity-95 text-white font-bold text-xs sm:text-sm shadow-lg shadow-rose-900/20 transition-all flex items-center gap-2"
+              className="h-12 sm:h-11 px-6 sm:px-8 rounded-xl bg-gradient-to-r from-emerald-700 via-rose-700 to-amber-700 hover:opacity-95 active:scale-98 text-white font-bold text-xs sm:text-sm shadow-lg shadow-rose-900/25 transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>Save & Complete {event.name.split(' ')[0]} Plan</span>
+              <span>Save {event.name.split(' ')[0]} Plan</span>
             </button>
           )}
         </div>

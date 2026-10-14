@@ -48,7 +48,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
           <button
             type="button"
             onClick={onOpenMobileMenu}
-            className="p-2 -ml-1 rounded-xl text-stone-700 hover:text-stone-900 hover:bg-stone-100 lg:hidden transition-colors shrink-0"
+            className="w-10 h-10 -ml-1 rounded-xl text-stone-700 hover:text-stone-900 hover:bg-stone-100 active:bg-stone-200 flex items-center justify-center lg:hidden transition-colors shrink-0"
             aria-label="Open mobile navigation menu"
           >
             <Menu className="w-5 h-5" />

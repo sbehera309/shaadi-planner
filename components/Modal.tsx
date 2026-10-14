@@ -44,30 +44,32 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center p-0 sm:p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
-        className={`bg-white rounded-2xl shadow-2xl border border-stone-200 w-full ${maxWidthClass} max-h-[94vh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150`}
+        className={`bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl border-t sm:border border-stone-200 w-full ${maxWidthClass} max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200`}
       >
         {/* Header */}
-        <div className="px-4 py-3.5 sm:px-6 sm:py-4 border-b border-stone-100 flex items-center justify-between bg-stone-50/70 shrink-0">
+        <div className="px-5 py-4 pt-[max(1.25rem,env(safe-area-inset-top))] sm:pt-4 sm:px-6 border-b border-stone-100 flex items-center justify-between bg-stone-50/90 shrink-0 z-10">
           <h3 className="font-semibold text-base sm:text-lg text-stone-900 font-serif truncate pr-2">
             {title}
           </h3>
           <button
             onClick={onClose}
-            className="p-2 -mr-1 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-200/50 transition-colors shrink-0"
+            className="w-9 h-9 rounded-full bg-stone-200/80 hover:bg-stone-300 active:bg-stone-400 flex items-center justify-center text-stone-700 transition-colors shrink-0"
             aria-label="Close dialog"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 overscroll-contain">{children}</div>
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 overscroll-contain pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-6">
+          {children}
+        </div>
       </div>
     </div>
   );

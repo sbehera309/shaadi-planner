@@ -48,7 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose })
   const renderContent = (isMobile: boolean) => (
     <div className="flex flex-col h-full overflow-y-auto">
       {/* Brand Header */}
-      <div className="p-5 sm:p-6 border-b border-stone-800 flex items-center justify-between">
+      <div className={`p-5 sm:p-6 border-b border-stone-800 flex items-center justify-between shrink-0 ${isMobile ? 'pt-[max(1.25rem,env(safe-area-inset-top))]' : ''}`}>
         <Link
           href="/"
           onClick={() => isMobile && onMobileClose?.()}
@@ -138,7 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose })
       </nav>
 
       {/* Excel Sync & Guest Invitation Footer Actions */}
-      <div className="p-4 border-t border-stone-800 mt-auto space-y-2">
+      <div className={`p-4 border-t border-stone-800 mt-auto space-y-2 shrink-0 ${isMobile ? 'pb-[max(1.5rem,env(safe-area-inset-bottom))]' : ''}`}>
         <button
           type="button"
           onClick={() => {
