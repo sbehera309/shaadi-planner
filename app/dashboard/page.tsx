@@ -57,8 +57,8 @@ export default function DashboardOverviewPage() {
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [selectedEventToPlan, setSelectedEventToPlan] = useState<WeddingEvent | null>(null);
 
-  // Event Sorting & Prioritization State
-  const [sortOrder, setSortOrder] = useState<EventSortOrder>('priority');
+  // Event Sorting & Prioritization State (defaults to chronological sequence)
+  const [sortOrder, setSortOrder] = useState<EventSortOrder>('chronological');
 
   // Budget calculations in USD
   const totalTargetBudget = wedding?.targetBudget || 0;
@@ -329,6 +329,20 @@ export default function DashboardOverviewPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
+                  onClick={() => setSortOrder('chronological')}
+                  className={`px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
+                    sortOrder === 'chronological'
+                      ? 'bg-rose-950 text-white shadow-xs ring-1 ring-rose-500/50'
+                      : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
+                  }`}
+                  title="Traditional Desi weekend order: Mehndi -> Sangeet -> Pheras -> Reception"
+                >
+                  <Calendar className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Weekend Timeline (Chronological)</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setSortOrder('priority')}
                   className={`px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
                     sortOrder === 'priority'
@@ -339,20 +353,6 @@ export default function DashboardOverviewPage() {
                 >
                   <Flame className="w-3.5 h-3.5 text-amber-400" />
                   <span>Planning Priority (High Lead Time)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setSortOrder('chronological')}
-                  className={`px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
-                    sortOrder === 'chronological'
-                      ? 'bg-rose-950 text-white shadow-xs ring-1 ring-rose-500/50'
-                      : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
-                  }`}
-                  title="Traditional Desi weekend order: Mehndi -> Sangeet -> Pheras -> Reception"
-                >
-                  <Calendar className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Weekend Timeline</span>
                 </button>
 
                 <button

@@ -26,6 +26,7 @@ export interface EventBlueprint {
   venueType: string;
   planningPriority: number; // 1 = highest lead-time, e.g. Baraat/Pheras, 2 = Sangeet, 3 = Reception
   chronologicalRank: number; // 1 = Roka, 2 = Mehndi, 3 = Haldi, 4 = Sangeet, 5 = Pheras, 6 = Reception
+  timelinePhase: string; // e.g. "Pre-Wedding Kick-off", "The Wedding Day", "Grand Finale • Last Day"
   priorityBadge: {
     label: string;
     level: 'critical' | 'high' | 'medium';
@@ -47,6 +48,7 @@ export const EVENT_BLUEPRINTS: Record<SubEventType, EventBlueprint> = {
     venueType: 'Grand Mandap Lawn or Estate Ballroom',
     planningPriority: 1, // Core ceremony: highest lead time
     chronologicalRank: 5,
+    timelinePhase: 'The Wedding Day',
     priorityBadge: {
       label: '🔥 Core Ceremony (Highest Lead Time)',
       level: 'critical',
@@ -204,6 +206,7 @@ export const EVENT_BLUEPRINTS: Record<SubEventType, EventBlueprint> = {
     venueType: 'Ballroom with Hardwood Dance Floor & Sound Permit',
     planningPriority: 2, // High priority party
     chronologicalRank: 4,
+    timelinePhase: 'Eve of Wedding Night',
     priorityBadge: {
       label: '⚡ High-Impact Party (Late Sound Curfew)',
       level: 'high',
@@ -297,6 +300,7 @@ export const EVENT_BLUEPRINTS: Record<SubEventType, EventBlueprint> = {
     venueType: 'Luxury Hotel Ballroom / Country Club Estate',
     planningPriority: 3, // High priority gala
     chronologicalRank: 6,
+    timelinePhase: 'Finale • Last Day',
     priorityBadge: {
       label: '🥂 Grand Gala (Ballroom & Catering)',
       level: 'high',
@@ -414,6 +418,7 @@ export const EVENT_BLUEPRINTS: Record<SubEventType, EventBlueprint> = {
     venueType: 'Garden Terrace or Boutique Banquet Lounge',
     planningPriority: 4,
     chronologicalRank: 2,
+    timelinePhase: 'Pre-Wedding Henna Lounge',
     priorityBadge: {
       label: '🌿 Festive Lounge (Henna Artists)',
       level: 'medium',
@@ -494,6 +499,7 @@ export const EVENT_BLUEPRINTS: Record<SubEventType, EventBlueprint> = {
     venueType: 'Courtyard, Lawn or Poolside Area with Wash Stations',
     planningPriority: 5,
     chronologicalRank: 3,
+    timelinePhase: 'Pre-Wedding Morning Ritual',
     priorityBadge: {
       label: '💛 Joyful Ritual (Turmeric & Floral)',
       level: 'medium',
@@ -560,6 +566,7 @@ export const EVENT_BLUEPRINTS: Record<SubEventType, EventBlueprint> = {
     colorTheme: '#B45309',
     planningPriority: 6,
     chronologicalRank: 1,
+    timelinePhase: 'Pre-Wedding Kick-off',
     priorityBadge: {
       label: '💍 Kick-off (Intimate Gathering)',
       level: 'medium',
@@ -617,6 +624,7 @@ export const EVENT_BLUEPRINTS: Record<SubEventType, EventBlueprint> = {
     colorTheme: '#C2410C',
     planningPriority: 1,
     chronologicalRank: 5,
+    timelinePhase: 'Procession Parade',
     priorityBadge: {
       label: '🐎 Procession & Permits',
       level: 'critical',
@@ -653,6 +661,7 @@ export const EVENT_BLUEPRINTS: Record<SubEventType, EventBlueprint> = {
     colorTheme: '#4C0519',
     planningPriority: 5,
     chronologicalRank: 6,
+    timelinePhase: 'Farewell Send-off',
     priorityBadge: {
       label: '🚗 Send-off & Transport',
       level: 'medium',
@@ -689,6 +698,7 @@ export const EVENT_BLUEPRINTS: Record<SubEventType, EventBlueprint> = {
     colorTheme: '#374151',
     planningPriority: 6,
     chronologicalRank: 7,
+    timelinePhase: 'Custom Ritual',
     priorityBadge: {
       label: '✨ Custom Event',
       level: 'medium',
@@ -746,11 +756,44 @@ export function sortEventsBy(
   return cloned.sort((a, b) => {
     // If dates are present and differ, sort by date then time
     if (a.date && b.date && a.date !== b.date && a.date !== 'TBD' && b.date !== 'TBD') {
-      return a.date.localeCompare(b.date);
+      const dateComparison = a.date.localeCompare(b.date);
+      if (dateComparison !== 0) return dateComparison;
     }
-    // Fall back to traditional ritual sequence
+    // If start times are present and differ on the same day
+    if (a.startTime && b.startTime && a.startTime !== b.startTime) {
+      const timeComparison = a.startTime.localeCompare(b.startTime);
+      if (timeComparison !== 0) return timeComparison;
+    }
+    // Fall back to traditional ritual sequence: Roka -> Mehndi -> Haldi -> Sangeet -> Pheras -> Reception
     const rA = EVENT_BLUEPRINTS[a.type]?.chronologicalRank ?? 99;
     const rB = EVENT_BLUEPRINTS[b.type]?.chronologicalRank ?? 99;
     return rA - rB;
   });
 }
+
+/**
+ * Traditional chronological weekend order for ceremony selection:
+ * 1. Roka (Kick-off)
+ * 2. Mehndi (Henna Lounge)
+ * 3. Haldi (Morning Ritual)
+ * 4. Sangeet (Eve of Wedding Gala)
+ * 5. Baraat & Pheras (The Wedding Ceremony)
+ * 6. Reception (Grand Finale on the last day)
+ */
+export const CHRONOLOGICAL_EVENT_TYPES: SubEventType[] = [
+  'roka',
+  'mehendi',
+  'haldi',
+  'sangeet',
+  'pheras',
+  'reception',
+];
+
+export function sortEventTypesChronologically(types: SubEventType[]): SubEventType[] {
+  return [...types].sort((a, b) => {
+    const rankA = EVENT_BLUEPRINTS[a]?.chronologicalRank ?? 99;
+    const rankB = EVENT_BLUEPRINTS[b]?.chronologicalRank ?? 99;
+    return rankA - rankB;
+  });
+}
+

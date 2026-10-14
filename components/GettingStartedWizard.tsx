@@ -33,7 +33,12 @@ import {
   Lightbulb,
 } from 'lucide-react';
 import { SubEventType, RequirementCategory, EventChecklistItem, WeddingEvent } from '@/lib/types';
-import { EVENT_BLUEPRINTS, EventBlueprint } from '@/lib/eventBlueprints';
+import {
+  EVENT_BLUEPRINTS,
+  EventBlueprint,
+  CHRONOLOGICAL_EVENT_TYPES,
+  sortEventTypesChronologically,
+} from '@/lib/eventBlueprints';
 
 interface WizardDecisionItem {
   id?: string;
@@ -77,16 +82,16 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
     story: '',
   });
 
-  // Step 2: Selected Events (defaults in priority order: Pheras, Sangeet, Reception, Mehndi)
+  // Step 2: Selected Events (defaults in chronological sequence: Mehndi -> Sangeet -> Pheras -> Reception)
   const [selectedEventTypes, setSelectedEventTypes] = useState<SubEventType[]>([
-    'pheras',
-    'sangeet',
-    'reception',
     'mehendi',
+    'sangeet',
+    'pheras',
+    'reception',
   ]);
 
-  // Step 3: Active Event Tab for viewing & editing decisions (defaults to #1 priority)
-  const [activeEventTab, setActiveEventTab] = useState<SubEventType>('pheras');
+  // Step 3: Active Event Tab for viewing & editing decisions (defaults to first chronological event)
+  const [activeEventTab, setActiveEventTab] = useState<SubEventType>('mehendi');
 
   // Step 3: Expanded items for sub-item details (e.g. welcome bags, jewelry)
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
@@ -171,13 +176,13 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
         alert('Please select at least one wedding event.');
         return;
       }
-      const updated = selectedEventTypes.filter((t) => t !== type);
+      const updated = sortEventTypesChronologically(selectedEventTypes.filter((t) => t !== type));
       setSelectedEventTypes(updated);
       if (activeEventTab === type && updated.length > 0) {
         setActiveEventTab(updated[0]);
       }
     } else {
-      const updated = [...selectedEventTypes, type];
+      const updated = sortEventTypesChronologically([...selectedEventTypes, type]);
       setSelectedEventTypes(updated);
       setActiveEventTab(type);
 
@@ -260,8 +265,9 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
     const startDate = datesNotFinalized ? '' : dateRange.startDate;
     const endDate = datesNotFinalized ? '' : dateRange.endDate || dateRange.startDate;
 
-    // Build the events list from the selected blueprints and decisions
-    const builtEvents: Array<Omit<WeddingEvent, 'id' | 'weddingId'>> = selectedEventTypes.map((type, idx) => {
+    // Build the events list in guaranteed chronological order: Roka -> Mehndi -> Haldi -> Sangeet -> Pheras -> Reception
+    const orderedTypes = sortEventTypesChronologically(selectedEventTypes);
+    const builtEvents: Array<Omit<WeddingEvent, 'id' | 'weddingId'>> = orderedTypes.map((type, idx) => {
       const bp = EVENT_BLUEPRINTS[type];
       const decisions = decisionsByEvent[type] || bp.decisions.map((d) => ({
         id: d.id,
@@ -581,13 +587,13 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
                 <div>
                   <h4 className="font-bold text-amber-950 text-sm">Which Ceremonies Are You Planning to Host?</h4>
                   <p className="text-xs text-amber-900 leading-relaxed mt-0.5">
-                    Select the festive sub-events you want to include. In the next step, you can click on each ceremony to review the decisions to make and items to get for that event!
+                    Select your ceremonies in chronological order — starting with events that happen first and finishing with the reception on the last day. In the next step, you can customize decisions and essentials for each event!
                   </p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {(['pheras', 'sangeet', 'reception', 'mehendi', 'haldi', 'roka'] as SubEventType[]).map((type) => {
+                {CHRONOLOGICAL_EVENT_TYPES.map((type, index) => {
                   const bp = EVENT_BLUEPRINTS[type];
                   if (!bp) return null;
                   const isSelected = selectedEventTypes.includes(type);
@@ -605,14 +611,15 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-stone-100 text-stone-700 font-sans">
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-stone-100 text-stone-700 font-sans">
                               {type.toUpperCase()}
                             </span>
-                            {bp.priorityBadge && (
-                              <span
-                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${bp.priorityBadge.color}`}
-                              >
-                                {bp.priorityBadge.label}
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200 font-sans">
+                              #{index + 1} • {bp.timelinePhase}
+                            </span>
+                            {type === 'reception' && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200 font-sans">
+                                Finale • Last Day
                               </span>
                             )}
                           </div>
@@ -660,20 +667,13 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
                 </div>
               </div>
 
-              {/* Event Tabs Switcher in Planning Priority Order */}
+              {/* Event Tabs Switcher in Chronological Sequence */}
               <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-                {selectedEventTypes
-                  .slice()
-                  .sort(
-                    (a, b) =>
-                      (EVENT_BLUEPRINTS[a]?.planningPriority || 99) -
-                      (EVENT_BLUEPRINTS[b]?.planningPriority || 99)
-                  )
-                  .map((type) => {
-                    const bp = EVENT_BLUEPRINTS[type];
-                    const isActive = activeEventTab === type;
-                    const decisions = decisionsByEvent[type] || [];
-                    const count = decisions.filter((d) => d.checked).length;
+                {sortEventTypesChronologically(selectedEventTypes).map((type, idx) => {
+                  const bp = EVENT_BLUEPRINTS[type];
+                  const isActive = activeEventTab === type;
+                  const decisions = decisionsByEvent[type] || [];
+                  const count = decisions.filter((d) => d.checked).length;
 
                     const renderIcon = () => {
                       const iconClass = `w-4 h-4 shrink-0 ${isActive ? 'text-amber-300' : 'text-stone-500'}`;

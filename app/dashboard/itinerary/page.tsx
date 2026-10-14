@@ -27,6 +27,9 @@ import {
   Hotel,
   Gift,
   Shirt,
+  Calendar,
+  Flame,
+  Zap,
 } from 'lucide-react';
 
 export default function ItineraryPage() {
@@ -45,7 +48,8 @@ export default function ItineraryPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<WeddingEvent | null>(null);
   const [eventToPlan, setEventToPlan] = useState<WeddingEvent | null>(null);
-  const [sortOrder, setSortOrder] = useState<EventSortOrder>('priority');
+  // Default to chronological sequence for true itinerary order
+  const [sortOrder, setSortOrder] = useState<EventSortOrder>('chronological');
 
   // Expanded checklist section state per event
   const [expandedChecklists, setExpandedChecklists] = useState<Record<string, boolean>>({
@@ -249,36 +253,42 @@ export default function ItineraryPage() {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={() => setSortOrder('priority')}
-                className={`px-3 py-1.5 rounded-xl font-semibold transition-all ${
-                  sortOrder === 'priority'
-                    ? 'bg-stone-900 text-white shadow-xs'
+                onClick={() => setSortOrder('chronological')}
+                className={`px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
+                  sortOrder === 'chronological'
+                    ? 'bg-rose-950 text-white shadow-xs ring-1 ring-rose-500/50'
                     : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
                 }`}
+                title="Traditional chronological order: Roka -> Mehndi -> Haldi -> Sangeet -> Pheras -> Reception"
               >
-                🏆 Planning Priority (Lead Time First)
+                <Calendar className="w-3.5 h-3.5 text-amber-400" />
+                <span>Weekend Timeline (Chronological)</span>
               </button>
               <button
                 type="button"
-                onClick={() => setSortOrder('chronological')}
-                className={`px-3 py-1.5 rounded-xl font-semibold transition-all ${
-                  sortOrder === 'chronological'
-                    ? 'bg-stone-900 text-white shadow-xs'
+                onClick={() => setSortOrder('priority')}
+                className={`px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
+                  sortOrder === 'priority'
+                    ? 'bg-rose-950 text-white shadow-xs ring-1 ring-rose-500/50'
                     : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
                 }`}
+                title="Prioritize high-lead-time ceremonies first (e.g. Baraat/Pheras fire permits & Sangeet sound curfew)"
               >
-                📅 Weekend Timeline
+                <Flame className="w-3.5 h-3.5 text-amber-400" />
+                <span>Planning Priority (High Lead Time)</span>
               </button>
               <button
                 type="button"
                 onClick={() => setSortOrder('needs_planning')}
-                className={`px-3 py-1.5 rounded-xl font-semibold transition-all ${
+                className={`px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
                   sortOrder === 'needs_planning'
-                    ? 'bg-stone-900 text-white shadow-xs'
+                    ? 'bg-rose-950 text-white shadow-xs ring-1 ring-rose-500/50'
                     : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
                 }`}
+                title="Show ceremonies with 0 decisions arranged at the top"
               >
-                ⚡ Needs Planning First
+                <Zap className="w-3.5 h-3.5 text-amber-400" />
+                <span>Needs Planning First</span>
               </button>
             </div>
           </div>
