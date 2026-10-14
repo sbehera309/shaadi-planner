@@ -300,12 +300,16 @@ export default function ItineraryPage() {
                       <div>
                         <span className="font-semibold text-stone-900 block">Date & Timing</span>
                         <span className="text-stone-500">
-                          {new Date(event.date).toLocaleDateString('en-US', {
-                            weekday: 'short',
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })}
+                          {event.date && event.date.trim() !== '' && event.date !== 'TBD' ? (
+                            new Date(event.date).toLocaleDateString('en-US', {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })
+                          ) : (
+                            'Date to be decided'
+                          )}
                         </span>
                         <span className="block text-stone-700 font-medium">
                           {event.startTime} - {event.endTime}

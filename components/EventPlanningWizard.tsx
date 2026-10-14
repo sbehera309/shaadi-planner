@@ -226,19 +226,18 @@ export const EventPlanningWizard: React.FC<EventPlanningWizardProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div className="sm:col-span-2">
-                  <label className="font-bold text-stone-700 block mb-1.5">Venue / Hotel / Resort Name *</label>
+                  <label className="font-bold text-stone-700 block mb-1.5">Venue / Hotel / Resort Name (Optional)</label>
                   <input
                     type="text"
-                    required
                     value={formData.venueName}
                     onChange={(e) => setFormData({ ...formData, venueName: e.target.value })}
-                    placeholder="e.g. Hyatt Regency Ballroom or The Legacy Castle"
+                    placeholder="e.g. Hyatt Regency Ballroom or 'Venue scouting in progress'"
                     className="w-full px-4 py-2.5 rounded-xl border border-stone-300 text-stone-900 focus:outline-hidden focus:ring-2 focus:ring-rose-500 font-medium text-sm"
                   />
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="font-bold text-stone-700 block mb-1.5">Venue Address / US City *</label>
+                  <label className="font-bold text-stone-700 block mb-1.5">Venue Address / US City (Optional)</label>
                   <input
                     type="text"
                     value={formData.venueAddress}
@@ -249,10 +248,9 @@ export const EventPlanningWizard: React.FC<EventPlanningWizardProps> = ({
                 </div>
 
                 <div>
-                  <label className="font-bold text-stone-700 block mb-1.5">Event Date *</label>
+                  <label className="font-bold text-stone-700 block mb-1.5">Event Date (Optional)</label>
                   <input
                     type="date"
-                    required
                     value={formData.date}
                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                     className="w-full px-4 py-2.5 rounded-xl border border-stone-300 text-stone-900 focus:outline-hidden focus:ring-2 focus:ring-rose-500 font-medium text-sm"

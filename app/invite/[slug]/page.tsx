@@ -128,20 +128,31 @@ export default function PublicWeddingInvitePage({
 
           {/* Location & Dates */}
           <div className="pt-4 flex flex-wrap justify-center items-center gap-4 text-xs font-medium text-amber-200">
-            <span className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/10 backdrop-blur-xs border border-white/10">
-              <Calendar className="w-4 h-4 text-amber-400" />
-              {new Date(wedding.startDate).toLocaleDateString('en-US', {
-                month: 'long',
-                day: 'numeric',
-                year: 'numeric',
-              })}{' '}
-              –{' '}
-              {new Date(wedding.endDate).toLocaleDateString('en-US', {
-                month: 'long',
-                day: 'numeric',
-                year: 'numeric',
-              })}
-            </span>
+            {wedding.startDate && wedding.startDate.trim() !== '' ? (
+              <span className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/10 backdrop-blur-xs border border-white/10">
+                <Calendar className="w-4 h-4 text-amber-400" />
+                {new Date(wedding.startDate).toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+                {wedding.endDate && wedding.endDate !== wedding.startDate && (
+                  <>
+                    {' – '}
+                    {new Date(wedding.endDate).toLocaleDateString('en-US', {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </>
+                )}
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/10 backdrop-blur-xs border border-white/10">
+                <Calendar className="w-4 h-4 text-amber-400" />
+                Dates to be Announced (Venue Scout in Progress)
+              </span>
+            )}
             <span className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/10 backdrop-blur-xs border border-white/10">
               <MapPin className="w-4 h-4 text-rose-400" />
               {wedding.venueName}, {wedding.city}

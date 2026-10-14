@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from './Modal';
 import { useWedding } from '@/lib/store';
-import { Sparkles, Heart } from 'lucide-react';
+import { Sparkles, Heart, CalendarRange, Calendar } from 'lucide-react';
 
 interface EditWeddingModalProps {
   isOpen: boolean;
@@ -13,6 +13,7 @@ interface EditWeddingModalProps {
 export const EditWeddingModal: React.FC<EditWeddingModalProps> = ({ isOpen, onClose }) => {
   const { wedding, updateWeddingProfile } = useWedding();
 
+  const [datesNotFinalized, setDatesNotFinalized] = useState(false);
   const [form, setForm] = useState({
     brideName: '',
     groomName: '',
@@ -27,6 +28,8 @@ export const EditWeddingModal: React.FC<EditWeddingModalProps> = ({ isOpen, onCl
 
   useEffect(() => {
     if (wedding) {
+      const hasStart = Boolean(wedding.startDate && wedding.startDate.trim() !== '');
+      setDatesNotFinalized(!hasStart);
       setForm({
         brideName: wedding.brideName || '',
         groomName: wedding.groomName || '',
@@ -41,6 +44,34 @@ export const EditWeddingModal: React.FC<EditWeddingModalProps> = ({ isOpen, onCl
     }
   }, [wedding, isOpen]);
 
+  const handleStartDateChange = (newStart: string) => {
+    if (!newStart) {
+      setForm((prev) => ({ ...prev, startDate: '', endDate: '' }));
+      return;
+    }
+    const startObj = new Date(newStart);
+    if (!isNaN(startObj.getTime())) {
+      const endObj = new Date(startObj);
+      endObj.setDate(endObj.getDate() + 2); // Default to 3-day weekend
+      const endStr = endObj.toISOString().split('T')[0];
+      setForm((prev) => ({ ...prev, startDate: newStart, endDate: endStr }));
+    } else {
+      setForm((prev) => ({ ...prev, startDate: newStart }));
+    }
+  };
+
+  const handleDurationPreset = (days: number) => {
+    if (form.startDate) {
+      const startObj = new Date(form.startDate);
+      if (!isNaN(startObj.getTime())) {
+        const endObj = new Date(startObj);
+        endObj.setDate(endObj.getDate() + (days - 1));
+        const endStr = endObj.toISOString().split('T')[0];
+        setForm((prev) => ({ ...prev, endDate: endStr }));
+      }
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const bride = form.brideName.trim();
@@ -54,14 +85,17 @@ export const EditWeddingModal: React.FC<EditWeddingModalProps> = ({ isOpen, onCl
       form.hashtag.trim() ||
       (groom && bride ? `#${groom.replace(/\s+/g, '')}Ki${bride.replace(/\s+/g, '')}` : '#ShubhVivah');
 
+    const startDate = datesNotFinalized ? '' : form.startDate;
+    const endDate = datesNotFinalized ? '' : form.endDate || form.startDate;
+
     updateWeddingProfile({
       brideName: bride,
       groomName: groom,
       slug: generatedSlug,
-      startDate: form.startDate,
-      endDate: form.endDate || form.startDate,
+      startDate: startDate,
+      endDate: endDate,
       city: form.city.trim() || 'USA',
-      venueName: form.venueName.trim() || 'Wedding Venue',
+      venueName: form.venueName.trim() || 'Venue to be decided',
       targetBudget: Number(form.targetBudget) || 0,
       hashtag: defaultHashtag,
       story: form.story.trim(),
@@ -83,7 +117,7 @@ export const EditWeddingModal: React.FC<EditWeddingModalProps> = ({ isOpen, onCl
         <div className="bg-amber-50/70 p-3.5 rounded-xl border border-amber-200/60 flex items-start gap-2.5">
           <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <p className="text-[11px] text-amber-900 leading-relaxed">
-            Enter the couple's names and celebration dates to personalize your planning dashboard, budget allocations, and guest invitations.
+            Enter the couple's names and optional dates. Dates and venue bookings can be updated anytime as you compare venue availability.
           </p>
         </div>
 
@@ -96,7 +130,7 @@ export const EditWeddingModal: React.FC<EditWeddingModalProps> = ({ isOpen, onCl
               value={form.brideName}
               onChange={(e) => setForm({ ...form, brideName: e.target.value })}
               placeholder="e.g. Ananya Sharma"
-              className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-rose-500"
+              className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-rose-500 font-medium"
             />
           </div>
           <div>
@@ -107,39 +141,83 @@ export const EditWeddingModal: React.FC<EditWeddingModalProps> = ({ isOpen, onCl
               value={form.groomName}
               onChange={(e) => setForm({ ...form, groomName: e.target.value })}
               placeholder="e.g. Arjun Mehta"
-              className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-rose-500"
+              className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-rose-500 font-medium"
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="font-semibold text-stone-700 block mb-1">Start Date *</label>
-            <input
-              type="date"
-              required
-              value={form.startDate}
-              onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-rose-500"
-            />
+        {/* Date Range & Flexible Option */}
+        <div className="p-3.5 rounded-xl border border-stone-200 bg-stone-50/60 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-stone-700 flex items-center gap-1.5">
+              <CalendarRange className="w-3.5 h-3.5 text-amber-700" />
+              <span>Celebration Dates (Optional)</span>
+            </span>
           </div>
-          <div>
-            <label className="font-semibold text-stone-700 block mb-1">End Date</label>
+
+          <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-stone-200">
             <input
-              type="date"
-              value={form.endDate}
-              onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-rose-500"
+              type="checkbox"
+              id="editDatesNotFinalized"
+              checked={datesNotFinalized}
+              onChange={(e) => setDatesNotFinalized(e.target.checked)}
+              className="w-4 h-4 rounded text-rose-700 focus:ring-rose-500 border-stone-300 cursor-pointer"
             />
+            <label htmlFor="editDatesNotFinalized" className="text-xs font-medium text-stone-700 cursor-pointer">
+              Dates not finalized yet • Comparing venue availability & auspicious muhurats
+            </label>
           </div>
+
+          {!datesNotFinalized && (
+            <div className="space-y-2 pt-1 animate-in fade-in duration-150">
+              <div className="flex items-center gap-2 text-[11px] text-stone-500">
+                <span>Presets:</span>
+                {[
+                  { label: '1 Day', days: 1 },
+                  { label: '2 Days', days: 2 },
+                  { label: '3 Days (Weekend)', days: 3 },
+                  { label: '4 Days', days: 4 },
+                ].map((p) => (
+                  <button
+                    key={p.days}
+                    type="button"
+                    onClick={() => handleDurationPreset(p.days)}
+                    className="px-2.5 py-0.5 rounded-md bg-white border border-stone-200 text-stone-700 hover:bg-stone-100 font-medium"
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-semibold text-stone-600 block mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    value={form.startDate}
+                    onChange={(e) => handleStartDateChange(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white focus:outline-hidden focus:ring-2 focus:ring-rose-500"
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-stone-600 block mb-1">End Date</label>
+                  <input
+                    type="date"
+                    value={form.endDate}
+                    onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white focus:outline-hidden focus:ring-2 focus:ring-rose-500"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="font-semibold text-stone-700 block mb-1">City / Region (USA) *</label>
+            <label className="font-semibold text-stone-700 block mb-1">City / Region (USA)</label>
             <input
               type="text"
-              required
               value={form.city}
               onChange={(e) => setForm({ ...form, city: e.target.value })}
               placeholder="e.g. Somerset, NJ or Chicago, IL"
@@ -147,10 +225,9 @@ export const EditWeddingModal: React.FC<EditWeddingModalProps> = ({ isOpen, onCl
             />
           </div>
           <div>
-            <label className="font-semibold text-stone-700 block mb-1">Primary Venue / Resort *</label>
+            <label className="font-semibold text-stone-700 block mb-1">Primary Venue / Resort</label>
             <input
               type="text"
-              required
               value={form.venueName}
               onChange={(e) => setForm({ ...form, venueName: e.target.value })}
               placeholder="e.g. Hyatt Regency or The Palace"

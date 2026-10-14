@@ -125,7 +125,7 @@ export default function DashboardOverviewPage() {
 
             <p className="mt-2 text-stone-300 text-sm leading-relaxed">
               {wedding.venueName} {wedding.city && `• ${wedding.city}`}
-              {wedding.startDate && (
+              {wedding.startDate ? (
                 <span className="text-amber-300/90 font-medium">
                   {' '}
                   • {new Date(wedding.startDate).toLocaleDateString('en-US', {
@@ -133,6 +133,18 @@ export default function DashboardOverviewPage() {
                     day: 'numeric',
                     year: 'numeric',
                   })}
+                  {wedding.endDate && wedding.endDate !== wedding.startDate && (
+                    <> – {new Date(wedding.endDate).toLocaleDateString('en-US', {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}</>
+                  )}
+                </span>
+              ) : (
+                <span className="text-amber-300/80 font-medium italic">
+                  {' '}
+                  • Dates to be finalized (Scouting venues)
                 </span>
               )}
             </p>
@@ -345,11 +357,15 @@ export default function DashboardOverviewPage() {
                         <div className="flex flex-wrap items-center gap-3 text-xs text-stone-600 font-medium">
                           <span className="flex items-center gap-1">
                             <Clock className="w-3.5 h-3.5 text-stone-400" />
-                            {new Date(event.date).toLocaleDateString('en-US', {
-                              weekday: 'short',
-                              month: 'short',
-                              day: 'numeric',
-                            })}{' '}
+                            {event.date && event.date.trim() !== '' && event.date !== 'TBD' ? (
+                              new Date(event.date).toLocaleDateString('en-US', {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric',
+                              })
+                            ) : (
+                              'Date to be decided'
+                            )}{' '}
                             • {event.startTime} - {event.endTime}
                           </span>
                         </div>
