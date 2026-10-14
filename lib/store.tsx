@@ -84,6 +84,15 @@ interface WeddingContextType {
   // Template & Reset
   resetToDefaultData: () => void;
   loadSampleTemplate: () => void;
+  importFullWeddingData: (data: {
+    wedding?: Partial<WeddingProfile>;
+    events?: WeddingEvent[];
+    budgetItems?: BudgetItem[];
+    guests?: Guest[];
+    vendors?: Vendor[];
+    shagunRecords?: ShagunRecord[];
+    rooms?: RoomAllocation[];
+  }) => void;
 }
 
 const WeddingContext = createContext<WeddingContextType | undefined>(undefined);
@@ -491,6 +500,59 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setRooms(sampleUsaWeddingTemplate.rooms);
   };
 
+  const importFullWeddingData = (data: {
+    wedding?: Partial<WeddingProfile>;
+    events?: WeddingEvent[];
+    budgetItems?: BudgetItem[];
+    guests?: Guest[];
+    vendors?: Vendor[];
+    shagunRecords?: ShagunRecord[];
+    rooms?: RoomAllocation[];
+  }) => {
+    if (data.wedding) {
+      setWedding((prev) => {
+        const merged: WeddingProfile = {
+          id: prev?.id || 'w-user-1',
+          ownerId: prev?.ownerId || 'owner-1',
+          brideName: data.wedding?.brideName || prev?.brideName || 'Bride',
+          groomName: data.wedding?.groomName || prev?.groomName || 'Groom',
+          slug: data.wedding?.slug || prev?.slug || 'our-wedding',
+          tradition: data.wedding?.tradition || prev?.tradition || 'traditional_desi',
+          startDate: data.wedding?.startDate !== undefined ? data.wedding.startDate : prev?.startDate || '',
+          endDate: data.wedding?.endDate !== undefined ? data.wedding.endDate : prev?.endDate || '',
+          city: data.wedding?.city || prev?.city || '',
+          venueName: data.wedding?.venueName || prev?.venueName || '',
+          currency: 'USD',
+          targetBudget: data.wedding?.targetBudget || prev?.targetBudget || 150000,
+          story: data.wedding?.story || prev?.story || '',
+          hashtag: data.wedding?.hashtag || prev?.hashtag || '',
+          isConfigured: true,
+          horoscope: data.wedding?.horoscope || prev?.horoscope,
+        };
+        return merged;
+      });
+    }
+
+    if (data.events && data.events.length > 0) {
+      setEvents(data.events);
+    }
+    if (data.budgetItems && data.budgetItems.length > 0) {
+      setBudgetItems(data.budgetItems);
+    }
+    if (data.guests && data.guests.length > 0) {
+      setGuests(data.guests);
+    }
+    if (data.vendors && data.vendors.length > 0) {
+      setVendors(data.vendors);
+    }
+    if (data.shagunRecords && data.shagunRecords.length > 0) {
+      setShagunRecords(data.shagunRecords);
+    }
+    if (data.rooms && data.rooms.length > 0) {
+      setRooms(data.rooms);
+    }
+  };
+
   return (
     <WeddingContext.Provider
       value={{
@@ -533,6 +595,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         removeGuestFromRoom,
         resetToDefaultData,
         loadSampleTemplate,
+        importFullWeddingData,
       }}
     >
       {children}

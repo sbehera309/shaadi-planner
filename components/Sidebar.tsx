@@ -15,9 +15,12 @@ import {
   Sparkles,
   HeartHandshake,
   X,
+  Compass,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { useWedding } from '@/lib/store';
 import { EditWeddingModal } from './EditWeddingModal';
+import { ExcelSyncModal } from './ExcelSyncModal';
 
 interface SidebarProps {
   isMobileOpen?: boolean;
@@ -29,10 +32,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose })
   const { wedding } = useWedding();
 
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+  const [isExcelModalOpen, setIsExcelModalOpen] = React.useState(false);
 
   const navItems = [
     { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
     { label: 'Itinerary & Timings', href: '/dashboard/itinerary', icon: CalendarDays },
+    { label: 'Horoscope & Kundali', href: '/dashboard/horoscope', icon: Compass },
     { label: 'Guests & RSVPs', href: '/dashboard/guests', icon: Users },
     { label: 'Budget & Splits', href: '/dashboard/budget', icon: WalletCards },
     { label: 'Vendor Directory', href: '/dashboard/vendors', icon: Briefcase },
@@ -132,14 +137,31 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose })
         })}
       </nav>
 
-      {/* Guest Invitation Quick Link */}
-      {wedding && wedding.isConfigured && wedding.slug && (
-        <div className="p-4 border-t border-stone-800 mt-auto">
+      {/* Excel Sync & Guest Invitation Footer Actions */}
+      <div className="p-4 border-t border-stone-800 mt-auto space-y-2">
+        <button
+          type="button"
+          onClick={() => {
+            if (isMobile) onMobileClose?.();
+            setIsExcelModalOpen(true);
+          }}
+          className="w-full flex items-center justify-between p-2.5 rounded-xl bg-stone-800/80 hover:bg-stone-800 text-stone-200 border border-stone-700/60 text-xs font-semibold transition-all group"
+        >
+          <div className="flex items-center gap-2">
+            <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>Excel & Sheets Sync</span>
+          </div>
+          <span className="text-[10px] text-stone-400 group-hover:text-white font-mono bg-stone-700/50 px-1.5 py-0.5 rounded">
+            .xlsx
+          </span>
+        </button>
+
+        {wedding && wedding.isConfigured && wedding.slug && (
           <Link
             href={`/invite/${wedding.slug}`}
             target="_blank"
             onClick={() => isMobile && onMobileClose?.()}
-            className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-amber-600 to-rose-600 text-white font-medium text-xs hover:opacity-95 shadow-md shadow-rose-900/30 transition-all group"
+            className="flex items-center justify-between p-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-rose-600 text-white font-medium text-xs hover:opacity-95 shadow-md shadow-rose-900/30 transition-all group"
           >
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-amber-200" />
@@ -147,8 +169,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose })
             </div>
             <ExternalLink className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </Link>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 
@@ -175,6 +197,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose })
       <EditWeddingModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
+      />
+
+      <ExcelSyncModal
+        isOpen={isExcelModalOpen}
+        onClose={() => setIsExcelModalOpen(false)}
       />
     </>
   );

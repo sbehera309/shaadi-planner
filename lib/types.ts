@@ -99,6 +99,7 @@ export interface BudgetItem {
   paidBy: 'bride_side' | 'groom_side' | 'split_50_50' | 'couple';
   status: 'paid' | 'partial' | 'pending';
   vendorId?: string;
+  notes?: string;
 }
 
 export interface Vendor {
@@ -160,6 +161,63 @@ export interface RoomAllocation {
 
 export type WeddingTradition = 'traditional_desi' | 'south_indian' | 'fusion_mixed';
 
+export interface PersonAstrologyProfile {
+  name: string;
+  birthDate: string; // YYYY-MM-DD
+  birthTime?: string; // e.g. "10:30 AM"
+  birthPlace?: string; // e.g. "Chicago, IL, USA"
+  rashi?: string; // Vedic Moon Sign (e.g. "Mesha (Aries)", "Karka (Cancer)", etc.)
+  nakshatra?: string; // Birth Star (e.g. "Rohini", "Swati", etc.)
+  sunSign?: string; // Sun sign
+}
+
+export interface CompatibilityPillar {
+  name: string;
+  sanskritName: string;
+  score: number;
+  maxScore: number;
+  description: string;
+  verdict: 'Excellent' | 'Good' | 'Fair';
+}
+
+export interface PoruthamItem {
+  name: string;
+  status: 'Compatible' | 'Partially Compatible' | 'Neutral';
+  description: string;
+}
+
+export interface HoroscopeCompatibilityReport {
+  score: number; // e.g. 29 out of 36
+  maxScore: number; // 36
+  percentage: number; // e.g. 81%
+  verdict: 'Uttam (Highly Auspicious Match)' | 'Shubh (Very Good Match)' | 'Madhyam (Good Harmony)' | 'Dynamic Growth Union';
+  summary: string;
+  archetype: {
+    title: string;
+    description: string;
+    elementalBlend: string;
+  };
+  pillars: CompatibilityPillar[];
+  poruthams?: PoruthamItem[];
+  luckyElements: {
+    colors: string[];
+    gemstones: string[];
+    auspiciousDays: string[];
+    sacredFlora: string[];
+    planetaryDeity: string;
+    mantraOrBlessing: string;
+  };
+  relationshipStrengths: string[];
+  remediesAndAdvice: string[];
+  calculatedAt?: string;
+}
+
+export interface WeddingHoroscopeData {
+  bride: PersonAstrologyProfile;
+  groom: PersonAstrologyProfile;
+  report?: HoroscopeCompatibilityReport;
+}
+
 export interface WeddingProfile {
   id: string;
   ownerId: string;
@@ -177,4 +235,5 @@ export interface WeddingProfile {
   hashtag: string;
   coverImage?: string;
   isConfigured?: boolean;
+  horoscope?: WeddingHoroscopeData;
 }

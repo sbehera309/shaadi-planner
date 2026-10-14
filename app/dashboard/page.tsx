@@ -7,6 +7,7 @@ import { WeddingEvent } from '@/lib/types';
 import { EditWeddingModal } from '@/components/EditWeddingModal';
 import { GettingStartedWizard } from '@/components/GettingStartedWizard';
 import { EventPlanningWizard } from '@/components/EventPlanningWizard';
+import { ExcelSyncModal } from '@/components/ExcelSyncModal';
 import {
   EVENT_BLUEPRINTS,
   EventSortOrder,
@@ -40,6 +41,11 @@ import {
   Hotel,
   Shirt,
   Package,
+  FileSpreadsheet,
+  Moon,
+  Star,
+  Download,
+  Upload,
 } from 'lucide-react';
 
 export default function DashboardOverviewPage() {
@@ -56,6 +62,7 @@ export default function DashboardOverviewPage() {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const [selectedEventToPlan, setSelectedEventToPlan] = useState<WeddingEvent | null>(null);
 
   // Event Sorting & Prioritization State (defaults to chronological sequence)
@@ -130,14 +137,24 @@ export default function DashboardOverviewPage() {
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Desi American Wedding Planning HQ</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
+                  type="button"
+                  onClick={() => setIsExcelModalOpen(true)}
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600/30 hover:bg-emerald-600/40 text-emerald-200 text-xs font-semibold border border-emerald-500/40 transition-colors flex items-center gap-1.5"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>Excel & Sheets Sync</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setIsWizardOpen(true)}
                   className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-amber-200 text-xs font-medium border border-white/20 transition-colors"
                 >
                   ✨ Re-run Setup Guide
                 </button>
                 <button
+                  type="button"
                   onClick={() => setIsEditModalOpen(true)}
                   className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-amber-200 text-xs font-medium border border-white/20 transition-colors"
                 >
@@ -274,6 +291,15 @@ export default function DashboardOverviewPage() {
                 className="px-4 py-3.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 hover:text-stone-900 font-medium text-xs transition-colors flex items-center justify-center gap-1.5"
               >
                 <span>Explore Sample Template</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsExcelModalOpen(true)}
+                className="px-4 py-3.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold text-xs border border-emerald-300 transition-colors flex items-center justify-center gap-1.5"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                <span>Import Spreadsheet</span>
               </button>
             </div>
           </div>
@@ -578,6 +604,110 @@ export default function DashboardOverviewPage() {
         </section>
       )}
 
+      {/* FEATURE SPOTLIGHT: Vedic Horoscope & Offline Excel / Sheets Sync */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* Card 1: Horoscope & Kundali Milan */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-950 via-purple-950 to-stone-900 p-6 text-white border border-purple-800/40 shadow-lg flex flex-col justify-between">
+          <div className="space-y-3 relative z-10">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/20 text-purple-200 text-xs font-semibold border border-purple-400/30">
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span>Vedic Astrological Harmony</span>
+            </div>
+            <h3 className="text-xl font-bold font-serif text-amber-100">
+              Kundali Milan & 36 Gunas Reading
+            </h3>
+            <p className="text-xs text-stone-300 leading-relaxed">
+              Calculate birth star (Nakshatra) and Moon sign (Rashi) compatibility, Ashta Koota pillars, 10 South Indian Dasa Poruthams, and your celestial archetype with auspicious wedding day colors.
+            </p>
+
+            {wedding?.horoscope?.report ? (
+              <div className="mt-3 p-3.5 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-between">
+                <div>
+                  <div className="text-[11px] text-amber-300 font-semibold uppercase tracking-wider">
+                    Calculated Match Score
+                  </div>
+                  <div className="text-lg font-bold text-white flex items-center gap-2">
+                    <span>{wedding.horoscope.report.score} / 36 Gunas</span>
+                    <span className="text-xs font-normal text-purple-200">
+                      • {wedding.horoscope.report.archetype?.title}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="inline-block px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-400/30">
+                    {wedding.horoscope.report.verdict}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-2 text-xs text-stone-400 italic">
+                No horoscope calculated yet. Enter birth date, time, and Vedic signs for both bride & groom to unlock astrological compatibility.
+              </div>
+            )}
+          </div>
+
+          <div className="mt-5 pt-4 border-t border-purple-800/50 flex items-center justify-between relative z-10">
+            <span className="text-xs text-purple-200 font-medium">
+              36 Gunas • 10 Poruthams • Lucky Gems
+            </span>
+            <Link
+              href="/dashboard/horoscope"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-600 hover:to-rose-700 text-white text-xs font-bold shadow-md transition-all"
+            >
+              <span>{wedding?.horoscope?.report ? 'View Full Reading' : 'Calculate Kundali'}</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+          <div className="absolute -right-8 -bottom-8 w-44 h-44 bg-purple-500/10 rounded-full blur-2xl pointer-events-none" />
+        </div>
+
+        {/* Card 2: Two-way Excel & Google Sheets Sync */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-950 via-teal-950 to-stone-900 p-6 text-white border border-emerald-800/40 shadow-lg flex flex-col justify-between">
+          <div className="space-y-3 relative z-10">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-200 text-xs font-semibold border border-emerald-400/30">
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-300" />
+              <span>Two-Way Spreadsheet Sync</span>
+            </div>
+            <h3 className="text-xl font-bold font-serif text-emerald-100">
+              Excel & Google Sheets Master File
+            </h3>
+            <p className="text-xs text-stone-300 leading-relaxed">
+              Export your entire wedding plan into a master 7-tab Excel workbook (Events, Budget, Guests, Vendors, Shagun Gifts, Rooms), or upload updated spreadsheets to synchronize changes back.
+            </p>
+
+            <div className="grid grid-cols-3 gap-2 mt-2 text-center text-xs">
+              <div className="p-2 rounded-xl bg-white/10 border border-white/10">
+                <div className="font-bold text-emerald-300">{events.length}</div>
+                <div className="text-[10px] text-stone-300">Ceremonies</div>
+              </div>
+              <div className="p-2 rounded-xl bg-white/10 border border-white/10">
+                <div className="font-bold text-emerald-300">{guests.length}</div>
+                <div className="text-[10px] text-stone-300">Guest Parties</div>
+              </div>
+              <div className="p-2 rounded-xl bg-white/10 border border-white/10">
+                <div className="font-bold text-emerald-300">{budgetItems.length}</div>
+                <div className="text-[10px] text-stone-300">Cost Items</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5 pt-4 border-t border-emerald-800/50 flex items-center justify-between relative z-10">
+            <span className="text-xs text-emerald-200 font-medium">
+              Compatible with MS Excel, Sheets & Numbers
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsExcelModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-all"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>Export / Import .xlsx</span>
+            </button>
+          </div>
+          <div className="absolute -right-8 -bottom-8 w-44 h-44 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+        </div>
+      </section>
+
       {/* SECONDARY SECTION: Overall Wedding Pulse & Financials */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
@@ -710,14 +840,14 @@ export default function DashboardOverviewPage() {
         </div>
 
         {/* Quick Links Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-2">
           <Link
             href="/dashboard/guests"
             className="p-3 rounded-2xl bg-white border border-stone-200 hover:border-rose-300 hover:bg-rose-50/30 transition-all flex items-center justify-between text-xs font-semibold text-stone-800 group"
           >
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-rose-600" />
-              <span>Guest Directory</span>
+              <span>Guests</span>
             </div>
             <ArrowUpRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-rose-600" />
           </Link>
@@ -728,7 +858,7 @@ export default function DashboardOverviewPage() {
           >
             <div className="flex items-center gap-2">
               <Wallet className="w-4 h-4 text-amber-600" />
-              <span>Budget & Splits</span>
+              <span>Budget</span>
             </div>
             <ArrowUpRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-amber-600" />
           </Link>
@@ -739,33 +869,56 @@ export default function DashboardOverviewPage() {
           >
             <div className="flex items-center gap-2">
               <Gift className="w-4 h-4 text-emerald-600" />
-              <span>Gift Tracker</span>
+              <span>Gifts</span>
             </div>
             <ArrowUpRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-emerald-600" />
           </Link>
+
+          <Link
+            href="/dashboard/horoscope"
+            className="p-3 rounded-2xl bg-white border border-stone-200 hover:border-purple-300 hover:bg-purple-50/30 transition-all flex items-center justify-between text-xs font-semibold text-stone-800 group"
+          >
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-purple-600" />
+              <span>Horoscope</span>
+            </div>
+            <ArrowUpRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-purple-600" />
+          </Link>
+
+          <button
+            type="button"
+            onClick={() => setIsExcelModalOpen(true)}
+            className="p-3 rounded-2xl bg-white border border-stone-200 hover:border-emerald-400 hover:bg-emerald-50/30 transition-all flex items-center justify-between text-xs font-semibold text-stone-800 group text-left"
+          >
+            <div className="flex items-center gap-2">
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+              <span>Excel Sync</span>
+            </div>
+            <ArrowUpRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-emerald-600" />
+          </button>
 
           {wedding && wedding.isConfigured && wedding.slug ? (
             <Link
               href={`/invite/${wedding.slug}`}
               target="_blank"
-              className="p-3 rounded-2xl bg-white border border-stone-200 hover:border-purple-300 hover:bg-purple-50/30 transition-all flex items-center justify-between text-xs font-semibold text-stone-800 group"
+              className="p-3 rounded-2xl bg-white border border-stone-200 hover:border-amber-300 hover:bg-amber-50/30 transition-all flex items-center justify-between text-xs font-semibold text-stone-800 group"
             >
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-purple-600" />
-                <span>Digital E-Invite</span>
+                <Sparkles className="w-4 h-4 text-amber-600" />
+                <span>E-Invite</span>
               </div>
-              <ArrowUpRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-purple-600" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-amber-600" />
             </Link>
           ) : (
             <button
               onClick={() => setIsEditModalOpen(true)}
-              className="p-3 rounded-2xl bg-white border border-stone-200 hover:border-purple-300 hover:bg-purple-50/30 transition-all flex items-center justify-between text-xs font-semibold text-stone-800 group text-left"
+              className="p-3 rounded-2xl bg-white border border-stone-200 hover:border-amber-300 hover:bg-amber-50/30 transition-all flex items-center justify-between text-xs font-semibold text-stone-800 group text-left"
             >
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-purple-600" />
-                <span>Wedding Setup</span>
+                <Sparkles className="w-4 h-4 text-amber-600" />
+                <span>Setup</span>
               </div>
-              <ArrowUpRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-purple-600" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-amber-600" />
             </button>
           )}
         </div>
@@ -788,6 +941,12 @@ export default function DashboardOverviewPage() {
       <GettingStartedWizard
         isOpen={isWizardOpen}
         onClose={() => setIsWizardOpen(false)}
+      />
+
+      {/* Two-Way Excel & Google Sheets Sync Modal */}
+      <ExcelSyncModal
+        isOpen={isExcelModalOpen}
+        onClose={() => setIsExcelModalOpen(false)}
       />
     </div>
   );
