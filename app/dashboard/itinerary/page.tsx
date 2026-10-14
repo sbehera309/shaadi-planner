@@ -5,7 +5,12 @@ import { useWedding } from '@/lib/store';
 import { WeddingEvent, SubEventType, EventChecklistItem, RequirementCategory } from '@/lib/types';
 import { Modal } from '@/components/Modal';
 import { EventPlanningWizard } from '@/components/EventPlanningWizard';
-import { EVENT_BLUEPRINTS, EventSortOrder, sortEventsBy } from '@/lib/eventBlueprints';
+import {
+  EVENT_BLUEPRINTS,
+  EventSortOrder,
+  sortEventsBy,
+  getEventBlueprintsForTradition,
+} from '@/lib/eventBlueprints';
 import {
   CalendarDays,
   Plus,
@@ -34,6 +39,7 @@ import {
 
 export default function ItineraryPage() {
   const {
+    wedding,
     events,
     addEvent,
     updateEvent,
@@ -205,7 +211,7 @@ export default function ItineraryPage() {
             Multi-Event Itinerary & Essentials Tracker
           </h1>
           <p className="text-xs text-stone-500 mt-1">
-            Track traditional rituals, muhurat timings, and item requirements (e.g. Baraat horse/car, puja samagri, saafas, dhol squad).
+            Track traditional rituals, sacred ceremony vows timings, and item requirements (e.g. Baraat horse/car, puja samagri, saafas, dhol squad).
           </p>
         </div>
         <button
@@ -300,7 +306,8 @@ export default function ItineraryPage() {
               const arrangedItems = checklist.filter((item) => item.isArranged).length;
               const pctArranged = totalItems > 0 ? Math.round((arrangedItems / totalItems) * 100) : 0;
               const isExpanded = expandedChecklists[event.id] ?? false;
-              const blueprint = EVENT_BLUEPRINTS[event.type];
+              const traditionBlueprints = getEventBlueprintsForTradition(wedding?.tradition);
+              const blueprint = traditionBlueprints[event.type] || EVENT_BLUEPRINTS[event.type];
 
               return (
                 <div
@@ -354,7 +361,7 @@ export default function ItineraryPage() {
                   {event.muhuratTime && (
                     <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400 text-stone-900 text-xs font-bold shadow-xs">
                       <Sparkles className="w-3.5 h-3.5 text-amber-900" />
-                      <span>Muhurat: {event.muhuratTime}</span>
+                      <span>Vows Window: {event.muhuratTime}</span>
                     </div>
                   )}
                 </div>
@@ -650,13 +657,13 @@ export default function ItineraryPage() {
 
             <div>
               <label className="font-semibold text-stone-700 block mb-1">
-                Auspicious Muhurat (Optional)
+                Main Vows / Ceremony Window (Optional)
               </label>
               <input
                 type="text"
                 value={formData.muhuratTime}
                 onChange={(e) => setFormData({ ...formData, muhuratTime: e.target.value })}
-                placeholder="e.g. Godhuli Bela: 17:42 - 18:25"
+                placeholder="e.g. Sacred Vows: 11:30 AM - 12:15 PM"
                 className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-amber-500"
               />
             </div>

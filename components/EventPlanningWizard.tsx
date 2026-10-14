@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useWedding } from '@/lib/store';
 import { WeddingEvent, EventChecklistItem, RequirementCategory } from '@/lib/types';
-import { EVENT_BLUEPRINTS, EventBlueprint } from '@/lib/eventBlueprints';
+import { EVENT_BLUEPRINTS, EventBlueprint, getEventBlueprintsForTradition } from '@/lib/eventBlueprints';
 import {
   Sparkles,
   Calendar,
@@ -40,7 +40,7 @@ export const EventPlanningWizard: React.FC<EventPlanningWizardProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { updateEvent, addBudgetItem } = useWedding();
+  const { updateEvent, addBudgetItem, wedding } = useWedding();
 
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
 
@@ -72,7 +72,8 @@ export const EventPlanningWizard: React.FC<EventPlanningWizardProps> = ({
   // Load existing event data when opened
   useEffect(() => {
     if (event) {
-      const blueprint: EventBlueprint | undefined = EVENT_BLUEPRINTS[event.type];
+      const traditionBlueprints = getEventBlueprintsForTradition(wedding?.tradition);
+      const blueprint: EventBlueprint | undefined = traditionBlueprints[event.type];
 
       setFormData({
         venueName: event.venueName || blueprint?.venueType || '',
@@ -112,11 +113,12 @@ export const EventPlanningWizard: React.FC<EventPlanningWizardProps> = ({
 
       setCurrentStep(1);
     }
-  }, [event, isOpen]);
+  }, [event, isOpen, wedding?.tradition]);
 
   if (!isOpen || !event) return null;
 
-  const blueprint: EventBlueprint | undefined = EVENT_BLUEPRINTS[event.type];
+  const traditionBlueprints = getEventBlueprintsForTradition(wedding?.tradition);
+  const blueprint: EventBlueprint | undefined = traditionBlueprints[event.type];
 
   const handleToggleChecklist = (id: string) => {
     setChecklistItems((prev) =>
@@ -292,14 +294,19 @@ export const EventPlanningWizard: React.FC<EventPlanningWizardProps> = ({
                 </div>
 
                 <div>
-                  <label className="font-bold text-stone-700 block mb-1.5">Auspicious Muhurat (Optional)</label>
+                  <label className="font-bold text-stone-700 block mb-1.5">
+                    Main Vows / Ceremony Window (Optional)
+                  </label>
                   <input
                     type="text"
                     value={formData.muhuratTime}
                     onChange={(e) => setFormData({ ...formData, muhuratTime: e.target.value })}
-                    placeholder="e.g. Auspicious Pheras: 17:15 - 18:00"
+                    placeholder="e.g. Sacred Vows & Thaali / Pheras: 11:30 AM - 12:15 PM"
                     className="w-full px-4 py-2.5 rounded-xl border border-stone-300 text-stone-900 focus:outline-hidden focus:ring-2 focus:ring-rose-500 font-medium text-sm"
                   />
+                  <p className="text-[11px] text-stone-500 mt-1">
+                    The primary time window for sacred Vedic vows, fire pheras, or Thaali tying.
+                  </p>
                 </div>
 
                 <div>

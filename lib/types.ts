@@ -158,12 +158,15 @@ export interface RoomAllocation {
   notes?: string;
 }
 
+export type WeddingTradition = 'traditional_desi' | 'south_indian' | 'fusion_mixed';
+
 export interface WeddingProfile {
   id: string;
   ownerId: string;
   brideName: string;
   groomName: string;
   slug: string;
+  tradition?: WeddingTradition;
   startDate: string;
   endDate: string;
   city: string;

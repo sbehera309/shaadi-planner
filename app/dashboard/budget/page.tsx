@@ -21,102 +21,142 @@ import {
   HelpCircle,
 } from 'lucide-react';
 
-const DESI_EXPENSE_PRESETS = [
+interface DesiExpensePreset {
+  title: string;
+  category: BudgetItem['category'];
+  estimatedCost: number;
+  paidBy: BudgetItem['paidBy'];
+  icon: string;
+  tip: string;
+  tradition?: 'all' | 'traditional_desi' | 'south_indian';
+}
+
+const DESI_EXPENSE_PRESETS: DesiExpensePreset[] = [
+  {
+    title: 'Dual-Use Baraat & Vidai Car (Vintage Convertible / Luxury)',
+    category: 'Accommodations & Transport',
+    estimatedCost: 2500,
+    paidBy: 'groom_side',
+    icon: '🚗',
+    tip: 'One vehicle for both Baraat procession & Vidai exit (saves horse + 2nd car fee!)',
+    tradition: 'all',
+  },
   {
     title: 'Ballroom Lighting & AV Production (Uplights, Moving Heads)',
-    category: 'Music, Dhol & Entertainment' as const,
+    category: 'Music, Dhol & Entertainment',
     estimatedCost: 5500,
-    paidBy: 'split_50_50' as const,
+    paidBy: 'split_50_50',
     icon: '💡',
     tip: 'Visual Comet / AV production company for perimeter uplights & dance spotlights',
+    tradition: 'all',
   },
   {
     title: 'Live Nathswaram & Thavil / Shehnai Classical Musicians',
-    category: 'Music, Dhol & Entertainment' as const,
+    category: 'Music, Dhol & Entertainment',
     estimatedCost: 2500,
-    paidBy: 'split_50_50' as const,
+    paidBy: 'split_50_50',
     icon: '🎺',
-    tip: 'Traditional auspicious live instrumentalists during Mandap & Muhurat',
-  },
-  {
-    title: 'Dual-Use Baraat & Vidai Car (Vintage Convertible / Luxury)',
-    category: 'Accommodations & Transport' as const,
-    estimatedCost: 2500,
-    paidBy: 'groom_side' as const,
-    icon: '🚗',
-    tip: 'One vehicle for both Baraat procession & Vidai exit (saves horse + 2nd car fee!)',
+    tip: 'Traditional auspicious live instrumentalists during Mandap & Ceremony Vows',
+    tradition: 'all',
   },
   {
     title: 'Baraat Horse (Ghodi) & Chhatri Handler + City Permit',
-    category: 'Accommodations & Transport' as const,
+    category: 'Accommodations & Transport',
     estimatedCost: 850,
-    paidBy: 'groom_side' as const,
+    paidBy: 'groom_side',
     icon: '🐎',
     tip: 'Traditional decorated mare procession with umbrella & city permit',
+    tradition: 'traditional_desi',
+  },
+  {
+    title: 'Baraat Dhol Squad (2 Mobile Drummers & Saafa Tying)',
+    category: 'Music, Dhol & Entertainment',
+    estimatedCost: 1200,
+    paidBy: 'groom_side',
+    icon: '🥁',
+    tip: 'Mobile acoustic dhol drummers for Baraat entry + family saafa tying service',
+    tradition: 'traditional_desi',
+  },
+  {
+    title: 'Kashi Yatra Umbrella, Walking Stick & Sacred Thaali Tray',
+    category: 'Pandit & Rituals',
+    estimatedCost: 650,
+    paidBy: 'split_50_50',
+    icon: '☂️',
+    tip: 'Decorated Kashi Yatra umbrella, walking cane, silver thali, and yellow thread',
+    tradition: 'south_indian',
+  },
+  {
+    title: 'Fresh Jasmine & Lotus Wedding Garlands (Maalai)',
+    category: 'Decor & Mandap',
+    estimatedCost: 850,
+    paidBy: 'split_50_50',
+    icon: '🌸',
+    tip: 'Thick fresh South Indian jasmine, rose petal, and lotus garlands for garland exchange',
+    tradition: 'south_indian',
   },
   {
     title: 'Custom Monogram Dance Floor Vinyl Wrap (Onyx / White)',
-    category: 'Decor & Mandap' as const,
+    category: 'Decor & Mandap',
     estimatedCost: 3200,
-    paidBy: 'split_50_50' as const,
+    paidBy: 'split_50_50',
     icon: '✨',
     tip: 'Seamless glossy vinyl wrap with custom couple monogram logo',
+    tradition: 'all',
   },
   {
     title: 'Vendor Meals Package (15 Crew Members @ $40/meal)',
-    category: 'Venue & Catering' as const,
+    category: 'Venue & Catering',
     estimatedCost: 600,
-    paidBy: 'split_50_50' as const,
+    paidBy: 'split_50_50',
     icon: '🍽️',
     tip: 'Required hot meal plates for photo/video, DJ, AV, and coordinator team',
+    tradition: 'all',
   },
   {
     title: 'Catering Staff Transport, Travel & 10% Gratuity',
-    category: 'Venue & Catering' as const,
+    category: 'Venue & Catering',
     estimatedCost: 8500,
-    paidBy: 'split_50_50' as const,
+    paidBy: 'split_50_50',
     icon: '📜',
     tip: 'Mobile kitchen transport trailers & service gratuity for outside Indian caterers (e.g. Moghul)',
+    tradition: 'all',
   },
   {
     title: 'Immediate Family Outfits (Matching Sarees, Kurtas & Safas)',
-    category: 'Outfits & Jewellery' as const,
+    category: 'Outfits & Jewellery',
     estimatedCost: 10000,
-    paidBy: 'split_50_50' as const,
+    paidBy: 'split_50_50',
     icon: '👗',
     tip: 'Ceremonial outfits for parents, siblings, bridesmaids, and family Safas',
+    tradition: 'all',
   },
   {
-    title: 'Auspicious Gold, Mangalsutra & Ritual Shagun Coins',
-    category: 'Outfits & Jewellery' as const,
+    title: 'Auspicious Gold, Mangalsutra / Thaali & Shagun Coins',
+    category: 'Outfits & Jewellery',
     estimatedCost: 3500,
-    paidBy: 'groom_side' as const,
+    paidBy: 'groom_side',
     icon: '🪙',
-    tip: 'Sacred Gold Mangalsutra, wedding bands, and 24K gold blessing coins',
+    tip: 'Sacred Gold Mangalsutra / Thaali, wedding bands, and 24K gold blessing coins',
+    tradition: 'all',
   },
   {
     title: 'Mithai Sweet Boxes (Formal Invites & Guest Return Favors)',
-    category: 'Favors & Invites' as const,
+    category: 'Favors & Invites',
     estimatedCost: 2000,
-    paidBy: 'split_50_50' as const,
+    paidBy: 'split_50_50',
     icon: '🍬',
     tip: 'Artisanal Indian mithai boxes (Kaju Katli, Laddoos) with invitation packaging',
-  },
-  {
-    title: 'Guest Airport Shuttle Vans & Hotel Transport (15-Passenger)',
-    category: 'Accommodations & Transport' as const,
-    estimatedCost: 3000,
-    paidBy: 'split_50_50' as const,
-    icon: '🚐',
-    tip: 'Shuttle vans transporting out-of-town guests between hotel and venues',
+    tradition: 'all',
   },
   {
     title: 'Vedic Priest / Iyer / Pandit Ji Dakshina & Travel',
-    category: 'Pandit & Rituals' as const,
+    category: 'Pandit & Rituals',
     estimatedCost: 2500,
-    paidBy: 'split_50_50' as const,
+    paidBy: 'split_50_50',
     icon: '🪔',
     tip: 'Vedic officiant / Iyer dakshina, puja samagri kit, and travel reimbursement',
+    tradition: 'all',
   },
 ];
 
@@ -124,6 +164,7 @@ export default function BudgetPage() {
   const { wedding, budgetItems, addBudgetItem, updateBudgetItem, deleteBudgetItem } = useWedding();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedSplit, setSelectedSplit] = useState<string>('all');
+  const [presetTraditionFilter, setPresetTraditionFilter] = useState<'all' | 'traditional_desi' | 'south_indian'>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<BudgetItem | null>(null);
 
@@ -332,7 +373,7 @@ export default function BudgetPage() {
 
       {/* Real-World Desi Wedding Expense Quick-Add Presets */}
       <div className="bg-gradient-to-r from-amber-50/80 via-rose-50/40 to-stone-50 border border-amber-200/80 rounded-2xl p-4 shadow-xs">
-        <div className="flex items-center justify-between mb-2.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
           <div className="flex items-center gap-2">
             <span className="p-1 rounded-lg bg-amber-100 text-amber-800">
               <Sparkles className="w-3.5 h-3.5" />
@@ -341,12 +382,32 @@ export default function BudgetPage() {
               Common Desi American Wedding Expenses (Quick-Add)
             </h3>
           </div>
-          <span className="text-[11px] text-stone-500 hidden sm:inline">
-            Click any item to pre-fill realistic USA vendor costs & family splits
-          </span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {[
+              { id: 'all', label: 'All Presets' },
+              { id: 'traditional_desi', label: '🌟 Traditional Desi' },
+              { id: 'south_indian', label: '🪔 South Indian' },
+            ].map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setPresetTraditionFilter(f.id as any)}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-colors ${
+                  presetTraditionFilter === f.id
+                    ? 'bg-rose-700 text-white shadow-2xs'
+                    : 'bg-white border border-stone-200 text-stone-600 hover:bg-stone-100'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-thin">
-          {DESI_EXPENSE_PRESETS.map((preset, idx) => (
+          {DESI_EXPENSE_PRESETS.filter((p) => {
+            if (presetTraditionFilter === 'all') return true;
+            return p.tradition === 'all' || p.tradition === presetTraditionFilter;
+          }).map((preset, idx) => (
             <button
               key={idx}
               onClick={() => handleSelectPreset(preset)}

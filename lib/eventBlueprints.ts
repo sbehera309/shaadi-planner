@@ -1,4 +1,4 @@
-import { SubEventType, RequirementCategory, WeddingEvent } from './types';
+import { SubEventType, RequirementCategory, WeddingEvent, WeddingTradition } from './types';
 
 export interface EventDecisionBlueprint {
   id: string;
@@ -174,13 +174,13 @@ export const EVENT_BLUEPRINTS: Record<SubEventType, EventBlueprint> = {
         title: 'Auspicious Live Musicians: Nathswaram & Thavil or Shehnai & Flute',
         category: 'Music, Sound & FX',
         decisionType: 'entertainment',
-        description: 'Traditional live classical instrumentalists to welcome guests, play during Kanyadaan, and perform sacred ragas during the Mangalsutra muhurat.',
+        description: 'Traditional live classical instrumentalists to welcome guests, play during Kanyadaan, and perform sacred ragas during the main ceremony vows exchange.',
         tip: 'Nathswaram (South Indian) or Shehnai (North Indian) creates an authentic sacred Vedic atmosphere.',
         defaultSelected: true,
         subItems: [
           { id: 'lm-1', title: 'Book live Nathswaram & Thavil ensemble (or Shehnai & Flute) for 3-4 hours', completed: false },
           { id: 'lm-2', title: 'Elevated Mandap-side floor seating (Bajots / cushions) and sound microphones', completed: false },
-          { id: 'lm-3', title: 'Coordinate muhurat cue signals between Priest and musicians', completed: false },
+          { id: 'lm-3', title: 'Coordinate vows time cue signals between Priest and musicians', completed: false },
           { id: 'lm-4', title: 'Provide artist hospitality & lunch arrangements', completed: false },
         ],
       },
@@ -232,7 +232,7 @@ export const EVENT_BLUEPRINTS: Record<SubEventType, EventBlueprint> = {
         title: 'Safe-Keeping for Mangalsutra, Gold Coins, Sindoor & Rings',
         category: 'Attire, Saafa & Jewellery',
         decisionType: 'ritual',
-        description: 'Assign a designated trusted family coordinator to hold and present sacred marriage symbols at the exact Vedic muhurat.',
+        description: 'Assign a designated trusted family coordinator to hold and present sacred marriage symbols at the exact ceremony vows window.',
         defaultSelected: true,
         subItems: [
           { id: 'sym-1', title: 'Sacred Gold & Black Bead Mangalsutra in secure velvet pouch', completed: false },
@@ -954,4 +954,256 @@ export function sortEventTypesChronologically(types: SubEventType[]): SubEventTy
     return rankA - rankB;
   });
 }
+
+/**
+ * South Indian Wedding Blueprint for Pheras (Muhurtham & Mandapam)
+ * Tamil, Telugu, Kannada, Malayalam traditions
+ */
+export const SOUTH_INDIAN_PHERAS_BLUEPRINT: EventBlueprint = {
+  type: 'pheras',
+  name: 'Muhurtham & Mandapam Ceremony (South Indian Wedding Day)',
+  tagline: 'Sacred Thaali tying, Kashi Yatra, Oonjal swing, Vedic mantras & Sadhya feast',
+  defaultTime: { start: '08:30', end: '13:30' },
+  bannerGradient: 'from-amber-700 via-yellow-700 to-orange-800',
+  description: 'The sacred heart of the South Indian wedding: auspicious morning Nadaswaram, Kashi Yatra, Maalai Maatral garland exchange, Kanyadaanam, and Mangalyadharanam (tying of the sacred Thaali) conducted by the Iyer / Vadhyar.',
+  dressCode: 'Traditional South Indian Silks: Bridal Kanchipuram Pattu Saree, Gold Temple Jewelry, Mullai Flowers & Groom Pure Silk Pattu Veshti (Dhoti) / Angavastram',
+  colorTheme: '#D97706',
+  venueType: 'Grand Mandapam Ballroom or Temple Hall',
+  planningPriority: 1,
+  chronologicalRank: 5,
+  timelinePhase: 'The Wedding Day • Sacred Muhurtham',
+  priorityBadge: {
+    label: '🪔 Sacred Muhurtham (Vedic Morning Rituals)',
+    level: 'critical',
+    color: 'bg-amber-100 text-amber-900 border-amber-300',
+  },
+  decisions: [
+    {
+      id: 'south-hotel-block',
+      title: 'Hotel Room Block & Family Hospitality Suite',
+      category: 'Transport & Entry',
+      decisionType: 'venue',
+      description: 'Reserve contracted hotel rooms with 5 AM early morning check-in for MUA and Iyer preparation.',
+      defaultSelected: true,
+      subItems: [
+        { id: 'shb-1', title: 'Contract room block with 5 AM early arrival passes for bridal party', completed: false },
+        { id: 'shb-2', title: 'Secure hospitality suite for midnight filter coffee and family gathering', completed: false },
+        { id: 'shb-3', title: 'Coordinate front desk distribution of South Indian welcome bags', completed: false },
+      ],
+    },
+    {
+      id: 'south-welcome-bags',
+      title: 'Guest Hospitality Welcome Bags (Banana Chips, Mysore Pak & Itinerary)',
+      category: 'Food, Drinks & Favors',
+      decisionType: 'ritual',
+      description: 'Welcome bags featuring South Indian savory snacks, sweets, and weekend schedule.',
+      defaultSelected: true,
+      subItems: [
+        { id: 'swb-1', title: 'Custom jute welcome bag with couple initials', completed: false },
+        { id: 'swb-2', title: 'South Indian banana chips, murukku & artisanal Mysore Pak sweets', completed: false },
+        { id: 'swb-3', title: 'Weekend schedule card with auspicious vows time window', completed: false },
+        { id: 'swb-4', title: 'Morning relief kit & bottled water bottles', completed: false },
+      ],
+    },
+    {
+      id: 'south-bridal-attire',
+      title: 'Bridal Kanchipuram Silk Sarees, Pure Gold Temple Jewelry & Jasmine Gajra',
+      category: 'Attire, Saafa & Jewellery',
+      decisionType: 'attire',
+      description: 'Heirloom Kanchipuram silk saree (Muhurtham saree & 9-yard Madisar if Iyengar/Iyer), antique temple necklace, Vanki (armlet), Maang Tikka, and fresh Mullai/Jasmine flowers.',
+      defaultSelected: true,
+      subItems: [
+        { id: 'sba-1', title: 'Auspicious Muhurtham Kanchipuram silk saree with pure zari borders steamed & pleated', completed: false },
+        { id: 'sba-2', title: 'Antique 22K temple jewelry choker, Kasu Malai (coin necklace) & Jhumkas', completed: false },
+        { id: 'sba-3', title: 'Bridal Vanki (armlet), Oddiyanam (gold waist belt) & Suryan/Chandran hair jewels', completed: false },
+        { id: 'sba-4', title: 'Fresh fragrant Jasmine / Mullai gajra flower strings for bridal braid (Jadai)', completed: false },
+        { id: 'sba-5', title: 'Bridal touch-up kit and comfortable ceremony footwear', completed: false },
+      ],
+    },
+    {
+      id: 'south-groom-attire',
+      title: 'Groom Pure Silk Pattu Veshti (Dhoti), Angavastram & Gold Chain',
+      category: 'Attire, Saafa & Jewellery',
+      decisionType: 'attire',
+      description: 'Traditional pure silk Veshti with gold zari border, matching Angavastram shawl, and gold chain/rings.',
+      defaultSelected: true,
+      subItems: [
+        { id: 'sga-1', title: 'Pure silk cream/gold Pattu Veshti (Dhoti) & matching Angavastram silk stole', completed: false },
+        { id: 'sga-2', title: 'Traditional silk shirt for welcoming & bare chest draping for Muhurtham rituals', completed: false },
+        { id: 'sga-3', title: 'Groom gold chain, ring, and formal ceremony leather sandals', completed: false },
+      ],
+    },
+    {
+      id: 'south-live-music',
+      title: 'Live Nathswaram & Thavil Auspicious Instrumental Ensemble',
+      category: 'Music, Sound & FX',
+      decisionType: 'entertainment',
+      description: 'Traditional Nadaswaram & Thavil live artists playing classical Carnatic ragas to welcome guests, accompany Kashi Yatra, and play the celebratory crescendo during Mangalyadharanam (Thaali tying).',
+      tip: 'The Nadaswaram crescendo during the 3 knots of the Thaali is the emotional climax of the wedding.',
+      defaultSelected: true,
+      subItems: [
+        { id: 'snm-1', title: 'Book 3-piece Nathswaram & Thavil live ensemble for 4 hours morning coverage', completed: false },
+        { id: 'snm-2', title: 'Arrange Mandapam-side elevated seating, power outlets & dedicated microphones', completed: false },
+        { id: 'snm-3', title: 'Coordinate Thaali tying crescendo cue with the Iyer / Vadhyar', completed: false },
+      ],
+    },
+    {
+      id: 'south-iyer',
+      title: 'Vedic Priest / Iyer / Vadhyar & Muhurtham Puja Samagri Kit',
+      category: 'Puja Samagri & Rituals',
+      decisionType: 'ritual',
+      description: 'Confirm Vedic Officiant (Iyer / Vadhyar / Purohit) dakshina, travel, and complete Samagri checklist (Coconuts, Betel leaves/nuts, Mango leaves, Turmeric, Rice Akshata, and Brass Urlis).',
+      defaultSelected: true,
+      subItems: [
+        { id: 'siy-1', title: 'Confirm Iyer / Vadhyar dakshina, travel, and morning arrival at 7:30 AM', completed: false },
+        { id: 'siy-2', title: 'Assemble Vedic Samagri: 20 Coconuts, Betel leaves, Turmeric root, Akshata & Ghee', completed: false },
+        { id: 'siy-3', title: 'Arrange Homam Kund and obtain venue smoke detector / open flame approval', completed: false },
+      ],
+    },
+    {
+      id: 'south-kashi-yatra',
+      title: 'Kashi Yatra Procession: Umbrella, Walking Stick, Geetha Book & Mirror',
+      category: 'Transport & Entry',
+      decisionType: 'ritual',
+      description: 'The playful traditional ritual where the groom pretends to leave for Kashi and the bride’s father convinces him to marry.',
+      defaultSelected: true,
+      subItems: [
+        { id: 'sky-1', title: 'Decorated ceremonial Kashi Yatra umbrella (silk with frills) & walking stick', completed: false },
+        { id: 'sky-2', title: 'Bhagavad Gita holy book, hand mirror & ceremonial footwear', completed: false },
+        { id: 'sky-3', title: 'Brief bride’s father and groom on playful ritual dialogue', completed: false },
+      ],
+    },
+    {
+      id: 'south-thaali',
+      title: 'Sacred Thaali (Mangalsutra), Gold Coins & Yellow Thread Coordination',
+      category: 'Attire, Saafa & Jewellery',
+      decisionType: 'ritual',
+      description: 'Gold Thaali / Thirumangalyam emblems blessed on a silver thali by elder guests before being tied around the bride’s neck with three sacred knots.',
+      defaultSelected: true,
+      subItems: [
+        { id: 'stt-1', title: 'Gold Thaali / Thirumangalyam charms strung on auspicious yellow turmeric thread', completed: false },
+        { id: 'stt-2', title: 'Silver puja plate (Thali) for circulating Thaali among elders for blessings', completed: false },
+        { id: 'stt-3', title: 'Assign groom’s sister to assist with tying the second and third knots', completed: false },
+      ],
+    },
+    {
+      id: 'south-garlands',
+      title: 'Fresh Jasmine, Lotus & Rose Petal Maalai (Garlands) for Maalai Maatral',
+      category: 'Puja Samagri & Rituals',
+      decisionType: 'decor',
+      description: 'Thick fragrant fresh South Indian floral garlands for the joyous couple garland exchange, plus family honoring shawls.',
+      defaultSelected: true,
+    },
+    {
+      id: 'south-mandapam',
+      title: 'Mandapam Architecture, Banana Tree Entrance & Brass Vilakku Lamps',
+      category: 'Decor, Props & Staging',
+      decisionType: 'decor',
+      description: 'Traditional Mandapam framed with whole green banana trees, fresh mango leaf Thoranams, brass Kuthu Vilakku oil lamps, and marigold strings.',
+      defaultSelected: true,
+    },
+    {
+      id: 'south-sadhya',
+      title: 'Traditional South Indian Banana Leaf Sadhya Feast (Adults + Kids + Vendors)',
+      category: 'Food, Drinks & Favors',
+      decisionType: 'food',
+      description: 'Authentic pure vegetarian South Indian feast served on fresh banana leaves: Sambar, Rasam, Avial, Kootu, Poriyal, Appalam, and warm Paal Payasam.',
+      defaultSelected: true,
+      subItems: [
+        { id: 'ss-1', title: 'Confirm adult guest count (e.g. 400-500 guests @ ~$45-$65/plate)', completed: false },
+        { id: 'ss-2', title: 'Order fresh whole banana leaves and stainless steel service water cups', completed: false },
+        { id: 'ss-3', title: 'Arrange South Indian filter coffee station for guest reception arrival', completed: false },
+      ],
+    },
+    {
+      id: 'south-vendor-meals',
+      title: 'Vendor Hot Meals & Green Room Hospitality',
+      category: 'Food, Drinks & Favors',
+      decisionType: 'food',
+      description: 'Provide hot meals and coffee for 10-15 working professionals (photographers, cinematographers, Nathswaram artists, coordinators).',
+      defaultSelected: true,
+    },
+    {
+      id: 'south-farewell-transport',
+      title: 'Farewell / Getaway Exit Vehicle & Luggage Coordination',
+      category: 'Transport & Entry',
+      decisionType: 'transport',
+      description: 'Decorated getaway vehicle for couple departure following the afternoon festivities.',
+      defaultSelected: true,
+    },
+  ],
+};
+
+/**
+ * Fusion / Cross-Cultural Blueprint for Pheras
+ * Blends North and South Indian traditions
+ */
+export const FUSION_PHERAS_BLUEPRINT: EventBlueprint = {
+  type: 'pheras',
+  name: 'Mandapam, Baraat & Sacred Vedic Pheras (Cross-Cultural Fusion Day)',
+  tagline: 'Groom Baraat procession with Dhol, Kashi Yatra, sacred Agni pheras & Thaali blessings',
+  defaultTime: { start: '10:30', end: '16:00' },
+  bannerGradient: 'from-rose-800 via-amber-800 to-red-950',
+  description: 'A beautiful fusion celebration weaving together North and South Indian traditions: high-energy Baraat entry with Dhol, Kashi Yatra, dual Iyer & Pandit Ji blessings, sacred fire pheras, and Thaali tying.',
+  dressCode: 'Regal Heritage & Silks: Bridal Lehengas / Kanchipuram Silks, Temple or Kundan Jewelry, Groom Sherwani or Pattu Veshti',
+  colorTheme: '#DC2626',
+  venueType: 'Grand Estate Mandapam Lawn or Ballroom',
+  planningPriority: 1,
+  chronologicalRank: 5,
+  timelinePhase: 'The Wedding Day • Fusion Ceremony',
+  priorityBadge: {
+    label: '💫 Cross-Cultural Celebration',
+    level: 'critical',
+    color: 'bg-rose-100 text-rose-900 border-rose-300',
+  },
+  decisions: [
+    ...EVENT_BLUEPRINTS.pheras.decisions,
+    {
+      id: 'fusion-south-music',
+      title: 'Live Nathswaram & Thavil Ensemble (Complements Baraat Dhol)',
+      category: 'Music, Sound & FX',
+      decisionType: 'entertainment',
+      description: 'Nathswaram & Thavil classical instrumentalists welcoming Mandap guests and performing the Thaali / Mangalsutra crescendo.',
+      defaultSelected: true,
+    },
+    {
+      id: 'fusion-kashi-yatra',
+      title: 'Kashi Yatra Playful Ritual (Umbrella, Cane & Gita Book)',
+      category: 'Transport & Entry',
+      decisionType: 'ritual',
+      description: 'Playful South Indian welcoming ritual between groom and bride’s father preceding Mandap entry.',
+      defaultSelected: true,
+    },
+    {
+      id: 'fusion-bananaleaf-satvik',
+      title: 'Dual Regional Feast: South Indian Sadhya + North Indian Satvik Specialties',
+      category: 'Food, Drinks & Favors',
+      decisionType: 'food',
+      description: 'Catering menu celebrating both families: Sambar, Avial, Payasam alongside Paneer, Dal Makhani, and Chaat.',
+      defaultSelected: true,
+    },
+  ],
+};
+
+/**
+ * Returns the appropriate event blueprints map based on the couple's cultural tradition
+ */
+export function getEventBlueprintsForTradition(
+  tradition: WeddingTradition = 'traditional_desi'
+): Record<SubEventType, EventBlueprint> {
+  if (tradition === 'south_indian') {
+    return {
+      ...EVENT_BLUEPRINTS,
+      pheras: SOUTH_INDIAN_PHERAS_BLUEPRINT,
+    };
+  }
+  if (tradition === 'fusion_mixed') {
+    return {
+      ...EVENT_BLUEPRINTS,
+      pheras: FUSION_PHERAS_BLUEPRINT,
+    };
+  }
+  return EVENT_BLUEPRINTS;
+}
+
 

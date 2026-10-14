@@ -32,7 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose })
 
   const navItems = [
     { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-    { label: 'Itinerary & Muhurat', href: '/dashboard/itinerary', icon: CalendarDays },
+    { label: 'Itinerary & Timings', href: '/dashboard/itinerary', icon: CalendarDays },
     { label: 'Guests & RSVPs', href: '/dashboard/guests', icon: Users },
     { label: 'Budget & Splits', href: '/dashboard/budget', icon: WalletCards },
     { label: 'Vendor Directory', href: '/dashboard/vendors', icon: Briefcase },

@@ -11,6 +11,7 @@ import {
   EVENT_BLUEPRINTS,
   EventSortOrder,
   sortEventsBy,
+  getEventBlueprintsForTradition,
 } from '@/lib/eventBlueprints';
 import {
   CalendarDays,
@@ -176,6 +177,15 @@ export default function DashboardOverviewPage() {
             </p>
 
             <div className="mt-5 flex flex-wrap gap-2.5 text-xs">
+              {wedding.tradition && (
+                <span className="px-3 py-1.5 rounded-xl bg-amber-900/60 border border-amber-600/60 font-semibold text-amber-200 shadow-2xs">
+                  {wedding.tradition === 'south_indian'
+                    ? '🪔 South Indian Wedding'
+                    : wedding.tradition === 'fusion_mixed'
+                    ? '💫 Cross-Cultural Fusion'
+                    : '🌟 Traditional Desi Wedding'}
+                </span>
+              )}
               {wedding.hashtag && (
                 <span className="px-3 py-1.5 rounded-xl bg-stone-800/80 border border-stone-700/80 font-medium text-stone-200">
                   🏷️ <strong className="text-amber-200">{wedding.hashtag}</strong>
@@ -397,7 +407,8 @@ export default function DashboardOverviewPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
                 {sortedEvents.map((event, idx) => {
-                  const blueprint = EVENT_BLUEPRINTS[event.type];
+                  const traditionBlueprints = getEventBlueprintsForTradition(wedding?.tradition);
+                  const blueprint = traditionBlueprints[event.type] || EVENT_BLUEPRINTS[event.type];
                   const arrangedCount = event.checklist?.filter((c) => c.isArranged).length || 0;
                   const totalChecklist = event.checklist?.length || 0;
 

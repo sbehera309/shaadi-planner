@@ -192,7 +192,7 @@ export default function PublicWeddingInvitePage({
                 <Sparkles className="w-8 h-8 text-amber-500 mx-auto" />
                 <h3 className="font-serif text-lg font-bold text-stone-900">Ceremony Details Coming Soon</h3>
                 <p className="text-xs text-stone-500 max-w-sm mx-auto">
-                  The couple is finalizing the ceremony schedule and muhurat timings. Please check back shortly or submit your general RSVP below!
+                  The couple is finalizing the ceremony schedule and vows timings. Please check back shortly or submit your general RSVP below!
                 </p>
               </div>
             ) : (
@@ -208,7 +208,7 @@ export default function PublicWeddingInvitePage({
                       </span>
                       {ev.muhuratTime && (
                         <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-400 text-stone-950 shadow-sm">
-                          ✨ Auspicious Muhurat: {ev.muhuratTime}
+                          ✨ Main Ceremony Vows Window: {ev.muhuratTime}
                         </span>
                       )}
                     </div>

@@ -25,8 +25,8 @@ export default function LandingPage() {
   const features = [
     {
       icon: CalendarDays,
-      title: 'Multi-Event Itinerary & Muhurat',
-      desc: 'Dedicated run-of-show for Mehendi, Haldi, Sangeet, Pheras & Reception with auspicious muhurat highlights and dress codes.',
+      title: 'Multi-Event Itinerary & Ceremony Schedules',
+      desc: 'Dedicated run-of-show for Sangeet, Haldi, Mehndi, Pheras & Reception with main ceremony vows time windows and dress codes.',
       color: 'from-amber-500 to-rose-600',
     },
     {

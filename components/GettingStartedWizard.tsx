@@ -32,12 +32,13 @@ import {
   Check,
   Lightbulb,
 } from 'lucide-react';
-import { SubEventType, RequirementCategory, EventChecklistItem, WeddingEvent } from '@/lib/types';
+import { SubEventType, RequirementCategory, EventChecklistItem, WeddingEvent, WeddingTradition } from '@/lib/types';
 import {
   EVENT_BLUEPRINTS,
   EventBlueprint,
   CHRONOLOGICAL_EVENT_TYPES,
   sortEventTypesChronologically,
+  getEventBlueprintsForTradition,
 } from '@/lib/eventBlueprints';
 
 interface WizardDecisionItem {
@@ -62,6 +63,9 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
   const { initializeGuidedWedding } = useWedding();
 
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
+
+  // Step 1: Cultural Tradition Preference (Traditional Desi vs South Indian vs Fusion)
+  const [selectedTradition, setSelectedTradition] = useState<WeddingTradition>('traditional_desi');
 
   // Step 1: Couple & Target Window State
   const [datesNotFinalized, setDatesNotFinalized] = useState(true);
@@ -171,6 +175,40 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
     setDateRange({ ...dateRange, durationDays: days });
   };
 
+  const handleTraditionChange = (tradition: WeddingTradition) => {
+    setSelectedTradition(tradition);
+    const bps = getEventBlueprintsForTradition(tradition);
+    const pherasBp = bps.pheras;
+    if (pherasBp) {
+      setDecisionsByEvent((prev) => ({
+        ...prev,
+        pheras: pherasBp.decisions.map((d) => {
+          const isItem =
+            d.category === 'Attire, Saafa & Jewellery' ||
+            d.category === 'Puja Samagri & Rituals' ||
+            d.title.toLowerCase().includes('bag') ||
+            d.title.toLowerCase().includes('favor') ||
+            d.title.toLowerCase().includes('saafa') ||
+            d.title.toLowerCase().includes('samagri') ||
+            d.title.toLowerCase().includes('milni') ||
+            d.title.toLowerCase().includes('thaali') ||
+            d.title.toLowerCase().includes('garland') ||
+            d.title.toLowerCase().includes('kashi');
+
+          return {
+            id: d.id,
+            title: d.title,
+            category: d.category,
+            checked: true,
+            isItemToGet: isItem,
+            notes: d.tip || d.description,
+            subItems: d.subItems ? d.subItems.map((s) => ({ ...s })) : undefined,
+          };
+        }),
+      }));
+    }
+  };
+
   const toggleEventType = (type: SubEventType) => {
     if (selectedEventTypes.includes(type)) {
       if (selectedEventTypes.length === 1) {
@@ -188,7 +226,8 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
       setActiveEventTab(type);
 
       if (!decisionsByEvent[type]) {
-        const bp = EVENT_BLUEPRINTS[type];
+        const bps = getEventBlueprintsForTradition(selectedTradition);
+        const bp = bps[type];
         if (bp) {
           setDecisionsByEvent((prev) => ({
             ...prev,
@@ -267,9 +306,10 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
     const endDate = datesNotFinalized ? '' : dateRange.endDate || dateRange.startDate;
 
     // Build the events list in guaranteed chronological order: Roka -> Mehndi -> Haldi -> Sangeet -> Pheras -> Reception
+    const bps = getEventBlueprintsForTradition(selectedTradition);
     const orderedTypes = sortEventTypesChronologically(selectedEventTypes);
     const builtEvents: Array<Omit<WeddingEvent, 'id' | 'weddingId'>> = orderedTypes.map((type, idx) => {
-      const bp = EVENT_BLUEPRINTS[type];
+      const bp = bps[type];
       const decisions = decisionsByEvent[type] || bp.decisions.map((d) => ({
         id: d.id,
         title: d.title,
@@ -331,6 +371,7 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
         brideName: bride,
         groomName: groom,
         slug: `${groom.toLowerCase()}-weds-${bride.toLowerCase()}`.replace(/[^a-z0-9]+/g, '-'),
+        tradition: selectedTradition,
         startDate: startDate,
         endDate: endDate,
         city: profileData.city,
@@ -428,6 +469,92 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
                     placeholder="e.g. Arjun Mehta"
                     className="w-full px-4 py-2.5 rounded-xl border border-stone-300 text-stone-900 focus:outline-hidden focus:ring-2 focus:ring-rose-500 font-medium text-sm"
                   />
+                </div>
+              </div>
+
+              {/* Cultural Tradition & Ceremony Style Selector */}
+              <div className="p-5 rounded-2xl border border-stone-200 bg-stone-50/50 space-y-3">
+                <div>
+                  <label className="font-bold text-stone-900 text-xs block">
+                    Cultural Tradition & Ceremony Style *
+                  </label>
+                  <p className="text-[11px] text-stone-500 font-medium mt-0.5">
+                    Select your tradition to tailor ceremony essentials, officiants, rituals, music, and feasts.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {/* Card 1: Traditional Desi */}
+                  <div
+                    onClick={() => handleTraditionChange('traditional_desi')}
+                    className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
+                      selectedTradition === 'traditional_desi'
+                        ? 'border-rose-600 bg-rose-50/60 shadow-xs'
+                        : 'border-stone-200 bg-white hover:border-stone-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-sm font-bold text-stone-900 font-serif">🌟 Traditional Desi</span>
+                      <div
+                        className={`w-4 h-4 rounded-full flex items-center justify-center ${
+                          selectedTradition === 'traditional_desi' ? 'bg-rose-700 text-white' : 'border border-stone-300'
+                        }`}
+                      >
+                        {selectedTradition === 'traditional_desi' && <Check className="w-3 h-3" />}
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-stone-600 leading-snug">
+                      North Indian / Punjabi / Gujarati / Hindi-belt traditions: Baraat with Dhol, Milni, Agni pheras & Sindoor.
+                    </p>
+                  </div>
+
+                  {/* Card 2: South Indian */}
+                  <div
+                    onClick={() => handleTraditionChange('south_indian')}
+                    className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
+                      selectedTradition === 'south_indian'
+                        ? 'border-amber-600 bg-amber-50/60 shadow-xs'
+                        : 'border-stone-200 bg-white hover:border-stone-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-sm font-bold text-stone-900 font-serif">🪔 South Indian</span>
+                      <div
+                        className={`w-4 h-4 rounded-full flex items-center justify-center ${
+                          selectedTradition === 'south_indian' ? 'bg-amber-700 text-white' : 'border border-stone-300'
+                        }`}
+                      >
+                        {selectedTradition === 'south_indian' && <Check className="w-3 h-3" />}
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-stone-600 leading-snug">
+                      Tamil / Telugu / Kannada / Malayalam traditions: Nathswaram & Thavil, Kashi Yatra, sacred Thaali tying & Banana Leaf Sadhya.
+                    </p>
+                  </div>
+
+                  {/* Card 3: Cross-Cultural / Fusion */}
+                  <div
+                    onClick={() => handleTraditionChange('fusion_mixed')}
+                    className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
+                      selectedTradition === 'fusion_mixed'
+                        ? 'border-purple-600 bg-purple-50/60 shadow-xs'
+                        : 'border-stone-200 bg-white hover:border-stone-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-sm font-bold text-stone-900 font-serif">💫 Cross-Cultural Fusion</span>
+                      <div
+                        className={`w-4 h-4 rounded-full flex items-center justify-center ${
+                          selectedTradition === 'fusion_mixed' ? 'bg-purple-700 text-white' : 'border border-stone-300'
+                        }`}
+                      >
+                        {selectedTradition === 'fusion_mixed' && <Check className="w-3 h-3" />}
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-stone-600 leading-snug">
+                      Blending North & South: High-energy Baraat + Kashi Yatra, dual Vedic blessings, and dual regional feast.
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -595,7 +722,8 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {CHRONOLOGICAL_EVENT_TYPES.map((type, index) => {
-                  const bp = EVENT_BLUEPRINTS[type];
+                  const traditionBlueprints = getEventBlueprintsForTradition(selectedTradition);
+                  const bp = traditionBlueprints[type];
                   if (!bp) return null;
                   const isSelected = selectedEventTypes.includes(type);
 
@@ -671,7 +799,8 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
               {/* Event Tabs Switcher in Chronological Sequence */}
               <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
                 {sortEventTypesChronologically(selectedEventTypes).map((type, idx) => {
-                  const bp = EVENT_BLUEPRINTS[type];
+                  const traditionBlueprints = getEventBlueprintsForTradition(selectedTradition);
+                  const bp = traditionBlueprints[type];
                   const isActive = activeEventTab === type;
                   const decisions = decisionsByEvent[type] || [];
                   const count = decisions.filter((d) => d.checked).length;
@@ -724,8 +853,9 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
               </div>
 
               {/* Active Event Details & Checklist */}
-              {activeEventTab && EVENT_BLUEPRINTS[activeEventTab] && (() => {
-                const bp = EVENT_BLUEPRINTS[activeEventTab];
+              {activeEventTab && getEventBlueprintsForTradition(selectedTradition)[activeEventTab] && (() => {
+                const traditionBlueprints = getEventBlueprintsForTradition(selectedTradition);
+                const bp = traditionBlueprints[activeEventTab];
                 const activeDecisions = decisionsByEvent[activeEventTab] || [];
                 const categoriesPresent = Array.from(new Set(activeDecisions.map((d) => d.category)));
 
