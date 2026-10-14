@@ -70,7 +70,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
           ) : (
             <div className="flex items-center gap-1.5 text-stone-500 text-xs truncate">
               <Calendar className="w-3.5 h-3.5 text-stone-400 shrink-0" />
-              <span className="truncate font-medium">ShaadiSutra Planner</span>
+              <span className="truncate font-medium">Vivaah Planner</span>
             </div>
           )}
         </div>

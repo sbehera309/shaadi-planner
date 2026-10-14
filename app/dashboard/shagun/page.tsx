@@ -114,10 +114,10 @@ export default function ShagunPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold font-serif text-stone-900">
-            Shagun & Lifafa (Gift) Ledger
+            Wedding Gifts & Envelopes
           </h1>
           <p className="text-xs text-stone-500 mt-1">
-            Digitally track cash envelopes, gold gifts, family reciprocity records, and thank-you dispatches.
+            Digitally track cash gifts, registry presents, family keepsakes, and thank-you notes.
           </p>
         </div>
         <button
@@ -125,7 +125,7 @@ export default function ShagunPage() {
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-semibold text-xs shadow-md shadow-teal-900/20 hover:opacity-95 self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
-          <span>Record Shagun / Lifafa</span>
+          <span>Record Gift / Envelope</span>
         </button>
       </div>
 
@@ -133,11 +133,11 @@ export default function ShagunPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <div className="bg-white p-5 rounded-2xl border border-emerald-200/80 shadow-xs">
           <div className="text-xs font-bold text-emerald-800 uppercase tracking-wider">
-            Total Cash Shagun Received
+            Total Cash Gifts Received
           </div>
           <div className="mt-2 text-2xl font-bold text-stone-900">{formatCurr(totalCash)}</div>
           <div className="mt-1 text-xs text-stone-500">
-            From {shagunRecords.filter((s) => s.type === 'cash_lifafa').length} cash lifafa envelopes
+            From {shagunRecords.filter((s) => s.type === 'cash_lifafa').length} cash gift envelopes
           </div>
         </div>
 
@@ -420,7 +420,7 @@ export default function ShagunPage() {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingRecord ? 'Edit Shagun Record' : 'Record Shagun Lifafa / Wedding Gift'}
+        title={editingRecord ? 'Edit Gift Record' : 'Record Wedding Gift / Envelope'}
         maxWidth="lg"
       >
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">

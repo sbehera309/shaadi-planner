@@ -12,8 +12,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'ShaadiSutra — Indian Wedding Planning Platform',
-  description: 'Complete Indian wedding management suite: multi-event itinerary, guest RSVPs, budget splitting, vendor directory, shagun tracker, and accommodations.',
+  title: 'Vivaah — Desi American Wedding Planner',
+  description: 'Modern wedding planning platform tailored for Desi-American celebrations: multi-day ceremonies, venue sound curfews, outside catering, guest RSVPs, and budget tracking.',
   manifest: '/manifest.json',
   icons: {
     icon: '/icon.svg',
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'ShaadiSutra',
+    title: 'Vivaah',
   },
 };
 

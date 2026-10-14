@@ -1,7 +1,7 @@
 {
-  "name": "ShaadiSutra — Indian Wedding Planner",
-  "short_name": "ShaadiSutra",
-  "description": "Culturally crafted Indian wedding management app in the USA",
+  "name": "Vivaah — Desi American Wedding Planner",
+  "short_name": "Vivaah",
+  "description": "Modern wedding planning app tailored for Desi-American celebrations in the USA",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#FAF8F5",

@@ -54,16 +54,16 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
     story: '',
   });
 
-  // Step 2: Selected Events (defaults to the common 4 Indian-American wedding events)
+  // Step 2: Selected Events (defaults in priority order: Pheras, Sangeet, Reception, Mehndi)
   const [selectedEventTypes, setSelectedEventTypes] = useState<SubEventType[]>([
-    'mehendi',
-    'sangeet',
     'pheras',
+    'sangeet',
     'reception',
+    'mehendi',
   ]);
 
-  // Step 3: Active Event Tab for viewing & editing decisions
-  const [activeEventTab, setActiveEventTab] = useState<SubEventType>('mehendi');
+  // Step 3: Active Event Tab for viewing & editing decisions (defaults to #1 priority)
+  const [activeEventTab, setActiveEventTab] = useState<SubEventType>('pheras');
 
   // Step 3: Decisions Checklist by Event
   const [decisionsByEvent, setDecisionsByEvent] = useState<
@@ -518,7 +518,7 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {(['mehendi', 'sangeet', 'haldi', 'pheras', 'reception', 'roka'] as SubEventType[]).map((type) => {
+                {(['pheras', 'sangeet', 'reception', 'mehendi', 'haldi', 'roka'] as SubEventType[]).map((type) => {
                   const bp = EVENT_BLUEPRINTS[type];
                   if (!bp) return null;
                   const isSelected = selectedEventTypes.includes(type);
@@ -535,11 +535,20 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
                     >
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-stone-100 text-stone-700 font-sans">
-                            {type.toUpperCase()}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-stone-100 text-stone-700 font-sans">
+                              {type.toUpperCase()}
+                            </span>
+                            {bp.priorityBadge && (
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${bp.priorityBadge.color}`}
+                              >
+                                {bp.priorityBadge.label}
+                              </span>
+                            )}
+                          </div>
                           <div
-                            className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
+                            className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors shrink-0 ${
                               isSelected ? 'bg-rose-700 text-white' : 'border-2 border-stone-300'
                             }`}
                           >
@@ -579,36 +588,43 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
                 </div>
               </div>
 
-              {/* Event Tabs Switcher */}
+              {/* Event Tabs Switcher in Planning Priority Order */}
               <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-                {selectedEventTypes.map((type) => {
-                  const bp = EVENT_BLUEPRINTS[type];
-                  const isActive = activeEventTab === type;
-                  const decisions = decisionsByEvent[type] || [];
-                  const count = decisions.filter((d) => d.checked).length;
+                {selectedEventTypes
+                  .slice()
+                  .sort(
+                    (a, b) =>
+                      (EVENT_BLUEPRINTS[a]?.planningPriority || 99) -
+                      (EVENT_BLUEPRINTS[b]?.planningPriority || 99)
+                  )
+                  .map((type) => {
+                    const bp = EVENT_BLUEPRINTS[type];
+                    const isActive = activeEventTab === type;
+                    const decisions = decisionsByEvent[type] || [];
+                    const count = decisions.filter((d) => d.checked).length;
 
-                  return (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => setActiveEventTab(type)}
-                      className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-2 ${
-                        isActive
-                          ? 'bg-stone-900 text-white shadow-sm ring-2 ring-amber-400'
-                          : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
-                      }`}
-                    >
-                      <span>{bp?.name || type}</span>
-                      <span
-                        className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                          isActive ? 'bg-amber-400 text-stone-900' : 'bg-stone-200 text-stone-700'
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setActiveEventTab(type)}
+                        className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-2 ${
+                          isActive
+                            ? 'bg-stone-900 text-white shadow-sm ring-2 ring-amber-400'
+                            : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
                         }`}
                       >
-                        {count} items
-                      </span>
-                    </button>
-                  );
-                })}
+                        <span>{bp?.name || type}</span>
+                        <span
+                          className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                            isActive ? 'bg-amber-400 text-stone-900' : 'bg-stone-200 text-stone-700'
+                          }`}
+                        >
+                          {count} items
+                        </span>
+                      </button>
+                    );
+                  })}
               </div>
 
               {/* Active Event Details & Checklist */}
@@ -619,10 +635,15 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
                     className={`p-4 bg-gradient-to-r ${EVENT_BLUEPRINTS[activeEventTab].bannerGradient} text-white flex flex-col sm:flex-row sm:items-center justify-between gap-2`}
                   >
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-white/20">
                           {activeEventTab.toUpperCase()}
                         </span>
+                        {EVENT_BLUEPRINTS[activeEventTab].priorityBadge && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/30 backdrop-blur-xs border border-white/20 text-white">
+                            {EVENT_BLUEPRINTS[activeEventTab].priorityBadge.label}
+                          </span>
+                        )}
                         <span className="text-xs text-white/90 font-medium">
                           🕒 {EVENT_BLUEPRINTS[activeEventTab].defaultTime.start} -{' '}
                           {EVENT_BLUEPRINTS[activeEventTab].defaultTime.end}

@@ -8,6 +8,11 @@ import { EditWeddingModal } from '@/components/EditWeddingModal';
 import { GettingStartedWizard } from '@/components/GettingStartedWizard';
 import { EventPlanningWizard } from '@/components/EventPlanningWizard';
 import {
+  EVENT_BLUEPRINTS,
+  EventSortOrder,
+  sortEventsBy,
+} from '@/lib/eventBlueprints';
+import {
   CalendarDays,
   Users,
   Wallet,
@@ -26,6 +31,8 @@ import {
   Tag,
   AlertCircle,
   HelpCircle,
+  ArrowUpDown,
+  Filter,
 } from 'lucide-react';
 
 export default function DashboardOverviewPage() {
@@ -44,7 +51,10 @@ export default function DashboardOverviewPage() {
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [selectedEventToPlan, setSelectedEventToPlan] = useState<WeddingEvent | null>(null);
 
-  // Budget calculations
+  // Event Sorting & Prioritization State
+  const [sortOrder, setSortOrder] = useState<EventSortOrder>('priority');
+
+  // Budget calculations in USD
   const totalTargetBudget = wedding?.targetBudget || 0;
   const totalActualCost = budgetItems.reduce((acc, curr) => acc + curr.actualCost, 0);
   const totalPaid = budgetItems.reduce((acc, curr) => acc + curr.paidAmount, 0);
@@ -61,8 +71,8 @@ export default function DashboardOverviewPage() {
   const groomHeadcount = groomGuests.reduce((acc, g) => acc + g.adultsCount + g.kidsCount, 0);
   const mutualHeadcount = mutualGuests.reduce((acc, g) => acc + g.adultsCount + g.kidsCount, 0);
 
-  // Shagun calculations
-  const totalCashShagun = shagunRecords.reduce((acc, s) => acc + (s.amount || 0), 0);
+  // Gift calculations
+  const totalCashGifts = shagunRecords.reduce((acc, s) => acc + (s.amount || 0), 0);
   const totalGiftsCount = shagunRecords.length;
   const thankYouPending = shagunRecords.filter((s) => !s.thankYouSent).length;
 
@@ -78,19 +88,29 @@ export default function DashboardOverviewPage() {
     }).format(val);
   };
 
-  // Event planning progress
-  const plannedEvents = events.filter(
-    (e) =>
-      (e.venueName && e.venueName !== 'TBD' && e.venueName !== 'Venue TBA') ||
-      (e.checklist && e.checklist.length > 0)
-  );
-  const plannedEventsPct = events.length > 0 ? Math.round((plannedEvents.length / events.length) * 100) : 0;
-
+  // ACCURATE Event Planning Progress:
+  // A ceremony is ONLY "Planned" if decisions in its checklist are actually arranged!
   const totalDecisionsCount = events.reduce((acc, e) => acc + (e.checklist ? e.checklist.length : 0), 0);
   const arrangedDecisionsCount = events.reduce(
     (acc, e) => acc + (e.checklist ? e.checklist.filter((c) => c.isArranged).length : 0),
     0
   );
+
+  // An event is fully planned if all its checklist decisions are arranged
+  const fullyPlannedEvents = events.filter(
+    (e) => e.checklist && e.checklist.length > 0 && e.checklist.every((c) => c.isArranged)
+  );
+
+  // An event is in progress if at least 1 decision is arranged
+  const inProgressEvents = events.filter(
+    (e) => e.checklist && e.checklist.length > 0 && e.checklist.some((c) => c.isArranged)
+  );
+
+  const overallDecisionsPct =
+    totalDecisionsCount > 0 ? Math.round((arrangedDecisionsCount / totalDecisionsCount) * 100) : 0;
+
+  // Sorted events list based on user preference
+  const sortedEvents = sortEventsBy(events, sortOrder);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -101,7 +121,7 @@ export default function DashboardOverviewPage() {
             <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold border border-amber-500/30">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Wedding Planning Journey</span>
+                <span>Desi American Wedding Planning HQ</span>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -144,7 +164,7 @@ export default function DashboardOverviewPage() {
               ) : (
                 <span className="text-amber-300/80 font-medium italic">
                   {' '}
-                  • Dates to be finalized (Scouting venues)
+                  • Dates to be finalized (Comparing venue availability)
                 </span>
               )}
             </p>
@@ -156,7 +176,7 @@ export default function DashboardOverviewPage() {
                 </span>
               )}
               <span className="px-3 py-1.5 rounded-xl bg-stone-800/80 border border-stone-700/80 font-medium text-stone-200">
-                📅 {events.length} Festive Sub-Events
+                📅 {events.length} Festive Celebrations
               </span>
               <span className="px-3 py-1.5 rounded-xl bg-stone-800/80 border border-stone-700/80 font-medium text-stone-200">
                 👥 {totalHeadcount} Expected Guests
@@ -175,16 +195,16 @@ export default function DashboardOverviewPage() {
           <div className="max-w-3xl space-y-5">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold">
               <Sparkles className="w-3.5 h-3.5 text-rose-600" />
-              <span>Welcome to ShaadiSutra • Step-by-Step Indian Wedding Planner</span>
+              <span>Welcome to Vivaah • Desi American Wedding Planner</span>
             </div>
 
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold font-serif text-stone-900 tracking-tight">
-              Start Planning Your Wedding, Step by Step
+              Plan Your Dream Wedding, Step by Step
             </h1>
 
             <p className="text-stone-600 text-sm sm:text-base leading-relaxed">
-              Planning an Indian wedding in the USA involves multiple ceremonies, family traditions, and vendor logistics.
-              Instead of throwing everything at you at once, ShaadiSutra guides you through a progressive, simple flow:
+              Planning a South Asian / Desi-American wedding involves multi-day celebrations, outside Indian catering approval at US hotels, sound curfews, and vendor coordination.
+              Instead of throwing everything at you at once, Vivaah guides you through a progressive, simple flow:
             </p>
 
             {/* 2-Step Roadmap Graphic */}
@@ -194,10 +214,10 @@ export default function DashboardOverviewPage() {
                   <span className="w-6 h-6 rounded-full bg-amber-600 text-white text-xs flex items-center justify-center font-bold">
                     1
                   </span>
-                  <span>Quick Initial Setup</span>
+                  <span>Quick Setup & Pick Celebrations</span>
                 </div>
                 <p className="text-xs text-stone-600 leading-relaxed pl-8">
-                  Name the couple, pick your target wedding date & city, and select which ceremonies you're hosting (Sangeet, Mehndi, Haldi, Baraat & Pheras, Reception).
+                  Name the couple, pick your target celebration window (optional if scouting venues), and choose which events you're hosting (Sangeet, Mehndi, Haldi, Baraat & Pheras, Reception).
                 </p>
               </div>
 
@@ -206,10 +226,10 @@ export default function DashboardOverviewPage() {
                   <span className="w-6 h-6 rounded-full bg-rose-600 text-white text-xs flex items-center justify-center font-bold">
                     2
                   </span>
-                  <span>Event-by-Event Guided Planning</span>
+                  <span>Event-by-Event Guided Decisions</span>
                 </div>
                 <p className="text-xs text-stone-600 leading-relaxed pl-8">
-                  For each ceremony, walk through decisions for venues & municipal permits, Indian catering & chaat, DJ/music, decor, and ceremony essentials.
+                  For each ceremony, walk through decisions for venues & municipal permits (sound curfews & fire marshals), Indian catering & chaat, DJ/music, and ceremony essentials.
                 </p>
               </div>
             </div>
@@ -247,7 +267,8 @@ export default function DashboardOverviewPage() {
       {/* PRIMARY SECTION: Event-by-Event Planning Roadmap */}
       {wedding && wedding.isConfigured && (
         <section className="space-y-4">
-          <div className="bg-white p-6 sm:p-7 rounded-3xl border border-stone-200 shadow-xs space-y-4">
+          <div className="bg-white p-6 sm:p-7 rounded-3xl border border-stone-200 shadow-xs space-y-5">
+            {/* Header & Accurate Progress Bar */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <div className="inline-flex items-center gap-2 text-rose-800 font-bold text-xs uppercase tracking-wider mb-1">
@@ -258,28 +279,86 @@ export default function DashboardOverviewPage() {
                   Plan Decisions for Each Ceremony
                 </h2>
                 <p className="text-xs sm:text-sm text-stone-600 mt-1 max-w-2xl">
-                  Select each event below to walk through venue rules & curfews, catering & dietary preferences, DJ/sound, and essentials checklists.
+                  Select each celebration below to make decisions on venues & late sound curfews, Indian catering & chaat counters, DJ/music, and essentials checklists.
                 </p>
               </div>
 
-              {/* Progress Summary Pill */}
+              {/* Progress Summary: Accurately reflects decisions arranged! */}
               <div className="flex flex-col items-start sm:items-end gap-1.5 shrink-0 bg-stone-50 sm:bg-transparent p-3 sm:p-0 rounded-2xl border sm:border-0 border-stone-200">
                 <div className="flex items-center gap-2 text-xs font-semibold text-stone-700">
-                  <span className="font-bold text-stone-900">{plannedEvents.length} of {events.length}</span>
-                  <span>Ceremonies Planned</span>
-                  <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[11px] font-bold">
-                    {plannedEventsPct}% Complete
+                  <span className="font-bold text-stone-900">
+                    {arrangedDecisionsCount === 0
+                      ? `0 of ${events.length} Planned`
+                      : `${fullyPlannedEvents.length} of ${events.length} Fully Planned`}
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                      overallDecisionsPct > 0
+                        ? 'bg-amber-100 text-amber-900'
+                        : 'bg-stone-200 text-stone-700'
+                    }`}
+                  >
+                    {overallDecisionsPct}% Complete
                   </span>
                 </div>
                 <div className="w-48 sm:w-56 bg-stone-200 h-2 rounded-full overflow-hidden">
                   <div
                     className="bg-gradient-to-r from-amber-500 to-rose-600 h-full rounded-full transition-all duration-300"
-                    style={{ width: `${Math.max(plannedEventsPct, 5)}%` }}
+                    style={{ width: `${Math.max(overallDecisionsPct, 0)}%` }}
                   />
                 </div>
                 <div className="text-[11px] text-stone-500">
-                  {arrangedDecisionsCount} of {totalDecisionsCount} checklist decisions arranged
+                  {arrangedDecisionsCount} of {totalDecisionsCount} decisions arranged
                 </div>
+              </div>
+            </div>
+
+            {/* Event Sorting & Prioritization Controls Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 pb-1 border-t border-stone-100 text-xs">
+              <div className="flex items-center gap-2 text-stone-600 font-semibold">
+                <ArrowUpDown className="w-3.5 h-3.5 text-stone-500" />
+                <span>Order Ceremonies By:</span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSortOrder('priority')}
+                  className={`px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
+                    sortOrder === 'priority'
+                      ? 'bg-stone-900 text-white shadow-xs'
+                      : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
+                  }`}
+                  title="Prioritize high-lead-time ceremonies first (e.g. Baraat/Pheras fire permits & Sangeet sound curfew)"
+                >
+                  <span>🏆 Planning Priority (High-Lead Time First)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSortOrder('chronological')}
+                  className={`px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
+                    sortOrder === 'chronological'
+                      ? 'bg-stone-900 text-white shadow-xs'
+                      : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
+                  }`}
+                  title="Traditional Desi weekend order: Mehndi -> Sangeet -> Pheras -> Reception"
+                >
+                  <span>📅 Weekend Timeline</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSortOrder('needs_planning')}
+                  className={`px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
+                    sortOrder === 'needs_planning'
+                      ? 'bg-stone-900 text-white shadow-xs'
+                      : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
+                  }`}
+                  title="Show ceremonies with 0 decisions arranged at the top"
+                >
+                  <span>⚡ Needs Planning First</span>
+                </button>
               </div>
             </div>
 
@@ -307,13 +386,16 @@ export default function DashboardOverviewPage() {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                {events.map((event, idx) => {
-                  const isEventPlanned =
-                    Boolean(event.venueName && event.venueName !== 'TBD' && event.venueName !== 'Venue TBA') ||
-                    Boolean(event.checklist && event.checklist.length > 0);
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                {sortedEvents.map((event, idx) => {
+                  const blueprint = EVENT_BLUEPRINTS[event.type];
                   const arrangedCount = event.checklist?.filter((c) => c.isArranged).length || 0;
                   const totalChecklist = event.checklist?.length || 0;
+
+                  // Honest planning status
+                  const isFullyPlanned = arrangedCount === totalChecklist && totalChecklist > 0;
+                  const isInProgress = arrangedCount > 0 && !isFullyPlanned;
+                  const isNeedsPlanning = arrangedCount === 0;
 
                   return (
                     <div
@@ -321,13 +403,20 @@ export default function DashboardOverviewPage() {
                       className="rounded-2xl border border-stone-200 hover:border-amber-400/80 bg-stone-50/40 p-5 flex flex-col justify-between space-y-4 transition-all hover:shadow-md"
                     >
                       <div className="space-y-3">
-                        {/* Event Header */}
+                        {/* Event Header with Priority Badge */}
                         <div className="flex items-start justify-between gap-2">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
+                          <div className="space-y-1.5">
+                            <div className="flex flex-wrap items-center gap-1.5">
                               <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-stone-200 text-stone-800">
-                                Event {idx + 1} • {event.type.toUpperCase()}
+                                {event.type.toUpperCase()}
                               </span>
+                              {blueprint?.priorityBadge && (
+                                <span
+                                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${blueprint.priorityBadge.color}`}
+                                >
+                                  {blueprint.priorityBadge.label}
+                                </span>
+                              )}
                               {event.muhuratTime && (
                                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
                                   ✨ {event.muhuratTime}
@@ -339,15 +428,20 @@ export default function DashboardOverviewPage() {
                             </h3>
                           </div>
 
-                          {/* Status Badge */}
-                          {isEventPlanned ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-semibold shrink-0">
+                          {/* Honest Status Badge based on actual arranged decisions */}
+                          {isFullyPlanned ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 text-[11px] font-semibold shrink-0">
                               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>Plan In Progress</span>
+                              <span>Decisions Complete</span>
+                            </span>
+                          ) : isInProgress ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 text-blue-900 border border-blue-300 text-[11px] font-semibold shrink-0">
+                              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                              <span>In Progress ({arrangedCount}/{totalChecklist})</span>
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 text-amber-900 border border-amber-300 text-[11px] font-semibold shrink-0">
-                              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                              <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
                               <span>Needs Planning</span>
                             </span>
                           )}
@@ -411,11 +505,19 @@ export default function DashboardOverviewPage() {
                         <button
                           type="button"
                           onClick={() => setSelectedEventToPlan(event)}
-                          className="w-full py-2.5 px-4 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-semibold text-xs shadow-xs hover:shadow transition-all flex items-center justify-center gap-2 group"
+                          className={`w-full py-2.5 px-4 rounded-xl text-white font-semibold text-xs shadow-xs hover:shadow transition-all flex items-center justify-center gap-2 group ${
+                            isNeedsPlanning
+                              ? 'bg-gradient-to-r from-rose-700 via-rose-800 to-amber-700 hover:opacity-95 shadow-md shadow-rose-900/20'
+                              : 'bg-stone-900 hover:bg-stone-800'
+                          }`}
                         >
                           <Sparkles className="w-3.5 h-3.5 text-amber-400 group-hover:rotate-12 transition-transform" />
                           <span>
-                            {isEventPlanned ? '✏️ Review & Edit Event Decisions' : '✨ Plan This Event'}
+                            {isNeedsPlanning
+                              ? '✨ Plan This Event'
+                              : isInProgress
+                              ? `✏️ Continue Planning (${arrangedCount}/${totalChecklist} Done)`
+                              : 'Review Event Plan'}
                           </span>
                         </button>
                       </div>
@@ -428,7 +530,7 @@ export default function DashboardOverviewPage() {
             {/* Bottom Actions Row */}
             <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-stone-100">
               <span className="text-xs text-stone-500">
-                Need to add more ceremonies? (e.g. Roka, Welcome Dinner, Post-wedding Brunch)
+                Need to add more celebrations? (e.g. Welcome Dinner, Post-wedding Brunch, Roka)
               </span>
               <Link
                 href="/dashboard/itinerary"
@@ -450,7 +552,7 @@ export default function DashboardOverviewPage() {
               Wedding Pulse & Core Logistics
             </h2>
             <p className="text-xs text-stone-500">
-              Real-time summary of budget commitments in USD, guest counts, and shagun envelopes
+              Real-time summary of budget commitments in USD, guest counts, and gifts
             </p>
           </div>
         </div>
@@ -524,11 +626,11 @@ export default function DashboardOverviewPage() {
             </div>
           </div>
 
-          {/* Metric 3: Shagun */}
+          {/* Metric 3: Gifts (Renamed from Shagun Lifafas) */}
           <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-stone-600">
-                Shagun Lifafas
+                Wedding Gifts
               </span>
               <div className="p-2 rounded-xl bg-emerald-50 text-emerald-700">
                 <Gift className="w-4 h-4" />
@@ -536,10 +638,10 @@ export default function DashboardOverviewPage() {
             </div>
             <div className="mt-3">
               <div className="text-2xl font-extrabold text-stone-900 tracking-tight">
-                {formatCurr(totalCashShagun)}
+                {formatCurr(totalCashGifts)}
               </div>
               <div className="mt-1 text-xs text-stone-600 font-medium">
-                {totalGiftsCount} envelopes / gifts logged
+                {totalGiftsCount} gifts & envelopes logged
               </div>
               <div className="mt-2 text-xs font-medium flex items-center justify-between">
                 <span className="text-stone-600">Thank-yous pending:</span>
@@ -603,7 +705,7 @@ export default function DashboardOverviewPage() {
           >
             <div className="flex items-center gap-2">
               <Gift className="w-4 h-4 text-emerald-600" />
-              <span>Shagun Tracker</span>
+              <span>Gift Tracker</span>
             </div>
             <ArrowUpRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-emerald-600" />
           </Link>

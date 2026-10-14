@@ -5,6 +5,7 @@ import { useWedding } from '@/lib/store';
 import { WeddingEvent, SubEventType, EventChecklistItem, RequirementCategory } from '@/lib/types';
 import { Modal } from '@/components/Modal';
 import { EventPlanningWizard } from '@/components/EventPlanningWizard';
+import { EVENT_BLUEPRINTS, EventSortOrder, sortEventsBy } from '@/lib/eventBlueprints';
 import {
   CalendarDays,
   Plus,
@@ -22,6 +23,7 @@ import {
   ChevronUp,
   Tag,
   UserCheck,
+  ArrowUpDown,
 } from 'lucide-react';
 
 export default function ItineraryPage() {
@@ -39,6 +41,7 @@ export default function ItineraryPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<WeddingEvent | null>(null);
   const [eventToPlan, setEventToPlan] = useState<WeddingEvent | null>(null);
+  const [sortOrder, setSortOrder] = useState<EventSortOrder>('priority');
 
   // Expanded checklist section state per event
   const [expandedChecklists, setExpandedChecklists] = useState<Record<string, boolean>>({
@@ -232,26 +235,78 @@ export default function ItineraryPage() {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {events.map((event, index) => {
-          const checklist = event.checklist || [];
-          const totalItems = checklist.length;
-          const arrangedItems = checklist.filter((item) => item.isArranged).length;
-          const pctArranged = totalItems > 0 ? Math.round((arrangedItems / totalItems) * 100) : 0;
-          const isExpanded = expandedChecklists[event.id] ?? false;
+        <div className="space-y-4">
+          {/* Sorting & Prioritization Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white rounded-2xl border border-stone-200 text-xs">
+            <div className="flex items-center gap-2 text-stone-600 font-semibold">
+              <ArrowUpDown className="w-3.5 h-3.5 text-stone-500" />
+              <span>Order Ceremonies By:</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSortOrder('priority')}
+                className={`px-3 py-1.5 rounded-xl font-semibold transition-all ${
+                  sortOrder === 'priority'
+                    ? 'bg-stone-900 text-white shadow-xs'
+                    : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
+                }`}
+              >
+                🏆 Planning Priority (Lead Time First)
+              </button>
+              <button
+                type="button"
+                onClick={() => setSortOrder('chronological')}
+                className={`px-3 py-1.5 rounded-xl font-semibold transition-all ${
+                  sortOrder === 'chronological'
+                    ? 'bg-stone-900 text-white shadow-xs'
+                    : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
+                }`}
+              >
+                📅 Weekend Timeline
+              </button>
+              <button
+                type="button"
+                onClick={() => setSortOrder('needs_planning')}
+                className={`px-3 py-1.5 rounded-xl font-semibold transition-all ${
+                  sortOrder === 'needs_planning'
+                    ? 'bg-stone-900 text-white shadow-xs'
+                    : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
+                }`}
+              >
+                ⚡ Needs Planning First
+              </button>
+            </div>
+          </div>
 
-          return (
-            <div
-              key={event.id}
-              className="bg-white rounded-3xl border border-stone-200 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
-            >
-              <div>
-                {/* Header Banner */}
-                <div className={`p-6 bg-gradient-to-r ${event.bannerGradient} text-white`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-white/20 backdrop-blur-xs text-white">
-                      Ceremony {index + 1}: {event.type.toUpperCase()}
-                    </span>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {sortEventsBy(events, sortOrder).map((event, index) => {
+              const checklist = event.checklist || [];
+              const totalItems = checklist.length;
+              const arrangedItems = checklist.filter((item) => item.isArranged).length;
+              const pctArranged = totalItems > 0 ? Math.round((arrangedItems / totalItems) * 100) : 0;
+              const isExpanded = expandedChecklists[event.id] ?? false;
+              const blueprint = EVENT_BLUEPRINTS[event.type];
+
+              return (
+                <div
+                  key={event.id}
+                  className="bg-white rounded-3xl border border-stone-200 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+                >
+                  <div>
+                    {/* Header Banner */}
+                    <div className={`p-6 bg-gradient-to-r ${event.bannerGradient} text-white`}>
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-white/20 backdrop-blur-xs text-white">
+                            {event.type.toUpperCase()}
+                          </span>
+                          {blueprint?.priorityBadge && (
+                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-black/30 backdrop-blur-xs border border-white/20 text-white">
+                              {blueprint.priorityBadge.label}
+                            </span>
+                          )}
+                        </div>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setEventToPlan(event)}
@@ -478,10 +533,11 @@ export default function ItineraryPage() {
                 </a>
               </div>
             </div>
-          );
-        })}
+            );
+          })}
         </div>
-      )}
+      </div>
+    )}
 
       {/* Add / Edit Event Modal */}
       <Modal

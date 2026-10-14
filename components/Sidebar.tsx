@@ -36,7 +36,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose })
     { label: 'Guests & RSVPs', href: '/dashboard/guests', icon: Users },
     { label: 'Budget & Splits', href: '/dashboard/budget', icon: WalletCards },
     { label: 'Vendor Directory', href: '/dashboard/vendors', icon: Briefcase },
-    { label: 'Shagun & Lifafa', href: '/dashboard/shagun', icon: Gift },
+    { label: 'Gifts', href: '/dashboard/shagun', icon: Gift },
     { label: 'Rooms & Logistics', href: '/dashboard/logistics', icon: Hotel },
   ];
 
@@ -53,8 +53,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose })
             <HeartHandshake className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="font-bold text-lg text-amber-100 tracking-wide font-serif">ShaadiSutra</h1>
-            <p className="text-[11px] text-stone-400">Wedding Operating System</p>
+            <h1 className="font-bold text-lg text-amber-100 tracking-wide font-serif">Vivaah</h1>
+            <p className="text-[11px] text-stone-400">Desi American Wedding Planner</p>
           </div>
         </Link>
         {isMobile && (

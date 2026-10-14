@@ -49,8 +49,8 @@ export default function LandingPage() {
     },
     {
       icon: Gift,
-      title: 'Shagun & Lifafa (Gift) Ledger',
-      desc: 'Log cash envelopes, gold/silver coins, past reciprocity records ("They gave $501 in 2023"), and thank-you dispatches.',
+      title: 'Wedding Gifts & Envelopes Ledger',
+      desc: 'Log cash gifts, registry presents, family reciprocity history, and thank-you note dispatches.',
       color: 'from-emerald-600 to-teal-600',
     },
     {
@@ -76,10 +76,10 @@ export default function LandingPage() {
           </div>
           <div>
             <span className="font-bold text-xl text-stone-900 tracking-wide font-serif">
-              ShaadiSutra
+              Vivaah
             </span>
             <span className="text-[10px] text-amber-800 font-bold block uppercase tracking-widest">
-              Indian Wedding Platform
+              Desi American Wedding Planner
             </span>
           </div>
         </div>
@@ -117,8 +117,8 @@ export default function LandingPage() {
         </h1>
 
         <p className="text-stone-600 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
-          From Mehendi song cues and Pandit ji's samagri to Ladkewale vs Ladkiwale guest management, 
-          side-wise budget splits, and Shagun lifafas — everything you need to pull off a dream wedding.
+          From sound curfews and fire permits for the mandap to Desi-American catering, 
+          side-wise budget splits in USD, and wedding gift tracking — everything you need to pull off your dream wedding.
         </p>
 
         {/* Dual Mode Entry Buttons */}
@@ -237,7 +237,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-stone-200 py-8 text-center text-xs text-stone-500">
         <p className="font-serif font-semibold text-stone-700">
-          ShaadiSutra — Indian Wedding Planning Platform
+          Vivaah — Desi American Wedding Planner
         </p>
         <p className="mt-1">Deployable to Vercel via Git push • Backed by Google Cloud Firebase</p>
       </footer>

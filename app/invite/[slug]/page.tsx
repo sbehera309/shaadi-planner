@@ -491,9 +491,9 @@ export default function PublicWeddingInvitePage({
       {/* Footer */}
       <footer className="border-t border-stone-300 py-8 text-center text-xs text-stone-500 space-y-2">
         <p className="font-serif font-semibold text-stone-700">
-          {wedding.hashtag} • Shubh Vivah {new Date(wedding.startDate).getFullYear()}
+          {wedding.hashtag} • Shubh Vivah {wedding.startDate ? new Date(wedding.startDate).getFullYear() : ''}
         </p>
-        <p>Built with love using ShaadiSutra Wedding Platform</p>
+        <p>Built with love using Vivaah</p>
       </footer>
     </div>
   );
