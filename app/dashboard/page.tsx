@@ -335,7 +335,7 @@ export default function DashboardOverviewPage() {
                       ? 'bg-rose-950 text-white shadow-xs ring-1 ring-rose-500/50'
                       : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
                   }`}
-                  title="Traditional Desi weekend order: Mehndi -> Sangeet -> Pheras -> Reception"
+                  title="Traditional Desi weekend order: Sangeet/Garba -> Haldi -> Mehndi -> Pheras -> Reception"
                 >
                   <Calendar className="w-3.5 h-3.5 text-amber-400" />
                   <span>Weekend Timeline (Chronological)</span>

@@ -205,8 +205,8 @@ export const EVENT_BLUEPRINTS: Record<SubEventType, EventBlueprint> = {
     colorTheme: '#D97706',
     venueType: 'Ballroom with Hardwood Dance Floor & Sound Permit',
     planningPriority: 2, // High priority party
-    chronologicalRank: 4,
-    timelinePhase: 'Eve of Wedding Night',
+    chronologicalRank: 2,
+    timelinePhase: 'Weekend Kick-off • Sangeet & Garba Night',
     priorityBadge: {
       label: '⚡ High-Impact Party (Late Sound Curfew)',
       level: 'high',
@@ -417,8 +417,8 @@ export const EVENT_BLUEPRINTS: Record<SubEventType, EventBlueprint> = {
     colorTheme: '#059669',
     venueType: 'Garden Terrace or Boutique Banquet Lounge',
     planningPriority: 4,
-    chronologicalRank: 2,
-    timelinePhase: 'Pre-Wedding Henna Lounge',
+    chronologicalRank: 4,
+    timelinePhase: 'Henna Lounge & Folk Music',
     priorityBadge: {
       label: '🌿 Festive Lounge (Henna Artists)',
       level: 'medium',
@@ -499,7 +499,7 @@ export const EVENT_BLUEPRINTS: Record<SubEventType, EventBlueprint> = {
     venueType: 'Courtyard, Lawn or Poolside Area with Wash Stations',
     planningPriority: 5,
     chronologicalRank: 3,
-    timelinePhase: 'Pre-Wedding Morning Ritual',
+    timelinePhase: 'Morning Cleansing & Turmeric Ritual',
     priorityBadge: {
       label: '💛 Joyful Ritual (Turmeric & Floral)',
       level: 'medium',
@@ -764,7 +764,7 @@ export function sortEventsBy(
       const timeComparison = a.startTime.localeCompare(b.startTime);
       if (timeComparison !== 0) return timeComparison;
     }
-    // Fall back to traditional ritual sequence: Roka -> Mehndi -> Haldi -> Sangeet -> Pheras -> Reception
+    // Fall back to traditional ritual sequence: Roka -> Sangeet -> Haldi -> Mehndi -> Pheras -> Reception
     const rA = EVENT_BLUEPRINTS[a.type]?.chronologicalRank ?? 99;
     const rB = EVENT_BLUEPRINTS[b.type]?.chronologicalRank ?? 99;
     return rA - rB;
@@ -774,17 +774,17 @@ export function sortEventsBy(
 /**
  * Traditional chronological weekend order for ceremony selection:
  * 1. Roka (Kick-off)
- * 2. Mehndi (Henna Lounge)
- * 3. Haldi (Morning Ritual)
- * 4. Sangeet (Eve of Wedding Gala)
- * 5. Baraat & Pheras (The Wedding Ceremony)
+ * 2. Sangeet & Garba Night (Weekend Kick-off Party)
+ * 3. Haldi (Morning Cleansing & Turmeric Ritual)
+ * 4. Mehndi (Festive Henna Lounge)
+ * 5. Baraat & Pheras (The Wedding Day)
  * 6. Reception (Grand Finale on the last day)
  */
 export const CHRONOLOGICAL_EVENT_TYPES: SubEventType[] = [
   'roka',
-  'mehendi',
-  'haldi',
   'sangeet',
+  'haldi',
+  'mehendi',
   'pheras',
   'reception',
 ];

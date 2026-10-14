@@ -82,16 +82,17 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
     story: '',
   });
 
-  // Step 2: Selected Events (defaults in chronological sequence: Mehndi -> Sangeet -> Pheras -> Reception)
+  // Step 2: Selected Events (defaults in chronological sequence: Sangeet -> Haldi -> Mehndi -> Pheras -> Reception)
   const [selectedEventTypes, setSelectedEventTypes] = useState<SubEventType[]>([
-    'mehendi',
     'sangeet',
+    'haldi',
+    'mehendi',
     'pheras',
     'reception',
   ]);
 
-  // Step 3: Active Event Tab for viewing & editing decisions (defaults to first chronological event)
-  const [activeEventTab, setActiveEventTab] = useState<SubEventType>('mehendi');
+  // Step 3: Active Event Tab for viewing & editing decisions (defaults to first event: Sangeet)
+  const [activeEventTab, setActiveEventTab] = useState<SubEventType>('sangeet');
 
   // Step 3: Expanded items for sub-item details (e.g. welcome bags, jewelry)
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
