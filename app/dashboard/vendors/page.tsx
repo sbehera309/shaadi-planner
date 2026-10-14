@@ -263,13 +263,17 @@ export default function VendorsPage() {
                 onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
                 className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-amber-500 bg-white"
               >
-                <option value="Pandit Ji">Pandit Ji / Officiant</option>
+                <option value="Pandit Ji">Pandit Ji / Priest / Iyer / Officiant</option>
                 <option value="Mehendi Artist">Mehendi Artist</option>
                 <option value="Bridal MUA & Hair">Bridal MUA & Hair</option>
                 <option value="Photographer & Cinematographer">Photographer & Cinematographer</option>
                 <option value="Choreographer & DJ">Choreographer, Dhol & DJ</option>
+                <option value="Lighting & AV Production">Lighting & AV Production (Visual Comet / Moving Heads)</option>
+                <option value="Baraat & Farewell Transport">Baraat & Farewell Transport (Horse / Car / Van)</option>
+                <option value="Live Musicians (Nathswaram/Shehnai)">Live Musicians (Nathswaram, Shehnai & Thavil)</option>
                 <option value="Mandap & Floral Decorator">Mandap & Floral Decorator</option>
-                <option value="Catering">Catering & Sweet Halwai</option>
+                <option value="Catering">Catering & Sweet Halwai (e.g. Moghul)</option>
+                <option value="Wedding Planner & Coordinator">Wedding Planner & Coordinator</option>
                 <option value="Trousseau / Attire">Trousseau & Attire Designer</option>
               </select>
             </div>

@@ -113,7 +113,11 @@ export interface Vendor {
     | 'Choreographer & DJ' 
     | 'Mandap & Floral Decorator' 
     | 'Catering' 
-    | 'Trousseau / Attire';
+    | 'Trousseau / Attire'
+    | 'Lighting & AV Production'
+    | 'Baraat & Farewell Transport'
+    | 'Live Musicians (Nathswaram/Shehnai)'
+    | 'Wedding Planner & Coordinator';
   contactPerson: string;
   phone: string;
   email?: string;

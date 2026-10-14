@@ -15,7 +15,110 @@ import {
   Edit2,
   PieChart,
   ArrowDownRight,
+  Calculator,
+  Sparkles,
+  ChevronRight,
+  HelpCircle,
 } from 'lucide-react';
+
+const DESI_EXPENSE_PRESETS = [
+  {
+    title: 'Ballroom Lighting & AV Production (Uplights, Moving Heads)',
+    category: 'Music, Dhol & Entertainment' as const,
+    estimatedCost: 5500,
+    paidBy: 'split_50_50' as const,
+    icon: '💡',
+    tip: 'Visual Comet / AV production company for perimeter uplights & dance spotlights',
+  },
+  {
+    title: 'Live Nathswaram & Thavil / Shehnai Classical Musicians',
+    category: 'Music, Dhol & Entertainment' as const,
+    estimatedCost: 2500,
+    paidBy: 'split_50_50' as const,
+    icon: '🎺',
+    tip: 'Traditional auspicious live instrumentalists during Mandap & Muhurat',
+  },
+  {
+    title: 'Dual-Use Baraat & Vidai Car (Vintage Convertible / Luxury)',
+    category: 'Accommodations & Transport' as const,
+    estimatedCost: 2500,
+    paidBy: 'groom_side' as const,
+    icon: '🚗',
+    tip: 'One vehicle for both Baraat procession & Vidai exit (saves horse + 2nd car fee!)',
+  },
+  {
+    title: 'Baraat Horse (Ghodi) & Chhatri Handler + City Permit',
+    category: 'Accommodations & Transport' as const,
+    estimatedCost: 850,
+    paidBy: 'groom_side' as const,
+    icon: '🐎',
+    tip: 'Traditional decorated mare procession with umbrella & city permit',
+  },
+  {
+    title: 'Custom Monogram Dance Floor Vinyl Wrap (Onyx / White)',
+    category: 'Decor & Mandap' as const,
+    estimatedCost: 3200,
+    paidBy: 'split_50_50' as const,
+    icon: '✨',
+    tip: 'Seamless glossy vinyl wrap with custom couple monogram logo',
+  },
+  {
+    title: 'Vendor Meals Package (15 Crew Members @ $40/meal)',
+    category: 'Venue & Catering' as const,
+    estimatedCost: 600,
+    paidBy: 'split_50_50' as const,
+    icon: '🍽️',
+    tip: 'Required hot meal plates for photo/video, DJ, AV, and coordinator team',
+  },
+  {
+    title: 'Catering Staff Transport, Travel & 10% Gratuity',
+    category: 'Venue & Catering' as const,
+    estimatedCost: 8500,
+    paidBy: 'split_50_50' as const,
+    icon: '📜',
+    tip: 'Mobile kitchen transport trailers & service gratuity for outside Indian caterers (e.g. Moghul)',
+  },
+  {
+    title: 'Immediate Family Outfits (Matching Sarees, Kurtas & Safas)',
+    category: 'Outfits & Jewellery' as const,
+    estimatedCost: 10000,
+    paidBy: 'split_50_50' as const,
+    icon: '👗',
+    tip: 'Ceremonial outfits for parents, siblings, bridesmaids, and family Safas',
+  },
+  {
+    title: 'Auspicious Gold, Mangalsutra & Ritual Shagun Coins',
+    category: 'Outfits & Jewellery' as const,
+    estimatedCost: 3500,
+    paidBy: 'groom_side' as const,
+    icon: '🪙',
+    tip: 'Sacred Gold Mangalsutra, wedding bands, and 24K gold blessing coins',
+  },
+  {
+    title: 'Mithai Sweet Boxes (Formal Invites & Guest Return Favors)',
+    category: 'Favors & Invites' as const,
+    estimatedCost: 2000,
+    paidBy: 'split_50_50' as const,
+    icon: '🍬',
+    tip: 'Artisanal Indian mithai boxes (Kaju Katli, Laddoos) with invitation packaging',
+  },
+  {
+    title: 'Guest Airport Shuttle Vans & Hotel Transport (15-Passenger)',
+    category: 'Accommodations & Transport' as const,
+    estimatedCost: 3000,
+    paidBy: 'split_50_50' as const,
+    icon: '🚐',
+    tip: 'Shuttle vans transporting out-of-town guests between hotel and venues',
+  },
+  {
+    title: 'Vedic Priest / Iyer / Pandit Ji Dakshina & Travel',
+    category: 'Pandit & Rituals' as const,
+    estimatedCost: 2500,
+    paidBy: 'split_50_50' as const,
+    icon: '🪔',
+    tip: 'Vedic officiant / Iyer dakshina, puja samagri kit, and travel reimbursement',
+  },
+];
 
 export default function BudgetPage() {
   const { wedding, budgetItems, addBudgetItem, updateBudgetItem, deleteBudgetItem } = useWedding();
@@ -35,6 +138,87 @@ export default function BudgetPage() {
     paidBy: 'split_50_50' as BudgetItem['paidBy'],
     status: 'partial' as BudgetItem['status'],
   });
+
+  // Catering & Per-Plate Calculator State
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+  const [calcData, setCalcData] = useState({
+    eventName: 'Reception Dinner & Venue Fee',
+    adultCount: 413,
+    adultRate: 80,
+    kidsCount: 35,
+    kidsRate: 40,
+    vendorCount: 15,
+    vendorRate: 40,
+    gratuityPercent: 10,
+    staffTransportFee: 6200,
+    salesTaxPercent: 6.625,
+  });
+
+  const handleSelectPreset = (preset: typeof DESI_EXPENSE_PRESETS[0]) => {
+    setEditingItem(null);
+    setFormData({
+      title: preset.title,
+      category: preset.category,
+      estimatedCost: preset.estimatedCost,
+      actualCost: preset.estimatedCost,
+      paidAmount: 0,
+      dueDate: '2026-10-15',
+      paidBy: preset.paidBy,
+      status: 'pending',
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleSaveCateringFromCalculator = () => {
+    const foodSubtotal =
+      calcData.adultCount * calcData.adultRate +
+      calcData.kidsCount * calcData.kidsRate +
+      calcData.vendorCount * calcData.vendorRate;
+    const gratuity = Math.round(foodSubtotal * (calcData.gratuityPercent / 100));
+    const tax = Math.round(foodSubtotal * (calcData.salesTaxPercent / 100));
+
+    // 1. Food plate costs
+    addBudgetItem({
+      title: `${calcData.eventName} Food Catering (${calcData.adultCount} Adults + ${calcData.kidsCount} Kids + ${calcData.vendorCount} Vendors)`,
+      category: 'Venue & Catering',
+      estimatedCost: foodSubtotal,
+      actualCost: foodSubtotal,
+      paidAmount: 0,
+      dueDate: '2026-10-15',
+      paidBy: 'split_50_50',
+      status: 'pending',
+    });
+
+    // 2. Staff & Transport
+    if (calcData.staffTransportFee > 0) {
+      addBudgetItem({
+        title: `${calcData.eventName} — Catering Staff Transport & Mobile Kitchen Setup`,
+        category: 'Venue & Catering',
+        estimatedCost: calcData.staffTransportFee,
+        actualCost: calcData.staffTransportFee,
+        paidAmount: 0,
+        dueDate: '2026-10-15',
+        paidBy: 'split_50_50',
+        status: 'pending',
+      });
+    }
+
+    // 3. Gratuity & Tax
+    if (gratuity > 0 || tax > 0) {
+      addBudgetItem({
+        title: `${calcData.eventName} — Catering Gratuity (${calcData.gratuityPercent}%) & Sales Tax (${calcData.salesTaxPercent}%)`,
+        category: 'Venue & Catering',
+        estimatedCost: gratuity + tax,
+        actualCost: gratuity + tax,
+        paidAmount: 0,
+        dueDate: '2026-10-15',
+        paidBy: 'split_50_50',
+        status: 'pending',
+      });
+    }
+
+    setIsCalculatorOpen(false);
+  };
 
   const handleOpenAdd = () => {
     setEditingItem(null);
@@ -128,13 +312,59 @@ export default function BudgetPage() {
             Track deposits, vendor installments, and clear side-wise splits between Ladkewale & Ladkiwale.
           </p>
         </div>
-        <button
-          onClick={handleOpenAdd}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-rose-700 text-white font-semibold text-xs shadow-md shadow-rose-900/20 hover:opacity-95 self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add Expense Item</span>
-        </button>
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          <button
+            onClick={() => setIsCalculatorOpen(true)}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-amber-300 hover:border-amber-500 text-stone-800 font-semibold text-xs shadow-xs hover:bg-amber-50/50 transition-all"
+          >
+            <Calculator className="w-4 h-4 text-amber-700" />
+            <span>Catering & Per-Plate Calculator</span>
+          </button>
+          <button
+            onClick={handleOpenAdd}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-rose-700 text-white font-semibold text-xs shadow-md shadow-rose-900/20 hover:opacity-95"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Expense Item</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Real-World Desi Wedding Expense Quick-Add Presets */}
+      <div className="bg-gradient-to-r from-amber-50/80 via-rose-50/40 to-stone-50 border border-amber-200/80 rounded-2xl p-4 shadow-xs">
+        <div className="flex items-center justify-between mb-2.5">
+          <div className="flex items-center gap-2">
+            <span className="p-1 rounded-lg bg-amber-100 text-amber-800">
+              <Sparkles className="w-3.5 h-3.5" />
+            </span>
+            <h3 className="text-xs font-bold text-stone-900 font-serif">
+              Common Desi American Wedding Expenses (Quick-Add)
+            </h3>
+          </div>
+          <span className="text-[11px] text-stone-500 hidden sm:inline">
+            Click any item to pre-fill realistic USA vendor costs & family splits
+          </span>
+        </div>
+        <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-thin">
+          {DESI_EXPENSE_PRESETS.map((preset, idx) => (
+            <button
+              key={idx}
+              onClick={() => handleSelectPreset(preset)}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white border border-stone-200 hover:border-amber-400 hover:shadow-xs transition-all text-left shrink-0 group"
+              title={preset.tip}
+            >
+              <span className="text-base">{preset.icon}</span>
+              <div>
+                <div className="text-[11px] font-semibold text-stone-800 group-hover:text-amber-800 line-clamp-1 max-w-[210px]">
+                  {preset.title.split('(')[0].trim()}
+                </div>
+                <div className="text-[10px] text-stone-400 font-medium">
+                  {formatCurr(preset.estimatedCost)} • {preset.paidBy.replace('_', ' ')}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Top 3 Split Cards: Bride vs Groom vs Shared */}
@@ -574,6 +804,209 @@ export default function BudgetPage() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Catering & Per-Plate Calculator Modal */}
+      <Modal
+        isOpen={isCalculatorOpen}
+        onClose={() => setIsCalculatorOpen(false)}
+        title="Desi Catering & Per-Plate Cost Calculator"
+        maxWidth="2xl"
+      >
+        <div className="space-y-5 text-xs">
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-stone-700 flex items-start gap-2.5">
+            <Sparkles className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold text-amber-900 block">USA Desi Catering Reality Check</span>
+              Indian caterers (e.g. Moghul) bill per-adult-plate, discounted child plates, required vendor meals, mobile kitchen transport trailers, 10–20% staff gratuity, and state sales tax. Use this to prevent five-figure surprises!
+            </div>
+          </div>
+
+          <div>
+            <label className="font-semibold text-stone-700 block mb-1">Event / Banquet Label *</label>
+            <input
+              type="text"
+              value={calcData.eventName}
+              onChange={(e) => setCalcData({ ...calcData, eventName: e.target.value })}
+              placeholder="e.g. Reception Dinner Banquet or Wedding Day Lunch"
+              className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-amber-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 space-y-2">
+              <span className="font-bold text-stone-900 block">Adult Guests</span>
+              <div>
+                <label className="text-[10px] text-stone-500 block">Count</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={calcData.adultCount}
+                  onChange={(e) => setCalcData({ ...calcData, adultCount: parseInt(e.target.value) || 0 })}
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 bg-white"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-stone-500 block">Rate / Plate ($)</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={calcData.adultRate}
+                  onChange={(e) => setCalcData({ ...calcData, adultRate: parseInt(e.target.value) || 0 })}
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 bg-white"
+                />
+              </div>
+              <div className="text-right text-[11px] font-bold text-stone-800 pt-1 border-t border-stone-200">
+                {formatCurr(calcData.adultCount * calcData.adultRate)}
+              </div>
+            </div>
+
+            <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 space-y-2">
+              <span className="font-bold text-stone-900 block">Children (Half Plate)</span>
+              <div>
+                <label className="text-[10px] text-stone-500 block">Count</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={calcData.kidsCount}
+                  onChange={(e) => setCalcData({ ...calcData, kidsCount: parseInt(e.target.value) || 0 })}
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 bg-white"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-stone-500 block">Rate / Plate ($)</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={calcData.kidsRate}
+                  onChange={(e) => setCalcData({ ...calcData, kidsRate: parseInt(e.target.value) || 0 })}
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 bg-white"
+                />
+              </div>
+              <div className="text-right text-[11px] font-bold text-stone-800 pt-1 border-t border-stone-200">
+                {formatCurr(calcData.kidsCount * calcData.kidsRate)}
+              </div>
+            </div>
+
+            <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 space-y-2">
+              <span className="font-bold text-stone-900 block">Vendor Crew Meals</span>
+              <div>
+                <label className="text-[10px] text-stone-500 block">Count (Photo, DJ, AV)</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={calcData.vendorCount}
+                  onChange={(e) => setCalcData({ ...calcData, vendorCount: parseInt(e.target.value) || 0 })}
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 bg-white"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-stone-500 block">Rate / Plate ($)</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={calcData.vendorRate}
+                  onChange={(e) => setCalcData({ ...calcData, vendorRate: parseInt(e.target.value) || 0 })}
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 bg-white"
+                />
+              </div>
+              <div className="text-right text-[11px] font-bold text-stone-800 pt-1 border-t border-stone-200">
+                {formatCurr(calcData.vendorCount * calcData.vendorRate)}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="font-semibold text-stone-700 block mb-1">Staff & Transport Fee ($)</label>
+              <input
+                type="number"
+                min={0}
+                value={calcData.staffTransportFee}
+                onChange={(e) => setCalcData({ ...calcData, staffTransportFee: parseInt(e.target.value) || 0 })}
+                placeholder="e.g. 6200"
+                className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white"
+              />
+            </div>
+            <div>
+              <label className="font-semibold text-stone-700 block mb-1">Service Gratuity (%)</label>
+              <input
+                type="number"
+                step="0.5"
+                min={0}
+                max={30}
+                value={calcData.gratuityPercent}
+                onChange={(e) => setCalcData({ ...calcData, gratuityPercent: parseFloat(e.target.value) || 0 })}
+                className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white"
+              />
+            </div>
+            <div>
+              <label className="font-semibold text-stone-700 block mb-1">Sales Tax (%)</label>
+              <input
+                type="number"
+                step="0.125"
+                min={0}
+                max={15}
+                value={calcData.salesTaxPercent}
+                onChange={(e) => setCalcData({ ...calcData, salesTaxPercent: parseFloat(e.target.value) || 0 })}
+                className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white"
+              />
+            </div>
+          </div>
+
+          {/* Breakdown summary card */}
+          {(() => {
+            const foodSub =
+              calcData.adultCount * calcData.adultRate +
+              calcData.kidsCount * calcData.kidsRate +
+              calcData.vendorCount * calcData.vendorRate;
+            const gratuityAmt = Math.round(foodSub * (calcData.gratuityPercent / 100));
+            const taxAmt = Math.round(foodSub * (calcData.salesTaxPercent / 100));
+            const grandTotal = foodSub + calcData.staffTransportFee + gratuityAmt + taxAmt;
+
+            return (
+              <div className="p-4 rounded-2xl bg-stone-900 text-stone-100 space-y-2">
+                <div className="flex justify-between text-xs text-stone-300">
+                  <span>Food Plates Subtotal ({calcData.adultCount + calcData.kidsCount + calcData.vendorCount} total plates):</span>
+                  <span className="font-semibold text-white">{formatCurr(foodSub)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-stone-300">
+                  <span>Staff Travel & Mobile Kitchen Transport:</span>
+                  <span className="font-semibold text-white">{formatCurr(calcData.staffTransportFee)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-stone-300">
+                  <span>Service Gratuity ({calcData.gratuityPercent}%):</span>
+                  <span className="font-semibold text-white">{formatCurr(gratuityAmt)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-stone-300">
+                  <span>Sales Tax ({calcData.salesTaxPercent}%):</span>
+                  <span className="font-semibold text-white">{formatCurr(taxAmt)}</span>
+                </div>
+                <div className="flex justify-between pt-2 border-t border-stone-700 text-sm font-bold">
+                  <span className="text-amber-400">Grand Total Catering Commitment:</span>
+                  <span className="text-amber-400 text-base">{formatCurr(grandTotal)}</span>
+                </div>
+              </div>
+            );
+          })()}
+
+          <div className="pt-3 border-t border-stone-200 flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setIsCalculatorOpen(false)}
+              className="px-4 py-2 rounded-xl border border-stone-300 text-stone-600 hover:bg-stone-50 font-medium"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveCateringFromCalculator}
+              className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-rose-700 text-white font-semibold shadow-md shadow-rose-900/20 hover:opacity-95"
+            >
+              Save Catering Package to Budget
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
