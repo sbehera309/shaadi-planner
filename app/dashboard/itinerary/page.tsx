@@ -24,6 +24,9 @@ import {
   Tag,
   UserCheck,
   ArrowUpDown,
+  Hotel,
+  Gift,
+  Shirt,
 } from 'lucide-react';
 
 export default function ItineraryPage() {
@@ -34,6 +37,7 @@ export default function ItineraryPage() {
     deleteEvent,
     addChecklistItem,
     toggleChecklistItem,
+    toggleChecklistSubItem,
     deleteChecklistItem,
     loadSampleTemplate,
   } = useWedding();
@@ -383,12 +387,36 @@ export default function ItineraryPage() {
                   </div>
 
                   {/* Dress Code Highlight */}
-                  <div className="p-3 rounded-xl bg-rose-50/70 border border-rose-100">
-                    <span className="text-xs font-bold text-rose-900 block mb-0.5">
-                      👗 Dress Code & Color Palette
-                    </span>
-                    <span className="text-xs text-rose-800">{event.dressCode}</span>
+                  <div className="p-3 rounded-xl bg-rose-50/70 border border-rose-100 flex items-start gap-2">
+                    <Shirt className="w-4 h-4 text-rose-700 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-xs font-bold text-rose-950 block mb-0.5">
+                        Dress Code & Styling
+                      </span>
+                      <span className="text-xs text-rose-900">{event.dressCode}</span>
+                    </div>
                   </div>
+
+                  {/* Hotel Room Block & Hospitality (if configured) */}
+                  {event.hotelBlockName && (
+                    <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200/60 flex items-start gap-2.5">
+                      <Hotel className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-semibold text-stone-900 block text-xs">Hotel Room Block & Lodging</span>
+                        <span className="text-stone-700 text-xs font-medium">{event.hotelBlockName}</span>
+                        {event.hasWelcomeDinner && (
+                          <span className="block text-[11px] text-amber-900 mt-0.5">
+                            • Welcome hospitality suite & family dinner planned
+                          </span>
+                        )}
+                        {event.hasWelcomeBags && (
+                          <span className="block text-[11px] text-amber-900 mt-0.5">
+                            • In-room guest welcome bags scheduled
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Ceremony Essentials Checklist Card */}
                   <div className="pt-2 border-t border-stone-100">
@@ -396,7 +424,7 @@ export default function ItineraryPage() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <Package className="w-4 h-4 text-amber-700" />
-                          <span className="font-bold text-stone-900 text-xs font-serif">
+                          <span className="font-bold text-stone-900 text-xs font-sans">
                             Ceremony Essentials & Item Checklist
                           </span>
                         </div>
@@ -427,72 +455,104 @@ export default function ItineraryPage() {
 
                       {/* Expandable items list */}
                       {isExpanded && (
-                        <div className="space-y-2 mt-3 pt-2 border-t border-stone-200/60">
+                        <div className="space-y-2.5 mt-3 pt-2 border-t border-stone-200/60">
                           {checklist.length > 0 ? (
                             checklist.map((item) => (
                               <div
                                 key={item.id}
-                                className={`p-2.5 rounded-xl border transition-all flex items-start justify-between gap-3 text-xs ${
+                                className={`p-3 rounded-xl border transition-all text-xs ${
                                   item.isArranged
                                     ? 'bg-emerald-50/60 border-emerald-200/80'
                                     : 'bg-white border-stone-200'
                                 }`}
                               >
-                                <div className="flex items-start gap-2.5 flex-1 min-w-0">
-                                  <button
-                                    onClick={() => toggleChecklistItem(event.id, item.id)}
-                                    className="mt-0.5 text-stone-400 hover:text-emerald-600 transition-colors shrink-0"
-                                    title={item.isArranged ? 'Mark Pending' : 'Mark Arranged'}
-                                  >
-                                    {item.isArranged ? (
-                                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                                    ) : (
-                                      <Circle className="w-4 h-4 text-stone-400" />
-                                    )}
-                                  </button>
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                                    <button
+                                      onClick={() => toggleChecklistItem(event.id, item.id)}
+                                      className="mt-0.5 text-stone-400 hover:text-emerald-600 transition-colors shrink-0"
+                                      title={item.isArranged ? 'Mark Pending' : 'Mark Arranged'}
+                                    >
+                                      {item.isArranged ? (
+                                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                      ) : (
+                                        <Circle className="w-4 h-4 text-stone-400" />
+                                      )}
+                                    </button>
 
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                                      <span
-                                        className={`font-semibold ${
-                                          item.isArranged
-                                            ? 'text-stone-600 line-through'
-                                            : 'text-stone-900'
-                                        }`}
-                                      >
-                                        {item.title}
-                                      </span>
-                                      <span
-                                        className={`px-2 py-0.2 rounded-md text-[10px] font-semibold border ${getCategoryColor(
-                                          item.category
-                                        )}`}
-                                      >
-                                        {item.category}
-                                      </span>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                                        <span
+                                          className={`font-semibold ${
+                                            item.isArranged
+                                              ? 'text-stone-600 line-through'
+                                              : 'text-stone-900'
+                                          }`}
+                                        >
+                                          {item.title}
+                                        </span>
+                                        <span
+                                          className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getCategoryColor(
+                                            item.category
+                                          )}`}
+                                        >
+                                          {item.category}
+                                        </span>
+                                      </div>
+
+                                      {item.assignedTo && (
+                                        <div className="text-[11px] text-stone-500 flex items-center gap-1">
+                                          <UserCheck className="w-3 h-3 text-stone-400" />
+                                          <span>In Charge: {item.assignedTo}</span>
+                                        </div>
+                                      )}
+
+                                      {item.notes && (
+                                        <div className="text-[11px] text-stone-500 italic mt-0.5">
+                                          Note: {item.notes}
+                                        </div>
+                                      )}
                                     </div>
-
-                                    {item.assignedTo && (
-                                      <div className="text-[11px] text-stone-500 flex items-center gap-1">
-                                        <UserCheck className="w-3 h-3 text-stone-400" />
-                                        <span>In Charge: {item.assignedTo}</span>
-                                      </div>
-                                    )}
-
-                                    {item.notes && (
-                                      <div className="text-[11px] text-stone-400 italic mt-0.5">
-                                        Note: {item.notes}
-                                      </div>
-                                    )}
                                   </div>
+
+                                  <button
+                                    onClick={() => deleteChecklistItem(event.id, item.id)}
+                                    className="p-1 text-stone-300 hover:text-rose-600 transition-colors shrink-0"
+                                    title="Delete Item"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
                                 </div>
 
-                                <button
-                                  onClick={() => deleteChecklistItem(event.id, item.id)}
-                                  className="p-1 text-stone-300 hover:text-rose-600 transition-colors shrink-0"
-                                  title="Delete Item"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
+                                {/* Micro-tasks / Sub-items breakdown */}
+                                {item.subItems && item.subItems.length > 0 && (
+                                  <div className="mt-2.5 pt-2 border-t border-stone-100 pl-6 space-y-1.5">
+                                    <div className="text-[10px] font-bold uppercase tracking-wider text-stone-500 flex items-center justify-between">
+                                      <span>Packing & Detail Items ({item.subItems.filter((s) => s.completed).length}/{item.subItems.length}):</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                                      {item.subItems.map((sub) => (
+                                        <button
+                                          key={sub.id}
+                                          type="button"
+                                          onClick={() => toggleChecklistSubItem(event.id, item.id, sub.id)}
+                                          className={`flex items-center gap-2 p-1.5 rounded-lg border text-left text-[11px] transition-colors ${
+                                            sub.completed
+                                              ? 'bg-emerald-50/80 border-emerald-200 text-stone-400 line-through'
+                                              : 'bg-stone-50/80 border-stone-200 text-stone-800 hover:bg-stone-100'
+                                          }`}
+                                        >
+                                          {sub.completed ? (
+                                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                          ) : (
+                                            <Circle className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                                          )}
+                                          <span className="truncate">{sub.title}</span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             ))
                           ) : (

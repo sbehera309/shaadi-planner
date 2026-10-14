@@ -49,6 +49,7 @@ interface WeddingContextType {
   deleteEvent: (id: string) => void;
   addChecklistItem: (eventId: string, item: Omit<EventChecklistItem, 'id'>) => void;
   toggleChecklistItem: (eventId: string, itemId: string) => void;
+  toggleChecklistSubItem: (eventId: string, itemId: string, subItemId: string) => void;
   deleteChecklistItem: (eventId: string, itemId: string) => void;
 
   // Guests
@@ -296,6 +297,29 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
   };
 
+  const toggleChecklistSubItem = (eventId: string, itemId: string, subItemId: string) => {
+    setEvents((prev) =>
+      prev.map((ev) => {
+        if (ev.id !== eventId) return ev;
+        return {
+          ...ev,
+          checklist: (ev.checklist || []).map((c) => {
+            if (c.id !== itemId) return c;
+            const updatedSubItems = (c.subItems || []).map((sub) =>
+              sub.id === subItemId ? { ...sub, completed: !sub.completed } : sub
+            );
+            const allDone = updatedSubItems.length > 0 && updatedSubItems.every((s) => s.completed);
+            return {
+              ...c,
+              subItems: updatedSubItems,
+              isArranged: allDone ? true : c.isArranged,
+            };
+          }),
+        };
+      })
+    );
+  };
+
   const deleteChecklistItem = (eventId: string, itemId: string) => {
     setEvents((prev) =>
       prev.map((ev) => {
@@ -476,6 +500,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         deleteEvent,
         addChecklistItem,
         toggleChecklistItem,
+        toggleChecklistSubItem,
         deleteChecklistItem,
         addGuest,
         updateGuest,

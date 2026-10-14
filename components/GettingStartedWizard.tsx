@@ -18,9 +18,32 @@ import {
   HelpCircle,
   Tag,
   ShieldCheck,
+  ChevronDown,
+  ChevronUp,
+  Flame,
+  Music,
+  Sun,
+  Palmtree,
+  Crown,
+  Building2,
+  Shirt,
+  UtensilsCrossed,
+  Gift,
+  Check,
+  Lightbulb,
 } from 'lucide-react';
 import { SubEventType, RequirementCategory, EventChecklistItem, WeddingEvent } from '@/lib/types';
 import { EVENT_BLUEPRINTS, EventBlueprint } from '@/lib/eventBlueprints';
+
+interface WizardDecisionItem {
+  id?: string;
+  title: string;
+  category: RequirementCategory;
+  checked: boolean;
+  isItemToGet?: boolean;
+  notes?: string;
+  subItems?: { id: string; title: string; completed: boolean }[];
+}
 
 interface GettingStartedWizardProps {
   isOpen: boolean;
@@ -65,12 +88,16 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
   // Step 3: Active Event Tab for viewing & editing decisions (defaults to #1 priority)
   const [activeEventTab, setActiveEventTab] = useState<SubEventType>('pheras');
 
+  // Step 3: Expanded items for sub-item details (e.g. welcome bags, jewelry)
+  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
+
+  const toggleExpandItem = (key: string) => {
+    setExpandedItems((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
   // Step 3: Decisions Checklist by Event
   const [decisionsByEvent, setDecisionsByEvent] = useState<
-    Record<
-      SubEventType,
-      { title: string; category: RequirementCategory; checked: boolean; isItemToGet?: boolean; notes?: string }[]
-    >
+    Record<SubEventType, WizardDecisionItem[]>
   >(() => {
     const initial: any = {};
     (['mehendi', 'sangeet', 'haldi', 'pheras', 'reception', 'roka'] as SubEventType[]).forEach((type) => {
@@ -80,16 +107,20 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
           const isItem =
             d.category === 'Attire, Saafa & Jewellery' ||
             d.category === 'Puja Samagri & Rituals' ||
+            d.title.toLowerCase().includes('bag') ||
+            d.title.toLowerCase().includes('favor') ||
             d.title.toLowerCase().includes('saafa') ||
             d.title.toLowerCase().includes('samagri') ||
             d.title.toLowerCase().includes('milni');
 
           return {
+            id: d.id,
             title: d.title,
             category: d.category,
             checked: true,
             isItemToGet: isItem,
             notes: d.tip || d.description,
+            subItems: d.subItems ? d.subItems.map((s) => ({ ...s })) : undefined,
           };
         });
       }
@@ -156,14 +187,18 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
           setDecisionsByEvent((prev) => ({
             ...prev,
             [type]: bp.decisions.map((d) => ({
+              id: d.id,
               title: d.title,
               category: d.category,
               checked: true,
               isItemToGet:
                 d.category === 'Attire, Saafa & Jewellery' ||
                 d.category === 'Puja Samagri & Rituals' ||
+                d.title.toLowerCase().includes('bag') ||
+                d.title.toLowerCase().includes('favor') ||
                 d.title.toLowerCase().includes('saafa'),
               notes: d.tip || d.description,
+              subItems: d.subItems ? d.subItems.map((s) => ({ ...s })) : undefined,
             })),
           }));
         }
@@ -177,6 +212,19 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
       if (items[index]) {
         items[index] = { ...items[index], checked: !items[index].checked };
       }
+      return { ...prev, [eventType]: items };
+    });
+  };
+
+  const toggleWizardSubItem = (eventType: SubEventType, itemIdx: number, subItemId: string) => {
+    setDecisionsByEvent((prev) => {
+      const items = [...(prev[eventType] || [])];
+      const target = items[itemIdx];
+      if (!target || !target.subItems) return prev;
+      const updatedSub = target.subItems.map((s) =>
+        s.id === subItemId ? { ...s, completed: !s.completed } : s
+      );
+      items[itemIdx] = { ...target, subItems: updatedSub };
       return { ...prev, [eventType]: items };
     });
   };
@@ -216,10 +264,12 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
     const builtEvents: Array<Omit<WeddingEvent, 'id' | 'weddingId'>> = selectedEventTypes.map((type, idx) => {
       const bp = EVENT_BLUEPRINTS[type];
       const decisions = decisionsByEvent[type] || bp.decisions.map((d) => ({
+        id: d.id,
         title: d.title,
         category: d.category,
         checked: true,
         notes: d.tip,
+        subItems: d.subItems,
       }));
 
       const checklistItems: EventChecklistItem[] = decisions
@@ -230,7 +280,18 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
           category: d.category,
           isArranged: false,
           notes: d.notes,
+          subItems: d.subItems ? d.subItems.map((s) => ({ ...s })) : undefined,
         }));
+
+      const hasWelcomeBags = decisions.some(
+        (d) => d.checked && d.title.toLowerCase().includes('welcome bag')
+      );
+      const hasWelcomeDinner = decisions.some(
+        (d) =>
+          d.checked &&
+          (d.title.toLowerCase().includes('welcome hospitality') ||
+            d.title.toLowerCase().includes('hotel room block'))
+      );
 
       return {
         name: bp.name,
@@ -246,6 +307,14 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
         description: bp.description,
         coordinatorName: `${bride} & ${groom}`,
         coordinatorPhone: '',
+        hotelBlockName:
+          type === 'pheras' || type === 'reception'
+            ? profileData.venueName
+              ? `${profileData.venueName} & Room Block`
+              : 'Partner Hotel Room Block'
+            : undefined,
+        hasWelcomeBags,
+        hasWelcomeDinner,
         checklist: checklistItems,
       };
     });
@@ -576,14 +645,17 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
           {/* STEP 3: Event-by-Event Interactive Decisions & Essentials Guide */}
           {currentStep === 3 && (
             <div className="space-y-5 animate-in fade-in duration-200">
-              <div className="bg-emerald-50/70 p-4 rounded-2xl border border-emerald-200/70 flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
+              {/* Guidance Callout */}
+              <div className="bg-gradient-to-r from-rose-50/80 via-amber-50/50 to-orange-50/60 p-4 sm:p-5 rounded-2xl border border-rose-200/70 flex items-start gap-3.5">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-rose-600 to-amber-600 flex items-center justify-center text-white shrink-0 mt-0.5 shadow-xs">
+                  <Sparkles className="w-4 h-4" />
+                </div>
                 <div>
-                  <h4 className="font-bold text-emerald-950 text-sm">
-                    Decisions & Items Needed for Each Ceremony
+                  <h4 className="font-bold text-stone-900 text-sm">
+                    Customize Decisions & Essentials for Each Ceremony
                   </h4>
-                  <p className="text-xs text-emerald-900 leading-relaxed mt-0.5">
-                    Click each event tab below to see the checklist of decisions you must make (venues, curfews, food style, music) and items to get for that event.
+                  <p className="text-xs text-stone-600 leading-relaxed mt-0.5">
+                    Click any ceremony tab below to review decisions for that event (venues, sound curfews, catering, attire, and decor). Expand any item to customize the deep details like hotel welcome bags and jewelry packing!
                   </p>
                 </div>
               </div>
@@ -603,21 +675,44 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
                     const decisions = decisionsByEvent[type] || [];
                     const count = decisions.filter((d) => d.checked).length;
 
+                    const renderIcon = () => {
+                      const iconClass = `w-4 h-4 shrink-0 ${isActive ? 'text-amber-300' : 'text-stone-500'}`;
+                      switch (type) {
+                        case 'pheras':
+                          return <Flame className={iconClass} />;
+                        case 'sangeet':
+                          return <Music className={iconClass} />;
+                        case 'reception':
+                          return <Sparkles className={iconClass} />;
+                        case 'mehendi':
+                          return <Palmtree className={iconClass} />;
+                        case 'haldi':
+                          return <Sun className={iconClass} />;
+                        case 'roka':
+                          return <Crown className={iconClass} />;
+                        default:
+                          return <Sparkles className={iconClass} />;
+                      }
+                    };
+
                     return (
                       <button
                         key={type}
                         type="button"
                         onClick={() => setActiveEventTab(type)}
-                        className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-2 ${
+                        className={`px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-2 ${
                           isActive
-                            ? 'bg-stone-900 text-white shadow-sm ring-2 ring-amber-400'
-                            : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
+                            ? 'bg-rose-950 text-white shadow-md shadow-rose-950/25 ring-2 ring-rose-500/50'
+                            : 'bg-white hover:bg-stone-50 text-stone-700 border border-stone-200/80 shadow-2xs'
                         }`}
                       >
-                        <span>{bp?.name || type}</span>
+                        {renderIcon()}
+                        <span>{bp?.name.split('(')[0].trim() || type}</span>
                         <span
                           className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                            isActive ? 'bg-amber-400 text-stone-900' : 'bg-stone-200 text-stone-700'
+                            isActive
+                              ? 'bg-rose-800 text-rose-100 border border-rose-700/60'
+                              : 'bg-stone-100 text-stone-600 border border-stone-200'
                           }`}
                         >
                           {count} items
@@ -628,183 +723,268 @@ export const GettingStartedWizard: React.FC<GettingStartedWizardProps> = ({
               </div>
 
               {/* Active Event Details & Checklist */}
-              {activeEventTab && EVENT_BLUEPRINTS[activeEventTab] && (
-                <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-xs space-y-4">
-                  {/* Event Banner */}
-                  <div
-                    className={`p-4 bg-gradient-to-r ${EVENT_BLUEPRINTS[activeEventTab].bannerGradient} text-white flex flex-col sm:flex-row sm:items-center justify-between gap-2`}
-                  >
-                    <div>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-white/20">
-                          {activeEventTab.toUpperCase()}
-                        </span>
-                        {EVENT_BLUEPRINTS[activeEventTab].priorityBadge && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/30 backdrop-blur-xs border border-white/20 text-white">
-                            {EVENT_BLUEPRINTS[activeEventTab].priorityBadge.label}
+              {activeEventTab && EVENT_BLUEPRINTS[activeEventTab] && (() => {
+                const bp = EVENT_BLUEPRINTS[activeEventTab];
+                const activeDecisions = decisionsByEvent[activeEventTab] || [];
+                const categoriesPresent = Array.from(new Set(activeDecisions.map((d) => d.category)));
+
+                const getCategoryMeta = (cat: RequirementCategory) => {
+                  switch (cat) {
+                    case 'Attire, Saafa & Jewellery':
+                      return {
+                        label: 'Attire, Jewelry & Groom Regalia',
+                        icon: <Shirt className="w-4 h-4 text-rose-700 shrink-0" />,
+                        accent: 'border-rose-200/80 bg-rose-50/30',
+                      };
+                    case 'Transport & Entry':
+                      return {
+                        label: 'Venue, Hotel Room Block & Baraat Permits',
+                        icon: <Building2 className="w-4 h-4 text-amber-700 shrink-0" />,
+                        accent: 'border-amber-200/80 bg-amber-50/30',
+                      };
+                    case 'Food, Drinks & Favors':
+                      return {
+                        label: 'Catering, Welcome Hospitality & Favors',
+                        icon: <UtensilsCrossed className="w-4 h-4 text-emerald-700 shrink-0" />,
+                        accent: 'border-emerald-200/80 bg-emerald-50/30',
+                      };
+                    case 'Music, Sound & FX':
+                      return {
+                        label: 'Music, Sound Curfew & DJ Entertainment',
+                        icon: <Music className="w-4 h-4 text-purple-700 shrink-0" />,
+                        accent: 'border-purple-200/80 bg-purple-50/30',
+                      };
+                    case 'Decor, Props & Staging':
+                      return {
+                        label: 'Decor, Mandap, Centerpieces & Dance Floor',
+                        icon: <Sparkles className="w-4 h-4 text-amber-700 shrink-0" />,
+                        accent: 'border-amber-200/80 bg-amber-50/30',
+                      };
+                    case 'Puja Samagri & Rituals':
+                      return {
+                        label: 'Sacred Rituals, Havan & Samagri Kit',
+                        icon: <Flame className="w-4 h-4 text-rose-700 shrink-0" />,
+                        accent: 'border-rose-200/80 bg-rose-50/30',
+                      };
+                    default:
+                      return {
+                        label: cat,
+                        icon: <Tag className="w-4 h-4 text-stone-600 shrink-0" />,
+                        accent: 'border-stone-200/80 bg-stone-50/30',
+                      };
+                  }
+                };
+
+                return (
+                  <div className="bg-white rounded-3xl border border-stone-200 overflow-hidden shadow-xs space-y-5">
+                    {/* Event Banner with High-Contrast Overlay */}
+                    <div
+                      className={`relative overflow-hidden p-5 sm:p-6 bg-gradient-to-r ${bp.bannerGradient} text-white`}
+                    >
+                      <div className="absolute inset-0 bg-black/25 backdrop-blur-[1px]" />
+                      <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-md">
+                              {activeEventTab.toUpperCase()}
+                            </span>
+                            {bp.priorityBadge && (
+                              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-black/40 border border-white/20 text-white flex items-center gap-1">
+                                <Flame className="w-3 h-3 text-amber-300" />
+                                <span>{bp.priorityBadge.label.replace(/[🔥⚡🥂🌿💛💍🐎🚗]/g, '').trim()}</span>
+                              </span>
+                            )}
+                            <span className="text-xs text-white/95 font-medium flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5 text-amber-300" />
+                              <span>
+                                {bp.defaultTime.start} – {bp.defaultTime.end}
+                              </span>
+                            </span>
+                          </div>
+                          <h3 className="font-bold text-xl sm:text-2xl font-sans tracking-tight text-white mt-1.5">
+                            {bp.name}
+                          </h3>
+                          <p className="text-xs sm:text-sm text-stone-100/90 leading-relaxed mt-1 max-w-2xl font-normal">
+                            {bp.description}
+                          </p>
+                        </div>
+
+                        <div className="shrink-0">
+                          <span className="text-xs bg-black/40 border border-white/25 px-3.5 py-2 rounded-xl font-semibold backdrop-blur-md inline-flex items-center gap-2 text-white shadow-xs">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+                            <span>
+                              {activeDecisions.filter((d) => d.checked).length} Decisions Selected
+                            </span>
                           </span>
-                        )}
-                        <span className="text-xs text-white/90 font-medium">
-                          🕒 {EVENT_BLUEPRINTS[activeEventTab].defaultTime.start} -{' '}
-                          {EVENT_BLUEPRINTS[activeEventTab].defaultTime.end}
-                        </span>
+                        </div>
                       </div>
-                      <h3 className="font-bold text-lg font-serif mt-1">
-                        {EVENT_BLUEPRINTS[activeEventTab].name}
-                      </h3>
-                      <p className="text-xs text-white/90 mt-0.5">
-                        {EVENT_BLUEPRINTS[activeEventTab].description}
-                      </p>
                     </div>
 
-                    <div className="shrink-0">
-                      <span className="text-xs bg-black/25 px-3 py-1.5 rounded-xl font-bold backdrop-blur-xs">
-                        {
-                          (decisionsByEvent[activeEventTab] || []).filter((d) => d.checked).length
-                        }{' '}
-                        Decisions Tracked
-                      </span>
+                    {/* Grouped Decisions by Category */}
+                    <div className="p-4 sm:p-6 space-y-6">
+                      {categoriesPresent.map((category) => {
+                        const meta = getCategoryMeta(category);
+                        const categoryItems = activeDecisions
+                          .map((item, originalIdx) => ({ item, originalIdx }))
+                          .filter(({ item }) => item.category === category);
+
+                        if (categoryItems.length === 0) return null;
+
+                        return (
+                          <div key={category} className="space-y-3">
+                            <div className="flex items-center gap-2 pb-1.5 border-b border-stone-100">
+                              <div className="p-1 rounded-md bg-stone-100">
+                                {meta.icon}
+                              </div>
+                              <span className="text-xs font-bold uppercase tracking-wider text-stone-800">
+                                {meta.label}
+                              </span>
+                              <span className="text-[11px] font-medium text-stone-400">
+                                ({categoryItems.length})
+                              </span>
+                            </div>
+
+                            <div className="space-y-2.5">
+                              {categoryItems.map(({ item, originalIdx }) => {
+                                const itemKey = `${activeEventTab}-${originalIdx}`;
+                                const isExpanded = Boolean(expandedItems[itemKey]);
+
+                                return (
+                                  <div
+                                    key={originalIdx}
+                                    className={`p-3.5 sm:p-4 rounded-2xl border transition-all ${
+                                      item.checked
+                                        ? 'bg-white border-stone-200/90 shadow-2xs hover:border-stone-300'
+                                        : 'bg-stone-50/70 border-stone-200/50 opacity-60'
+                                    }`}
+                                  >
+                                    <div className="flex items-start gap-3">
+                                      <input
+                                        type="checkbox"
+                                        checked={item.checked}
+                                        onChange={() => toggleDecisionItem(activeEventTab, originalIdx)}
+                                        className="mt-1 w-4 h-4 rounded-md text-rose-700 focus:ring-rose-500 border-stone-300 cursor-pointer shrink-0"
+                                      />
+                                      <div className="flex-1 min-w-0">
+                                        <p
+                                          onClick={() => toggleDecisionItem(activeEventTab, originalIdx)}
+                                          className={`text-sm font-semibold cursor-pointer ${
+                                            item.checked ? 'text-stone-900' : 'text-stone-400 line-through'
+                                          }`}
+                                        >
+                                          {item.title}
+                                        </p>
+
+                                        {item.notes && (
+                                          <div className="flex items-start gap-2 mt-2 text-xs text-amber-950 bg-amber-50/80 px-3 py-1.5 rounded-xl border border-amber-200/60 leading-relaxed font-normal">
+                                            <Lightbulb className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                                            <span>{item.notes}</span>
+                                          </div>
+                                        )}
+
+                                        {/* Progressive Disclosure: Expandable Sub-items (Welcome bags, attire, jewelry, centerpieces) */}
+                                        {item.subItems && item.subItems.length > 0 && (
+                                          <div className="mt-3">
+                                            <button
+                                              type="button"
+                                              onClick={() => toggleExpandItem(itemKey)}
+                                              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200/80 text-stone-700 text-xs font-semibold border border-stone-200 transition-colors"
+                                            >
+                                              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                                              <span>
+                                                {item.subItems.filter((s) => s.completed).length} of {item.subItems.length} tasks/items completed
+                                              </span>
+                                              <span className="text-stone-400 font-normal">
+                                                • {isExpanded ? 'Hide breakdown' : 'Click to customize details'}
+                                              </span>
+                                              {isExpanded ? (
+                                                <ChevronUp className="w-3.5 h-3.5 text-stone-600 ml-1" />
+                                              ) : (
+                                                <ChevronDown className="w-3.5 h-3.5 text-stone-600 ml-1" />
+                                              )}
+                                            </button>
+
+                                            {isExpanded && (
+                                              <div className="mt-2.5 p-3 sm:p-4 rounded-2xl bg-stone-50/90 border border-stone-200 space-y-2.5 animate-in fade-in duration-150">
+                                                <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-stone-500">
+                                                  <span>Detailed Checklist & Packing Items:</span>
+                                                  <span>{item.subItems.length} sub-items</span>
+                                                </div>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                  {item.subItems.map((sub) => (
+                                                    <label
+                                                      key={sub.id}
+                                                      className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white border border-stone-200/80 hover:bg-stone-50 text-xs cursor-pointer transition-colors"
+                                                    >
+                                                      <input
+                                                        type="checkbox"
+                                                        checked={sub.completed}
+                                                        onChange={() =>
+                                                          toggleWizardSubItem(activeEventTab, originalIdx, sub.id)
+                                                        }
+                                                        className="w-4 h-4 rounded-md text-rose-700 focus:ring-rose-500 border-stone-300"
+                                                      />
+                                                      <span
+                                                        className={
+                                                          sub.completed
+                                                            ? 'text-stone-400 line-through'
+                                                            : 'text-stone-800 font-medium'
+                                                        }
+                                                      >
+                                                        {sub.title}
+                                                      </span>
+                                                    </label>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Add Custom Item Row */}
+                      <div className="pt-4 border-t border-stone-200">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                          <input
+                            type="text"
+                            value={newCustomTitle}
+                            onChange={(e) => setNewCustomTitle(e.target.value)}
+                            placeholder={`+ Add custom decision or item to get for ${bp.name}...`}
+                            className="flex-1 px-4 py-2.5 rounded-xl border border-stone-300 text-xs text-stone-900 focus:outline-hidden focus:ring-2 focus:ring-rose-500 font-medium"
+                          />
+                          <select
+                            value={newCustomCategory}
+                            onChange={(e) => setNewCustomCategory(e.target.value as any)}
+                            className="px-3.5 py-2.5 rounded-xl border border-stone-300 text-xs bg-white text-stone-800 font-medium"
+                          >
+                            <option value="Attire, Saafa & Jewellery">Attire & Jewellery</option>
+                            <option value="Food, Drinks & Favors">Food & Favors</option>
+                            <option value="Transport & Entry">Hotel & Transport</option>
+                            <option value="Music, Sound & FX">Music & Sound</option>
+                            <option value="Decor, Props & Staging">Decor & Staging</option>
+                            <option value="Puja Samagri & Rituals">Rituals & Samagri</option>
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => handleAddCustomItem(activeEventTab)}
+                            className="px-5 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-semibold text-xs transition-colors shrink-0"
+                          >
+                            Add Item
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
-
-                  {/* Checklist of Decisions & Items to Get */}
-                  <div className="p-4 sm:p-5 space-y-4">
-                    {/* Section 1: Key Decisions to Make */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-2.5">
-                        <span className="text-xs font-bold uppercase tracking-wider text-stone-800">
-                          🎯 Decisions You Need to Make
-                        </span>
-                        <span className="text-[10px] text-stone-400 font-medium">
-                          (Venue, Sound Curfew, Food, DJ, Decor)
-                        </span>
-                      </div>
-
-                      <div className="space-y-2 divide-y divide-stone-100">
-                        {(decisionsByEvent[activeEventTab] || [])
-                          .map((item, originalIdx) => ({ item, originalIdx }))
-                          .filter(({ item }) => !item.isItemToGet)
-                          .map(({ item, originalIdx }) => (
-                            <div
-                              key={originalIdx}
-                              onClick={() => toggleDecisionItem(activeEventTab, originalIdx)}
-                              className="pt-2.5 first:pt-0 flex items-start gap-3 cursor-pointer group hover:bg-stone-50/60 p-2 rounded-xl transition-colors"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={item.checked}
-                                onChange={() => toggleDecisionItem(activeEventTab, originalIdx)}
-                                className="mt-1 w-4 h-4 rounded text-rose-700 focus:ring-rose-500 border-stone-300 cursor-pointer"
-                              />
-                              <div className="flex-1 min-w-0">
-                                <p
-                                  className={`text-xs font-semibold ${
-                                    item.checked ? 'text-stone-900' : 'text-stone-400 line-through'
-                                  }`}
-                                >
-                                  {item.title}
-                                </p>
-                                <div className="flex flex-wrap items-center gap-2 mt-1">
-                                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-stone-100 text-stone-600 font-medium">
-                                    📂 {item.category}
-                                  </span>
-                                  {item.notes && (
-                                    <span className="text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/70 font-medium">
-                                      💡 {item.notes}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-
-                    {/* Section 2: Items You Need to Get / Arrange */}
-                    <div className="pt-2 border-t border-stone-200">
-                      <div className="flex items-center gap-2 mb-2.5">
-                        <span className="text-xs font-bold uppercase tracking-wider text-stone-800">
-                          📦 Items & Essentials to Get / Arrange
-                        </span>
-                        <span className="text-[10px] text-stone-400 font-medium">
-                          (Saafas, Samagri, Milni Garlands, Favors)
-                        </span>
-                      </div>
-
-                      <div className="space-y-2 divide-y divide-stone-100">
-                        {(decisionsByEvent[activeEventTab] || [])
-                          .map((item, originalIdx) => ({ item, originalIdx }))
-                          .filter(({ item }) => item.isItemToGet)
-                          .map(({ item, originalIdx }) => (
-                            <div
-                              key={originalIdx}
-                              onClick={() => toggleDecisionItem(activeEventTab, originalIdx)}
-                              className="pt-2.5 first:pt-0 flex items-start gap-3 cursor-pointer group hover:bg-stone-50/60 p-2 rounded-xl transition-colors"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={item.checked}
-                                onChange={() => toggleDecisionItem(activeEventTab, originalIdx)}
-                                className="mt-1 w-4 h-4 rounded text-rose-700 focus:ring-rose-500 border-stone-300 cursor-pointer"
-                              />
-                              <div className="flex-1 min-w-0">
-                                <p
-                                  className={`text-xs font-semibold ${
-                                    item.checked ? 'text-stone-900' : 'text-stone-400 line-through'
-                                  }`}
-                                >
-                                  {item.title}
-                                </p>
-                                <div className="flex flex-wrap items-center gap-2 mt-1">
-                                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-stone-100 text-stone-600 font-medium">
-                                    📂 {item.category}
-                                  </span>
-                                  {item.notes && (
-                                    <span className="text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/70 font-medium">
-                                      💡 {item.notes}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-
-                    {/* Quick Add Custom Item input */}
-                    <div className="pt-3 border-t border-dashed border-stone-200">
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                        <input
-                          type="text"
-                          value={newCustomTitle}
-                          onChange={(e) => setNewCustomTitle(e.target.value)}
-                          placeholder={`+ Add custom decision or item to get for ${EVENT_BLUEPRINTS[activeEventTab].name}...`}
-                          className="flex-1 px-3 py-2 rounded-xl border border-stone-300 text-xs text-stone-900 focus:outline-hidden focus:ring-2 focus:ring-rose-500"
-                        />
-                        <select
-                          value={newCustomCategory}
-                          onChange={(e) => setNewCustomCategory(e.target.value as any)}
-                          className="px-3 py-2 rounded-xl border border-stone-300 text-xs bg-white text-stone-800"
-                        >
-                          <option value="Decor, Props & Staging">Decor & Staging</option>
-                          <option value="Food, Drinks & Favors">Food & Drinks</option>
-                          <option value="Music, Sound & FX">Music & Sound</option>
-                          <option value="Attire, Saafa & Jewellery">Attire & Saafa</option>
-                          <option value="Puja Samagri & Rituals">Rituals & Samagri</option>
-                          <option value="Transport & Entry">Transport & Entry</option>
-                        </select>
-                        <button
-                          type="button"
-                          onClick={() => handleAddCustomItem(activeEventTab)}
-                          className="px-4 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-semibold text-xs transition-colors shrink-0"
-                        >
-                          Add Item
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           )}
         </div>

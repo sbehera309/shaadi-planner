@@ -14,6 +14,7 @@ import {
 } from '@/lib/eventBlueprints';
 import {
   CalendarDays,
+  Calendar,
   Users,
   Wallet,
   Gift,
@@ -33,6 +34,11 @@ import {
   HelpCircle,
   ArrowUpDown,
   Filter,
+  Flame,
+  Zap,
+  Hotel,
+  Shirt,
+  Package,
 } from 'lucide-react';
 
 export default function DashboardOverviewPage() {
@@ -326,12 +332,13 @@ export default function DashboardOverviewPage() {
                   onClick={() => setSortOrder('priority')}
                   className={`px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
                     sortOrder === 'priority'
-                      ? 'bg-stone-900 text-white shadow-xs'
+                      ? 'bg-rose-950 text-white shadow-xs ring-1 ring-rose-500/50'
                       : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
                   }`}
                   title="Prioritize high-lead-time ceremonies first (e.g. Baraat/Pheras fire permits & Sangeet sound curfew)"
                 >
-                  <span>🏆 Planning Priority (High-Lead Time First)</span>
+                  <Flame className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Planning Priority (High Lead Time)</span>
                 </button>
 
                 <button
@@ -339,12 +346,13 @@ export default function DashboardOverviewPage() {
                   onClick={() => setSortOrder('chronological')}
                   className={`px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
                     sortOrder === 'chronological'
-                      ? 'bg-stone-900 text-white shadow-xs'
+                      ? 'bg-rose-950 text-white shadow-xs ring-1 ring-rose-500/50'
                       : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
                   }`}
                   title="Traditional Desi weekend order: Mehndi -> Sangeet -> Pheras -> Reception"
                 >
-                  <span>📅 Weekend Timeline</span>
+                  <Calendar className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Weekend Timeline</span>
                 </button>
 
                 <button
@@ -352,12 +360,13 @@ export default function DashboardOverviewPage() {
                   onClick={() => setSortOrder('needs_planning')}
                   className={`px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
                     sortOrder === 'needs_planning'
-                      ? 'bg-stone-900 text-white shadow-xs'
+                      ? 'bg-rose-950 text-white shadow-xs ring-1 ring-rose-500/50'
                       : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
                   }`}
                   title="Show ceremonies with 0 decisions arranged at the top"
                 >
-                  <span>⚡ Needs Planning First</span>
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Needs Planning First</span>
                 </button>
               </div>
             </div>
@@ -418,12 +427,13 @@ export default function DashboardOverviewPage() {
                                 </span>
                               )}
                               {event.muhuratTime && (
-                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
-                                  ✨ {event.muhuratTime}
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-1">
+                                  <Sparkles className="w-3 h-3 text-amber-700" />
+                                  <span>{event.muhuratTime}</span>
                                 </span>
                               )}
                             </div>
-                            <h3 className="font-bold text-lg text-stone-900 font-serif leading-tight">
+                            <h3 className="font-bold text-lg text-stone-900 font-sans tracking-tight leading-tight">
                               {event.name}
                             </h3>
                           </div>
@@ -477,7 +487,7 @@ export default function DashboardOverviewPage() {
                           </div>
 
                           <div className="p-2.5 rounded-xl bg-white border border-stone-200 flex items-start gap-2">
-                            <Tag className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                            <Shirt className="w-3.5 h-3.5 text-rose-700 shrink-0 mt-0.5" />
                             <div className="truncate">
                               <span className="text-[10px] uppercase font-bold text-stone-400 block">Dress Code</span>
                               <span className="font-semibold text-stone-800 truncate block">
@@ -485,13 +495,26 @@ export default function DashboardOverviewPage() {
                               </span>
                             </div>
                           </div>
+
+                          {event.hotelBlockName && (
+                            <div className="sm:col-span-2 p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/60 flex items-start gap-2">
+                              <Hotel className="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5" />
+                              <div className="truncate">
+                                <span className="text-[10px] uppercase font-bold text-amber-900 block">Hotel Room Block</span>
+                                <span className="font-semibold text-stone-900 truncate block text-xs">
+                                  {event.hotelBlockName}
+                                </span>
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         {/* Checklist progress */}
                         {totalChecklist > 0 && (
                           <div className="p-2.5 rounded-xl bg-amber-50/60 border border-amber-200/70 flex items-center justify-between text-xs font-medium">
-                            <span className="text-amber-950 font-semibold">
-                              📦 Ceremony Decisions & Essentials:
+                            <span className="text-amber-950 font-semibold inline-flex items-center gap-1.5">
+                              <Package className="w-3.5 h-3.5 text-amber-700" />
+                              <span>Ceremony Decisions & Essentials:</span>
                             </span>
                             <span className="text-amber-900 font-bold">
                               {arrangedCount}/{totalChecklist} arranged
@@ -514,9 +537,9 @@ export default function DashboardOverviewPage() {
                           <Sparkles className="w-3.5 h-3.5 text-amber-400 group-hover:rotate-12 transition-transform" />
                           <span>
                             {isNeedsPlanning
-                              ? '✨ Plan This Event'
+                              ? 'Plan Decisions'
                               : isInProgress
-                              ? `✏️ Continue Planning (${arrangedCount}/${totalChecklist} Done)`
+                              ? `Continue Planning (${arrangedCount}/${totalChecklist} Arranged)`
                               : 'Review Event Plan'}
                           </span>
                         </button>

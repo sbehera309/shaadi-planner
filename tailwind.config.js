@@ -51,8 +51,8 @@ module.exports = {
         ivory: '#FDFBF7',
       },
       fontFamily: {
-        serif: ['var(--font-cinzel)', 'Georgia', 'serif'],
-        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-sans)', '"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+        serif: ['var(--font-serif)', '"Playfair Display"', 'Georgia', 'serif'],
       },
     },
   },

@@ -20,6 +20,13 @@ import {
   Tag,
   AlertCircle,
   HelpCircle,
+  Hotel,
+  Gift,
+  Shirt,
+  Lightbulb,
+  ChevronDown,
+  ChevronUp,
+  Circle,
 } from 'lucide-react';
 
 interface EventPlanningWizardProps {
@@ -52,6 +59,9 @@ export const EventPlanningWizard: React.FC<EventPlanningWizardProps> = ({
     foodStyle: '',
     catererStatus: 'searching',
     estimatedBudget: 0,
+    hotelBlockName: '',
+    hasWelcomeBags: false,
+    hasWelcomeDinner: false,
   });
 
   // Decision Checklist items
@@ -78,6 +88,9 @@ export const EventPlanningWizard: React.FC<EventPlanningWizardProps> = ({
         foodStyle: '',
         catererStatus: 'searching',
         estimatedBudget: 0,
+        hotelBlockName: event.hotelBlockName || '',
+        hasWelcomeBags: event.hasWelcomeBags || false,
+        hasWelcomeDinner: event.hasWelcomeDinner || false,
       });
 
       // If event already has checklist items, load them; otherwise pre-populate from blueprint decisions
@@ -90,6 +103,7 @@ export const EventPlanningWizard: React.FC<EventPlanningWizardProps> = ({
           category: d.category,
           isArranged: false,
           notes: d.tip || d.description,
+          subItems: d.subItems ? d.subItems.map((s) => ({ ...s })) : undefined,
         }));
         setChecklistItems(generated);
       } else {
@@ -109,6 +123,23 @@ export const EventPlanningWizard: React.FC<EventPlanningWizardProps> = ({
       prev.map((item) =>
         item.id === id ? { ...item, isArranged: !item.isArranged } : item
       )
+    );
+  };
+
+  const handleToggleSubItem = (itemId: string, subId: string) => {
+    setChecklistItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== itemId || !item.subItems) return item;
+        const updatedSubs = item.subItems.map((s) =>
+          s.id === subId ? { ...s, completed: !s.completed } : s
+        );
+        const allDone = updatedSubs.length > 0 && updatedSubs.every((s) => s.completed);
+        return {
+          ...item,
+          subItems: updatedSubs,
+          isArranged: allDone ? true : item.isArranged,
+        };
+      })
     );
   };
 
@@ -143,6 +174,9 @@ export const EventPlanningWizard: React.FC<EventPlanningWizardProps> = ({
       description: formData.description.trim() || event.description,
       coordinatorName: formData.coordinatorName.trim() || event.coordinatorName,
       coordinatorPhone: formData.coordinatorPhone.trim() || event.coordinatorPhone,
+      hotelBlockName: formData.hotelBlockName.trim() || undefined,
+      hasWelcomeBags: formData.hasWelcomeBags,
+      hasWelcomeDinner: formData.hasWelcomeDinner,
       checklist: checklistItems,
     });
 
@@ -286,6 +320,48 @@ export const EventPlanningWizard: React.FC<EventPlanningWizardProps> = ({
                     onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
                     className="w-full px-4 py-2.5 rounded-xl border border-stone-300 text-stone-900 focus:outline-hidden focus:ring-2 focus:ring-rose-500 font-medium text-sm"
                   />
+                </div>
+
+                {/* Hotel Room Block & Hospitality */}
+                <div className="sm:col-span-2 p-4 rounded-2xl bg-amber-50/70 border border-amber-200/70 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Hotel className="w-4 h-4 text-amber-700" />
+                    <span className="font-bold text-stone-900 text-xs">
+                      Guest Hotel Room Block & Hospitality (Optional)
+                    </span>
+                  </div>
+                  <div>
+                    <label className="font-semibold text-stone-700 block mb-1 text-xs">
+                      Hotel Partner Name & Room Block Code
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.hotelBlockName}
+                      onChange={(e) => setFormData({ ...formData, hotelBlockName: e.target.value })}
+                      placeholder="e.g. Westin Jersey City Newport (Group Rate Code: SHAH2026)"
+                      className="w-full px-4 py-2 rounded-xl border border-stone-300 text-stone-900 focus:outline-hidden focus:ring-2 focus:ring-rose-500 font-medium text-xs bg-white"
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-4 pt-1">
+                    <label className="flex items-center gap-2 text-xs text-stone-700 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.hasWelcomeDinner}
+                        onChange={(e) => setFormData({ ...formData, hasWelcomeDinner: e.target.checked })}
+                        className="w-4 h-4 rounded text-rose-700 focus:ring-rose-500"
+                      />
+                      <span>Include Welcome Dinner / Hospitality Suite</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-xs text-stone-700 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.hasWelcomeBags}
+                        onChange={(e) => setFormData({ ...formData, hasWelcomeBags: e.target.checked })}
+                        className="w-4 h-4 rounded text-rose-700 focus:ring-rose-500"
+                      />
+                      <span>In-Room Guest Welcome Bags Planned</span>
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
@@ -454,43 +530,76 @@ export const EventPlanningWizard: React.FC<EventPlanningWizardProps> = ({
                 {checklistItems.map((item) => (
                   <div
                     key={item.id}
-                    className="p-3.5 rounded-xl bg-stone-50 border border-stone-200/80 flex items-start justify-between gap-3 group hover:border-amber-300 transition-colors"
+                    className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200/80 group hover:border-amber-300 transition-colors"
                   >
-                    <div
-                      onClick={() => handleToggleChecklist(item.id)}
-                      className="flex items-start gap-3 cursor-pointer flex-1"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={item.isArranged}
-                        onChange={() => handleToggleChecklist(item.id)}
-                        className="mt-1 w-4 h-4 rounded text-rose-700 focus:ring-rose-500 border-stone-300 cursor-pointer"
-                      />
-                      <div>
-                        <p className={`text-xs font-bold ${item.isArranged ? 'text-stone-400 line-through' : 'text-stone-900'}`}>
-                          {item.title}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-2 mt-1">
-                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-white border border-stone-200 text-stone-600 font-medium">
-                            {item.category}
-                          </span>
-                          {item.notes && (
-                            <span className="text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/60">
-                              💡 {item.notes}
+                    <div className="flex items-start justify-between gap-3">
+                      <div
+                        onClick={() => handleToggleChecklist(item.id)}
+                        className="flex items-start gap-3 cursor-pointer flex-1"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={item.isArranged}
+                          onChange={() => handleToggleChecklist(item.id)}
+                          className="mt-1 w-4 h-4 rounded text-rose-700 focus:ring-rose-500 border-stone-300 cursor-pointer"
+                        />
+                        <div className="flex-1">
+                          <p className={`text-xs font-bold ${item.isArranged ? 'text-stone-400 line-through' : 'text-stone-900'}`}>
+                            {item.title}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2 mt-1">
+                            <span className="text-[10px] px-2 py-0.5 rounded-md bg-white border border-stone-200 text-stone-600 font-medium">
+                              {item.category}
                             </span>
-                          )}
+                            {item.notes && (
+                              <span className="text-[10px] text-amber-900 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/60 inline-flex items-center gap-1 font-normal">
+                                <Lightbulb className="w-3 h-3 text-amber-600" />
+                                <span>{item.notes}</span>
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveChecklistItem(item.id)}
+                        className="p-1 rounded text-stone-400 hover:text-rose-600 hover:bg-stone-200/50 transition-colors shrink-0"
+                        title="Remove decision item"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveChecklistItem(item.id)}
-                      className="p-1 rounded text-stone-400 hover:text-rose-600 hover:bg-stone-200/50 transition-colors shrink-0"
-                      title="Remove decision item"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                    {/* Micro-tasks / Sub-items breakdown */}
+                    {item.subItems && item.subItems.length > 0 && (
+                      <div className="mt-2.5 pt-2 border-t border-stone-200/60 pl-6 space-y-1.5">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-stone-500 flex items-center justify-between">
+                          <span>Packing & Detail Checklist ({item.subItems.filter((s) => s.completed).length}/{item.subItems.length}):</span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                          {item.subItems.map((sub) => (
+                            <button
+                              key={sub.id}
+                              type="button"
+                              onClick={() => handleToggleSubItem(item.id, sub.id)}
+                              className={`flex items-center gap-2 p-1.5 rounded-lg border text-left text-[11px] transition-colors ${
+                                sub.completed
+                                  ? 'bg-emerald-50/80 border-emerald-200 text-stone-400 line-through'
+                                  : 'bg-white border-stone-200 text-stone-800 hover:bg-stone-100'
+                              }`}
+                            >
+                              {sub.completed ? (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                              ) : (
+                                <Circle className="w-3.5 h-3.5 text-stone-300 shrink-0" />
+                              )}
+                              <span className="truncate">{sub.title}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

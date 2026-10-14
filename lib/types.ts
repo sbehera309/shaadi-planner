@@ -30,6 +30,7 @@ export interface EventChecklistItem {
   assignedTo?: string; // e.g. "Groom's Brother", "Decor Vendor", "Planner"
   isArranged: boolean;
   notes?: string;
+  subItems?: { id: string; title: string; completed: boolean }[];
 }
 
 export interface WeddingEvent {
@@ -51,6 +52,9 @@ export interface WeddingEvent {
   coordinatorName: string;
   coordinatorPhone: string;
   checklist: EventChecklistItem[];
+  hotelBlockName?: string; // e.g. "Hyatt Regency / Westin Hotel Room Block"
+  hasWelcomeBags?: boolean;
+  hasWelcomeDinner?: boolean;
 }
 
 export interface Guest {
