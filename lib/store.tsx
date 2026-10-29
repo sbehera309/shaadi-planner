@@ -13,6 +13,7 @@ import {
   EventChecklistItem,
   VenueOption,
   SiteTourDayPlan,
+  SangeetVenueOption,
 } from './types';
 import {
   initialWeddingProfile,
@@ -39,6 +40,7 @@ interface WeddingContextType {
   rooms: RoomAllocation[];
   venues: VenueOption[];
   tourPlan: SiteTourDayPlan | null;
+  officialSangeetVenue: SangeetVenueOption | null;
   isDemoMode: boolean;
 
   // Wedding Profile
@@ -94,6 +96,7 @@ interface WeddingContextType {
   setOfficialVenue: (venueId: string) => void;
   saveTourPlan: (plan: SiteTourDayPlan) => void;
   clearTourPlan: () => void;
+  setOfficialSangeetVenue: (venue: SangeetVenueOption | null) => void;
 
   // Template & Reset
   resetToDefaultData: () => void;
@@ -123,6 +126,7 @@ const STORAGE_KEYS = {
   ROOMS: 'shaadi_v5_noprofile_rooms',
   VENUES: 'shaadi_v5_venues',
   TOUR_PLAN: 'shaadi_v5_tour_plan',
+  SANGEET_VENUE: 'shaadi_v5_sangeet_venue',
 };
 
 export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -135,6 +139,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [rooms, setRooms] = useState<RoomAllocation[]>(initialRooms);
   const [venues, setVenues] = useState<VenueOption[]>(initialVenues);
   const [tourPlan, setTourPlan] = useState<SiteTourDayPlan | null>(initialTourPlan);
+  const [officialSangeetVenue, setOfficialSangeetVenueState] = useState<SangeetVenueOption | null>(null);
   const [mounted, setMounted] = useState(false);
 
   // Load from localStorage on client mount
@@ -149,6 +154,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const savedRooms = localStorage.getItem(STORAGE_KEYS.ROOMS);
       const savedVenues = localStorage.getItem(STORAGE_KEYS.VENUES);
       const savedTourPlan = localStorage.getItem(STORAGE_KEYS.TOUR_PLAN);
+      const savedSangeetVenue = localStorage.getItem(STORAGE_KEYS.SANGEET_VENUE);
 
       if (savedProfile) {
         try {
@@ -172,6 +178,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (savedRooms) setRooms(JSON.parse(savedRooms));
       if (savedVenues) setVenues(JSON.parse(savedVenues));
       if (savedTourPlan) setTourPlan(JSON.parse(savedTourPlan));
+      if (savedSangeetVenue) setOfficialSangeetVenueState(JSON.parse(savedSangeetVenue));
     } catch (e) {
       console.warn('Using default wedding mock data:', e);
     }
@@ -199,6 +206,11 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       } else {
         localStorage.removeItem(STORAGE_KEYS.TOUR_PLAN);
       }
+      if (officialSangeetVenue) {
+        localStorage.setItem(STORAGE_KEYS.SANGEET_VENUE, JSON.stringify(officialSangeetVenue));
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.SANGEET_VENUE);
+      }
 
       // Real-time Cloud Firestore sync when configured
       if (isFirebaseConfigured && db && wedding) {
@@ -212,6 +224,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           rooms,
           venues,
           tourPlan,
+          officialSangeetVenue,
           updatedAt: new Date().toISOString(),
         };
         setDoc(doc(db, 'weddings', wedding.id), cloudData, { merge: true }).catch(() => {});
@@ -219,7 +232,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch (e) {
       console.error('Failed to sync changes:', e);
     }
-  }, [mounted, wedding, events, guests, budgetItems, vendors, shagunRecords, rooms, venues, tourPlan]);
+  }, [mounted, wedding, events, guests, budgetItems, vendors, shagunRecords, rooms, venues, tourPlan, officialSangeetVenue]);
 
   const createWeddingProfile = (profileData: Omit<WeddingProfile, 'id' | 'ownerId'>) => {
     const bride = profileData.brideName.trim();
@@ -589,6 +602,68 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setTourPlan(null);
   };
 
+  const setOfficialSangeetVenue = (targetVenue: SangeetVenueOption | null) => {
+    setOfficialSangeetVenueState(targetVenue);
+    if (!targetVenue) return;
+
+    // 1. Sync with Sangeet / Pre-Wedding Event in itinerary
+    const existingSangeetEvent = events.find(
+      (e) =>
+        e.name.toLowerCase().includes('sangeet') ||
+        e.name.toLowerCase().includes('garba') ||
+        e.name.toLowerCase().includes('mehndi')
+    );
+
+    if (existingSangeetEvent) {
+      updateEvent(existingSangeetEvent.id, {
+        venueName: targetVenue.name,
+        venueAddress: `${targetVenue.address}, ${targetVenue.city}, ${targetVenue.state} ${targetVenue.zipCode}`,
+        description: `Pre-wedding dance celebration, performances & live chaat at ${targetVenue.name}.`,
+      });
+    } else {
+      addEvent({
+        name: 'Sangeet & Garba Night',
+        type: 'sangeet',
+        date: wedding?.startDate || '2026-10-23',
+        startTime: '18:30',
+        endTime: '23:30',
+        venueName: targetVenue.name,
+        venueAddress: `${targetVenue.address}, ${targetVenue.city}, ${targetVenue.state} ${targetVenue.zipCode}`,
+        dressCode: 'Indo-Western or Vibrant Lehengas & Kurtas',
+        colorTheme: 'Jewel tones, Fuchsia & Royal Blue',
+        bannerGradient: 'from-amber-500 via-rose-500 to-purple-600',
+        description: `High-energy Sangeet, dance performances, live chaat & bhangra dhol celebration at ${targetVenue.name}.`,
+        coordinatorName: 'Family Sangeet Lead',
+        coordinatorPhone: targetVenue.contactPhone || '',
+        checklist: [],
+      });
+    }
+
+    // 2. Sync with Budget: update or add Sangeet Venue & Catering line item
+    const existingSangeetBudget = budgetItems.find((b) =>
+      b.title.toLowerCase().includes('sangeet')
+    );
+
+    if (existingSangeetBudget) {
+      updateBudgetItem(existingSangeetBudget.id, {
+        title: `${targetVenue.name} — Sangeet Hall Rental & Catering`,
+        estimatedCost: targetVenue.estimatedTotalCost,
+        actualCost: targetVenue.estimatedTotalCost,
+      });
+    } else {
+      addBudgetItem({
+        title: `${targetVenue.name} — Sangeet Hall Rental & Catering`,
+        category: 'Venue & Catering',
+        estimatedCost: targetVenue.estimatedTotalCost,
+        actualCost: targetVenue.estimatedTotalCost,
+        paidAmount: 0,
+        dueDate: '2026-10-10',
+        paidBy: 'split_50_50',
+        status: 'pending',
+      });
+    }
+  };
+
   const resetToDefaultData = () => {
     setWedding(initialWeddingProfile);
     setEvents(initialEvents);
@@ -599,6 +674,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setRooms(initialRooms);
     setVenues(initialVenues);
     setTourPlan(initialTourPlan);
+    setOfficialSangeetVenueState(null);
     localStorage.clear();
   };
 
@@ -687,6 +763,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         rooms,
         venues,
         tourPlan,
+        officialSangeetVenue,
         isDemoMode: !isFirebaseConfigured,
         createWeddingProfile,
         updateWeddingProfile,
@@ -721,6 +798,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         updateVenue,
         deleteVenue,
         setOfficialVenue,
+        setOfficialSangeetVenue,
         saveTourPlan,
         clearTourPlan,
         resetToDefaultData,

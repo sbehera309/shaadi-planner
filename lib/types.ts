@@ -547,3 +547,61 @@ export interface WeddingProfile {
   isConfigured?: boolean;
   horoscope?: WeddingHoroscopeData;
 }
+
+// -------------------------------------------------------------
+// SANGEET & PRE-WEDDING CELEBRATION VENUES & TRIANGULATION
+// -------------------------------------------------------------
+export interface SangeetDesiFeatures {
+  largeDanceFloor: boolean;
+  stageAvLighting: boolean;
+  soundCurfew: string; // e.g. "01:30 AM", "02:00 AM", "12:00 AM"
+  allowsLiveChaat: boolean; // Live chaat, tandoori & dosa stalls
+  allowsBhangraDhol: boolean;
+  hotelOnSite: boolean;
+  cateringPolicy: 'in_house_indian' | 'outside_approved_caterers' | 'both_allowed';
+}
+
+export interface SangeetVenueOption {
+  id: string;
+  name: string;
+  tagline: string;
+  address: string;
+  city: string;
+  state: 'NJ' | 'PA';
+  zipCode: string;
+  latitude: number;
+  longitude: number;
+  pricePerGuest: number; // e.g. 52 ($45 - $80 typical)
+  hallRentalFee: number; // e.g. 1500 or 0
+  estimatedTotalCost: number; // Calculated base or ~250-300 guests
+  maxCapacity: number; // e.g. 500
+  contactPhone?: string;
+  contactEmail?: string;
+  websiteUrl?: string;
+  desiFeatures: SangeetDesiFeatures;
+  highlightTag: string; // e.g. "🏆 Central NJ Indian Banquet Epicenter"
+  description: string;
+  curatedNotes: string;
+}
+
+export interface SangeetTriangulationMetrics {
+  groomDistanceMiles: number;
+  groomDriveMinutes: number;
+  brideDistanceMiles: number;
+  brideDriveMinutes: number;
+  mainVenueDistanceMiles: number;
+  mainVenueDriveMinutes: number;
+  fairnessScore: number; // 0-100: how balanced between Groom & Bride
+  convenienceScore: number; // 0-100: factoring main venue guest lodging
+  triangulationScore: number; // Combined weighted score (0-100)
+  fairnessVerdict: string; // Human readable explanation
+  isNearMainVenueHotelBlock: boolean; // within 25 mins of main venue
+  travelDeltaMinutes: number; // Difference between Groom drive and Bride drive
+}
+
+export interface RankedSangeetVenue {
+  venue: SangeetVenueOption;
+  metrics: SangeetTriangulationMetrics;
+  totalCostForGuests: number;
+  costPerGuest: number;
+}
