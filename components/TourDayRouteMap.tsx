@@ -411,8 +411,9 @@ export default function TourDayRouteMap({
       const centerLat = (bounds.minLat + bounds.maxLat) / 2;
       const centerLng = (bounds.minLon + bounds.maxLon) / 2;
 
-      if (!googleMapInstanceRef.current) {
-        googleMapInstanceRef.current = new google.maps.Map(googleMapDivRef.current, {
+      let map = googleMapInstanceRef.current;
+      if (!map) {
+        map = new google.maps.Map(googleMapDivRef.current, {
           center: { lat: centerLat, lng: centerLng },
           zoom: 10,
           mapTypeId: mapType === 'satellite' ? google.maps.MapTypeId.HYBRID : google.maps.MapTypeId.ROADMAP,
@@ -421,15 +422,43 @@ export default function TourDayRouteMap({
           fullscreenControl: true,
           zoomControl: true,
         });
+        googleMapInstanceRef.current = map;
       } else {
-        googleMapInstanceRef.current.setMapTypeId(
+        map.setMapTypeId(
           mapType === 'satellite' ? google.maps.MapTypeId.HYBRID : google.maps.MapTypeId.ROADMAP
         );
+      }
+
+      // Plot markers onto genuine Google Map
+      const mapBounds = new google.maps.LatLngBounds();
+      markers.forEach((m) => {
+        const pos = { lat: m.lat, lng: m.lon };
+        mapBounds.extend(pos);
+        const marker = new google.maps.Marker({
+          position: pos,
+          map,
+          title: m.title,
+          label:
+            m.type === 'tour_stop'
+              ? { text: `${m.stopOrder || 1}`, color: '#ffffff', fontWeight: 'bold' }
+              : m.type === 'groom_home'
+              ? '🤵'
+              : m.type === 'bride_home'
+              ? '👰'
+              : undefined,
+        });
+        marker.addListener('click', () => {
+          setActiveMarkerId(m.id);
+        });
+      });
+
+      if (markers.length > 1) {
+        map.fitBounds(mapBounds, 40);
       }
     } catch {
       // Fall back gracefully to SVG mode
     }
-  }, [isGoogleSdkReady, mapType, bounds]);
+  }, [isGoogleSdkReady, mapType, bounds, markers]);
 
   return (
     <div className="bg-white rounded-3xl p-4 sm:p-6 text-stone-900 shadow-xl border border-stone-200/90 space-y-4 overflow-hidden relative font-sans">
@@ -608,7 +637,7 @@ export default function TourDayRouteMap({
       )}
 
       {/* GOOGLE MAPS CANVAS CONTAINER */}
-      <div className="relative rounded-2xl border border-stone-300 overflow-hidden shadow-md aspect-16/10 sm:aspect-21/10 min-h-[380px] bg-[#e5e3df] select-none">
+      <div className="relative w-full h-[480px] sm:h-[540px] md:h-[600px] rounded-2xl border border-stone-300 overflow-hidden shadow-md bg-[#f4f3f0] select-none">
         {/* TOP-LEFT GOOGLE MAPS CONTROLS: [ Map | Satellite ] */}
         <div className="absolute top-3 left-3 z-30 flex items-center rounded-lg bg-white shadow-[0_1px_4px_rgba(0,0,0,0.3)] overflow-hidden border border-stone-200">
           <button
@@ -716,10 +745,17 @@ export default function TourDayRouteMap({
             mapType === 'satellite' ? 'bg-[#1b2b3a]' : 'bg-[#f4f3f0]'
           }`}
         >
+          {/* Live Google Map SDK container (rendered when valid Google Maps API Key is active) */}
+          <div
+            ref={googleMapDivRef}
+            className={`w-full h-full absolute inset-0 ${isGoogleSdkReady ? 'block z-10' : 'hidden'}`}
+          />
+
           {/* Authentic Google Maps Roadmap Background Features */}
           {mapType === 'roadmap' ? (
             <svg
               viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+              preserveAspectRatio="none"
               className="w-full h-full select-none absolute inset-0 pointer-events-none"
             >
               <defs>
@@ -864,7 +900,8 @@ export default function TourDayRouteMap({
           {/* INTERACTIVE SVG ROUTE & PIN LAYER */}
           <svg
             viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-            className="w-full h-full select-none absolute inset-0"
+            preserveAspectRatio="none"
+            className="w-full h-full select-none absolute inset-0 z-10"
           >
             <defs>
               {/* Google Navigation Blue Route Gradient */}
@@ -1240,18 +1277,20 @@ export default function TourDayRouteMap({
           {activeMarker && (() => {
             const pt = project(activeMarker.lat, activeMarker.lon);
             const isTopHalf = pt.y > 220;
-            const popupY = isTopHalf ? pt.y - 190 : pt.y + 40;
-            const popupX = Math.max(16, Math.min(svgWidth - 280, pt.x - 130));
+            const percentX = Math.max(16, Math.min(84, (pt.x / svgWidth) * 100));
+            const percentY = (pt.y / svgHeight) * 100;
 
             return (
               <div
                 style={{
                   position: 'absolute',
-                  left: `${popupX}px`,
-                  top: `${popupY}px`,
-                  width: '270px',
+                  left: `${percentX}%`,
+                  top: `${percentY}%`,
+                  transform: isTopHalf ? 'translate(-50%, -108%)' : 'translate(-50%, 15%)',
+                  width: '280px',
+                  maxWidth: '90vw',
                 }}
-                className="z-40 bg-white rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.25)] border border-stone-200 p-3.5 text-stone-900 animate-in fade-in zoom-in-95 duration-150"
+                className="z-40 bg-white rounded-2xl shadow-[0_6px_24px_rgba(0,0,0,0.28)] border border-stone-200 p-3.5 text-stone-900 animate-in fade-in zoom-in-95 duration-150"
               >
                 {/* Close Button */}
                 <button

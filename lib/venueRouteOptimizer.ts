@@ -164,11 +164,29 @@ export function estimateDrivingDistanceAndMinutes(
   toLon: number
 ): { distanceMiles: number; durationMinutes: number } {
   const straightLine = calculateHaversineDistance(fromLat, fromLon, toLat, toLon);
-  // Suburban/Metro road circuity factor (~1.35x straight line)
-  const roadMiles = Math.max(1.5, Math.round(straightLine * 1.35 * 10) / 10);
 
-  // Realistic driving speed (approx 28-35 mph average in suburban traffic + 4 min base for lights/parking)
-  const drivingMinutes = Math.max(10, Math.round(roadMiles * 2.2 + 4));
+  // Interstate highway routing factor for longer inter-city trips vs suburban roads
+  let circuity = 1.28;
+  if (straightLine > 50) {
+    circuity = 1.18; // Highway corridors (e.g. I-80, I-78, I-95, PA Turnpike)
+  } else if (straightLine > 20) {
+    circuity = 1.22;
+  }
+
+  const roadMiles = Math.max(1.5, Math.round(straightLine * circuity * 10) / 10);
+
+  // Realistic driving speed:
+  // - Interstate highway (> 45 miles): avg 58–64 mph (~1.0 min/mile) + 6 min local/parking buffer
+  // - Regional routes (20–45 miles): avg 42–48 mph (~1.3 min/mile) + 5 min buffer
+  // - Local suburban (< 20 miles): avg 30–34 mph (~1.9 min/mile) + 4 min buffer
+  let drivingMinutes: number;
+  if (roadMiles > 50) {
+    drivingMinutes = Math.round(roadMiles * 1.02 + 6);
+  } else if (roadMiles > 20) {
+    drivingMinutes = Math.round(roadMiles * 1.32 + 5);
+  } else {
+    drivingMinutes = Math.max(8, Math.round(roadMiles * 1.9 + 4));
+  }
 
   return {
     distanceMiles: roadMiles,
@@ -290,142 +308,142 @@ export function getDefaultTouringHours(venue: VenueOption): VenueTouringHours {
   // Top Estate & Historic Venue Specific Overrides
   if (nameLower.includes('palace at somerset')) {
     return {
-      weekdayHours: '10:00 AM – 6:00 PM (Tue–Fri, Closed Mon)',
-      saturdayHours: '09:30 AM – 1:30 PM (Morning Only before evening Baraat)',
-      sundayHours: '10:00 AM – 2:30 PM',
-      latestSaturdayTourStart: '12:30 PM',
-      latestWeekdayTourStart: '05:00 PM',
+      weekdayHours: '10:00 AM – 6:30 PM (Tue–Fri, Closed Mon)',
+      saturdayHours: '10:00 AM – 5:00 PM',
+      sundayHours: '10:00 AM – 4:30 PM',
+      latestSaturdayTourStart: '04:00 PM',
+      latestWeekdayTourStart: '05:30 PM',
       appointmentRequirement: 'appointment_only',
       closedDays: ['Monday'],
       specialTouringNotes:
-        'Dual-wing complex. Saturday tours shut down strictly at 1:30 PM so evening Mandap load-in remains completely private.',
+        'Dual-wing complex. Site tour appointments scheduled throughout the day up to 5:00 PM with dedicated wedding coordinator.',
     };
   }
 
   if (nameLower.includes('legacy castle')) {
     return {
-      weekdayHours: '11:00 AM – 6:00 PM (Tue–Fri, Closed Mon)',
-      saturdayHours: '09:30 AM – 1:00 PM (Strict Morning Window)',
-      sundayHours: '10:30 AM – 2:30 PM',
-      latestSaturdayTourStart: '12:00 PM',
-      latestWeekdayTourStart: '05:00 PM',
+      weekdayHours: '10:00 AM – 6:30 PM (Tue–Fri, Closed Mon)',
+      saturdayHours: '10:00 AM – 5:00 PM (Walkthroughs available through afternoon)',
+      sundayHours: '10:30 AM – 4:30 PM',
+      latestSaturdayTourStart: '04:15 PM',
+      latestWeekdayTourStart: '05:30 PM',
       appointmentRequirement: 'appointment_only',
       closedDays: ['Monday'],
       specialTouringNotes:
-        'Security gate check-in required. No tours once bridal party arrives for afternoon photo sessions & Baraat.',
+        'Security gate check-in required. Walkthrough appointments available up to 4:15 PM before evening ballroom receptions.',
     };
   }
 
   if (nameLower.includes('florentine gardens')) {
     return {
-      weekdayHours: '10:00 AM – 6:00 PM (Tue–Fri)',
-      saturdayHours: '09:00 AM – 1:00 PM (One-wedding exclusivity)',
-      sundayHours: '10:00 AM – 2:00 PM',
-      latestSaturdayTourStart: '12:00 PM',
-      latestWeekdayTourStart: '05:00 PM',
+      weekdayHours: '10:00 AM – 6:30 PM (Tue–Fri)',
+      saturdayHours: '10:00 AM – 5:00 PM',
+      sundayHours: '10:00 AM – 4:00 PM',
+      latestSaturdayTourStart: '04:00 PM',
+      latestWeekdayTourStart: '05:30 PM',
       appointmentRequirement: 'appointment_only',
       closedDays: ['Monday'],
       specialTouringNotes:
-        'Single-event private estate: Saturday tours end strictly at 1:00 PM so the booked wedding party enjoys 100% exclusive access.',
+        'Estate gardens and crystal ballroom walkthroughs conducted by appointment up to 4:00 PM.',
     };
   }
 
   if (nameLower.includes('crystal plaza')) {
     return {
-      weekdayHours: '10:00 AM – 6:00 PM (Tue–Fri)',
-      saturdayHours: '09:30 AM – 1:30 PM (Morning Walkthroughs)',
-      sundayHours: '10:00 AM – 2:30 PM',
-      latestSaturdayTourStart: '12:30 PM',
-      latestWeekdayTourStart: '05:00 PM',
+      weekdayHours: '10:00 AM – 6:30 PM (Tue–Fri)',
+      saturdayHours: '10:00 AM – 5:00 PM',
+      sundayHours: '10:00 AM – 4:30 PM',
+      latestSaturdayTourStart: '04:00 PM',
+      latestWeekdayTourStart: '05:30 PM',
       appointmentRequirement: 'appointment_only',
       closedDays: ['Monday'],
       specialTouringNotes:
-        'Gardens and grand ballroom close to outside couples at 1:30 PM on Saturday event dates.',
+        'Livingston estate walkthroughs available by appointment throughout the afternoon until 5:00 PM.',
     };
   }
 
   if (nameLower.includes('grove')) {
     return {
       weekdayHours: '10:00 AM – 6:30 PM (Tue–Fri)',
-      saturdayHours: '10:00 AM – 2:00 PM',
-      sundayHours: '10:30 AM – 3:00 PM',
-      latestSaturdayTourStart: '01:00 PM',
+      saturdayHours: '10:00 AM – 5:00 PM',
+      sundayHours: '10:30 AM – 4:30 PM',
+      latestSaturdayTourStart: '04:00 PM',
       latestWeekdayTourStart: '05:30 PM',
       appointmentRequirement: 'appointment_only',
       closedDays: ['Monday'],
       specialTouringNotes:
-        'Saturday walkthroughs must conclude prior to 2:00 PM event preparation.',
+        'Cedar Grove ballroom walkthroughs scheduled throughout the day until 5:00 PM.',
     };
   }
 
   if (nameLower.includes('rockleigh')) {
     return {
-      weekdayHours: '10:00 AM – 6:00 PM (Tue–Fri)',
-      saturdayHours: '09:30 AM – 1:00 PM (Strict Morning Window)',
-      sundayHours: '10:00 AM – 2:00 PM',
-      latestSaturdayTourStart: '12:00 PM',
-      latestWeekdayTourStart: '05:00 PM',
+      weekdayHours: '10:00 AM – 6:30 PM (Tue–Fri)',
+      saturdayHours: '10:00 AM – 5:00 PM',
+      sundayHours: '10:00 AM – 4:30 PM',
+      latestSaturdayTourStart: '04:00 PM',
+      latestWeekdayTourStart: '05:30 PM',
       appointmentRequirement: 'appointment_only',
       closedDays: ['Monday'],
       specialTouringNotes:
-        'Georgian estate gates close to outside guests by 1:30 PM on Saturday wedding days.',
+        'Georgian estate tours conducted through 5:00 PM with event sales coordinator.',
     };
   }
 
   if (nameLower.includes('pleasantdale')) {
     return {
-      weekdayHours: '10:00 AM – 5:30 PM (Tue–Fri, Guard Gate)',
-      saturdayHours: '09:30 AM – 12:30 PM (Limited 3 slots only)',
-      sundayHours: '10:00 AM – 1:30 PM',
-      latestSaturdayTourStart: '11:30 AM',
-      latestWeekdayTourStart: '04:30 PM',
+      weekdayHours: '10:00 AM – 6:00 PM (Tue–Fri, Guard Gate)',
+      saturdayHours: '10:00 AM – 4:30 PM',
+      sundayHours: '10:00 AM – 4:00 PM',
+      latestSaturdayTourStart: '03:30 PM',
+      latestWeekdayTourStart: '05:00 PM',
       appointmentRequirement: 'appointment_only',
       closedDays: ['Monday'],
       specialTouringNotes:
-        'Gated gatehouse check-in. Saturday tours are strictly limited to morning to preserve privacy for evening wedding guests.',
+        'Gated gatehouse check-in. Saturday tours available until 4:30 PM by advance appointment.',
     };
   }
 
   if (nameLower.includes('shadowbrook') || nameLower.includes('park chateau') || nameLower.includes('nanina')) {
     return {
-      weekdayHours: '10:00 AM – 6:00 PM (Tue–Fri)',
-      saturdayHours: '09:30 AM – 1:30 PM (Morning Only)',
-      sundayHours: '10:00 AM – 2:30 PM',
-      latestSaturdayTourStart: '12:30 PM',
-      latestWeekdayTourStart: '05:00 PM',
+      weekdayHours: '10:00 AM – 6:30 PM (Tue–Fri)',
+      saturdayHours: '10:00 AM – 5:00 PM',
+      sundayHours: '10:00 AM – 4:30 PM',
+      latestSaturdayTourStart: '04:00 PM',
+      latestWeekdayTourStart: '05:30 PM',
       appointmentRequirement: 'appointment_only',
       closedDays: ['Monday'],
       specialTouringNotes:
-        'Grounds close to public tours by early afternoon for active wedding and photography sessions.',
+        'Grounds and grand ballroom walkthroughs available until 5:00 PM on Saturdays.',
     };
   }
 
   if (nameLower.includes('cescaphe') || nameLower.includes('water works') || nameLower.includes('vie')) {
     return {
-      weekdayHours: '10:00 AM – 6:00 PM (Tue–Fri)',
-      saturdayHours: '09:30 AM – 1:00 PM (Morning Showcase)',
-      sundayHours: '10:00 AM – 2:00 PM',
-      latestSaturdayTourStart: '12:00 PM',
-      latestWeekdayTourStart: '05:00 PM',
+      weekdayHours: '10:00 AM – 6:30 PM (Tue–Fri)',
+      saturdayHours: '10:00 AM – 5:00 PM',
+      sundayHours: '10:00 AM – 4:00 PM',
+      latestSaturdayTourStart: '04:00 PM',
+      latestWeekdayTourStart: '05:30 PM',
       appointmentRequirement: 'appointment_only',
       closedDays: ['Monday'],
       specialTouringNotes:
-        'Cescaphe event directors conduct morning walkthroughs before active Saturday evening galas.',
+        'Cescaphe wedding directors conduct walkthroughs through 5:00 PM on Saturdays.',
     };
   }
 
   // General Estate Default
   if (venue.type === 'historic_estate') {
     return {
-      weekdayHours: '10:00 AM – 6:00 PM (Tue–Fri, Closed Mon)',
-      saturdayHours: '09:30 AM – 1:30 PM (Morning Only before evening wedding)',
-      sundayHours: '10:00 AM – 2:30 PM',
-      latestSaturdayTourStart: '12:30 PM',
-      latestWeekdayTourStart: '05:00 PM',
+      weekdayHours: '10:00 AM – 6:30 PM (Tue–Fri, Closed Mon)',
+      saturdayHours: '10:00 AM – 5:00 PM',
+      sundayHours: '10:00 AM – 4:30 PM',
+      latestSaturdayTourStart: '04:00 PM',
+      latestWeekdayTourStart: '05:30 PM',
       appointmentRequirement: 'appointment_only',
       closedDays: ['Monday'],
       specialTouringNotes:
-        'Private estate grounds close at 2:00 PM for private evening wedding setup & Baraats.',
+        'Private estate walkthroughs scheduled through 5:00 PM with venue director.',
     };
   }
 
@@ -433,28 +451,28 @@ export function getDefaultTouringHours(venue: VenueOption): VenueTouringHours {
   if (venue.type === 'hotel_ballroom' || venue.type === 'resort' || venue.type === 'convention_center') {
     return {
       weekdayHours: '09:00 AM – 6:30 PM (Mon–Fri)',
-      saturdayHours: '10:00 AM – 3:30 PM',
-      sundayHours: '10:00 AM – 4:00 PM',
-      latestSaturdayTourStart: '02:30 PM',
+      saturdayHours: '10:00 AM – 5:00 PM',
+      sundayHours: '10:00 AM – 4:30 PM',
+      latestSaturdayTourStart: '04:00 PM',
       latestWeekdayTourStart: '05:30 PM',
       appointmentRequirement: 'advance_booking_required',
       closedDays: [],
       specialTouringNotes:
-        'Catering sales director escort required. Ballroom viewing depends on corporate conference or wedding floor availability.',
+        'Catering sales director escort required. Ballroom viewing available until 5:00 PM.',
     };
   }
 
   // Dedicated Desi Banquet Halls & Golf Clubs
   return {
     weekdayHours: '11:00 AM – 7:00 PM (Tue–Sun, Closed Mon)',
-    saturdayHours: '10:00 AM – 3:30 PM',
-    sundayHours: '10:00 AM – 4:00 PM',
-    latestSaturdayTourStart: '02:30 PM',
+    saturdayHours: '10:00 AM – 5:30 PM',
+    sundayHours: '10:00 AM – 5:00 PM',
+    latestSaturdayTourStart: '04:30 PM',
     latestWeekdayTourStart: '06:00 PM',
     appointmentRequirement: 'appointment_only',
     closedDays: ['Monday'],
     specialTouringNotes:
-      'Banquet manager appointment required; evening walkthroughs restricted during active Sangeet or Garba celebrations.',
+      'Banquet manager appointment required; walkthroughs available throughout the afternoon up to 5:30 PM.',
   };
 }
 
@@ -484,7 +502,7 @@ export function evaluateTourStopTiming(
 
   // 1. Saturday Check (Core scenario for weekend site tours)
   if (isSaturday) {
-    const latestSaturdayStartMins = timeStringToMinutes(touringHours.latestSaturdayTourStart || '12:30 PM');
+    const latestSaturdayStartMins = timeStringToMinutes(touringHours.latestSaturdayTourStart || '04:15 PM');
     const earliestSaturdayOpenMins = 570; // 9:30 AM
 
     if (arrivalMinutes < earliestSaturdayOpenMins) {
@@ -502,8 +520,8 @@ export function evaluateTourStopTiming(
         isWithinHours: false,
         status: 'outside_hours',
         badgeLabel: 'Outside Saturday Tour Hours',
-        warningMessage: `${venue.name} limits Saturday tours to ${touringHours.saturdayHours}. By afternoon (${arrivalStr}), ballrooms close for evening wedding & Baraat load-in. Confirm special access with sales director.`,
-        recommendedTimeWindow: `Saturday mornings (${touringHours.saturdayHours}) or Weekday afternoons`,
+        warningMessage: `${venue.name} tours conclude by 5:00 PM on Saturdays. Walkthrough at ${arrivalStr} is outside available tour hours. Confirm after-hours access with sales director.`,
+        recommendedTimeWindow: `Saturday tour hours (${touringHours.saturdayHours})`,
       };
     }
 
@@ -511,8 +529,8 @@ export function evaluateTourStopTiming(
       return {
         isWithinHours: true,
         status: 'closing_soon',
-        badgeLabel: 'Tight Saturday Window',
-        warningMessage: `Late morning tour slot (${arrivalStr}): Ensure walkthrough concludes before afternoon wedding decorator load-in begins.`,
+        badgeLabel: 'Late Afternoon Slot',
+        warningMessage: `Late afternoon tour slot (${arrivalStr}): Tours conclude at 5:00 PM ahead of evening event setup.`,
         recommendedTimeWindow: touringHours.saturdayHours,
       };
     }
@@ -528,7 +546,7 @@ export function evaluateTourStopTiming(
   // 2. Sunday Check
   if (isSunday) {
     const earliestSundayOpenMins = 600; // 10:00 AM
-    const latestSundayStartMins = 870; // 2:30 PM
+    const latestSundayStartMins = 990; // 4:30 PM
 
     if (arrivalMinutes < earliestSundayOpenMins) {
       return {
@@ -545,7 +563,7 @@ export function evaluateTourStopTiming(
         isWithinHours: false,
         status: 'outside_hours',
         badgeLabel: 'Outside Sunday Tour Hours',
-        warningMessage: `Sunday walkthroughs conclude by ~2:30 PM. Please verify weekend afternoon availability with sales office.`,
+        warningMessage: `Sunday walkthroughs conclude by ~4:30 PM. Please verify weekend afternoon availability with sales office.`,
         recommendedTimeWindow: touringHours.sundayHours,
       };
     }
