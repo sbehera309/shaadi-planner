@@ -60,10 +60,14 @@ export const VenueCustomQuoteModal: React.FC<VenueCustomQuoteModalProps> = ({
   const [serviceChargePercent, setServiceChargePercent] = useState<string>('22');
   const [taxPercent, setTaxPercent] = useState<string>('6.625');
 
-  // Available Dates State
+  // Available Dates State & Date-Specific Pricing
   const [availableDates, setAvailableDates] = useState<AvailableVenueDateEntry[]>([]);
+  const [selectedDateId, setSelectedDateId] = useState<string>('');
   const [newDateInput, setNewDateInput] = useState<string>('');
   const [newDateNotes, setNewDateNotes] = useState<string>('');
+  const [newDateCost, setNewDateCost] = useState<string>('');
+  const [newDateCostType, setNewDateCostType] = useState<'flat_total' | 'per_person'>('flat_total');
+  const [newDateSeasonLabel, setNewDateSeasonLabel] = useState<string>('');
   const [newDateIsHold, setNewDateIsHold] = useState<boolean>(false);
   const [newDateHoldExpires, setNewDateHoldExpires] = useState<string>('');
   const [newDateIsPreferred, setNewDateIsPreferred] = useState<boolean>(false);
@@ -97,6 +101,7 @@ export const VenueCustomQuoteModal: React.FC<VenueCustomQuoteModalProps> = ({
       setServiceChargePercent(existingQuote.serviceChargePercent !== undefined ? String(existingQuote.serviceChargePercent) : '22');
       setTaxPercent(existingQuote.taxPercent !== undefined ? String(existingQuote.taxPercent) : (venue.state === 'PA' ? '8.0' : '6.625'));
       setAvailableDates(existingQuote.availableDates || []);
+      setSelectedDateId(existingQuote.selectedDateId || '');
       setCoordinatorName(existingQuote.coordinatorName || venue.contactPerson || '');
       setCoordinatorPhone(existingQuote.coordinatorPhone || venue.contactPhone || '');
       setCoordinatorEmail(existingQuote.coordinatorEmail || venue.contactEmail || '');
@@ -129,6 +134,7 @@ export const VenueCustomQuoteModal: React.FC<VenueCustomQuoteModalProps> = ({
           notes: 'Preloaded open window',
         }))
       );
+      setSelectedDateId('');
       setCoordinatorName(venue.contactPerson || '');
       setCoordinatorPhone(venue.contactPhone || '');
       setCoordinatorEmail(venue.contactEmail || '');
@@ -149,8 +155,33 @@ export const VenueCustomQuoteModal: React.FC<VenueCustomQuoteModalProps> = ({
 
     let subtotal = 0;
     let allInTotal = 0;
+    let activeDateDetail = '';
 
-    if (pricingType === 'flat_total') {
+    // Check if an active date with a specific price override is selected
+    const activeDate = availableDates.find(
+      (d) => (d.id === selectedDateId || (!selectedDateId && d.isPreferred)) && Number(d.customPriceOverride) > 0
+    ) || availableDates.find((d) => Number(d.customPriceOverride) > 0 && d.id === selectedDateId);
+
+    if (activeDate && Number(activeDate.customPriceOverride) > 0) {
+      const datePrice = Number(activeDate.customPriceOverride);
+      if (activeDate.pricingOverrideType === 'per_person') {
+        subtotal = datePrice * guests;
+        if (isTaxAndServiceIncluded) {
+          allInTotal = subtotal + fee;
+        } else {
+          allInTotal = Math.round(subtotal * feeMultiplier + fee);
+        }
+        activeDateDetail = `Date Override: $${datePrice}/guest • ${activeDate.seasonLabel || activeDate.date}`;
+      } else {
+        subtotal = datePrice;
+        if (isTaxAndServiceIncluded) {
+          allInTotal = datePrice + fee;
+        } else {
+          allInTotal = Math.round((datePrice + fee) * feeMultiplier);
+        }
+        activeDateDetail = `Date Override: $${datePrice.toLocaleString()} Flat • ${activeDate.seasonLabel || activeDate.date}`;
+      }
+    } else if (pricingType === 'flat_total') {
       const flat = Number(flatTotalAmount) || 0;
       subtotal = flat;
       if (isTaxAndServiceIncluded) {
@@ -186,6 +217,7 @@ export const VenueCustomQuoteModal: React.FC<VenueCustomQuoteModalProps> = ({
       allInTotal,
       costPerGuest,
       guests,
+      activeDateDetail,
     };
   }, [
     pricingType,
@@ -200,6 +232,8 @@ export const VenueCustomQuoteModal: React.FC<VenueCustomQuoteModalProps> = ({
     serviceChargePercent,
     taxPercent,
     planningGuestCount,
+    availableDates,
+    selectedDateId,
   ]);
 
   if (!venue) return null;
@@ -219,11 +253,19 @@ export const VenueCustomQuoteModal: React.FC<VenueCustomQuoteModalProps> = ({
       holdExpiresDate: newDateIsHold ? newDateHoldExpires : undefined,
       isPreferred: newDateIsPreferred,
       notes: newDateNotes.trim() || undefined,
+      customPriceOverride: newDateCost ? Number(newDateCost) : undefined,
+      pricingOverrideType: newDateCostType,
+      seasonLabel: newDateSeasonLabel.trim() || undefined,
     };
 
     setAvailableDates((prev) => [...prev, entry]);
+    if (!selectedDateId && newDateCost) {
+      setSelectedDateId(entry.id);
+    }
     setNewDateInput('');
     setNewDateNotes('');
+    setNewDateCost('');
+    setNewDateSeasonLabel('');
     setNewDateIsHold(false);
     setNewDateHoldExpires('');
     setNewDateIsPreferred(false);
@@ -231,6 +273,9 @@ export const VenueCustomQuoteModal: React.FC<VenueCustomQuoteModalProps> = ({
 
   const handleRemoveDate = (id: string) => {
     setAvailableDates((prev) => prev.filter((d) => d.id !== id));
+    if (selectedDateId === id) {
+      setSelectedDateId('');
+    }
   };
 
   const handleSave = async () => {
@@ -250,6 +295,7 @@ export const VenueCustomQuoteModal: React.FC<VenueCustomQuoteModalProps> = ({
       serviceChargePercent: serviceChargePercent ? Number(serviceChargePercent) : 22,
       taxPercent: taxPercent ? Number(taxPercent) : 6.625,
       availableDates,
+      selectedDateId: selectedDateId || undefined,
       coordinatorName: coordinatorName.trim() || undefined,
       coordinatorPhone: coordinatorPhone.trim() || undefined,
       coordinatorEmail: coordinatorEmail.trim() || undefined,
@@ -551,6 +597,13 @@ export const VenueCustomQuoteModal: React.FC<VenueCustomQuoteModalProps> = ({
 
         {/* DYNAMIC LIVE CALCULATION BOX */}
         <div className="p-4 rounded-2xl bg-gradient-to-r from-stone-900 to-stone-950 text-white space-y-2 border border-stone-800">
+          {calculatedEstimate.activeDateDetail && (
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-300 pb-2 border-b border-stone-800">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+              <span>{calculatedEstimate.activeDateDetail}</span>
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <div>
               <span className="text-[10px] uppercase font-bold text-amber-400 block tracking-wider">
@@ -569,33 +622,83 @@ export const VenueCustomQuoteModal: React.FC<VenueCustomQuoteModalProps> = ({
           </div>
         </div>
 
-        {/* SECTION 3: AVAILABLE DATES FROM VENDOR CALL */}
+        {/* SECTION 3: AVAILABLE DATES & DATE-SPECIFIC PRICING */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <label className="font-bold text-stone-900 text-xs flex items-center gap-1.5">
-              <Calendar className="w-4 h-4 text-rose-600" />
-              <span>2. Available Dates Given by Sales Coordinator ({availableDates.length} logged):</span>
-            </label>
+            <div>
+              <label className="font-bold text-stone-900 text-xs flex items-center gap-1.5">
+                <Calendar className="w-4 h-4 text-rose-600" />
+                <span>2. Available Dates &amp; Date-Specific Pricing ({availableDates.length} logged):</span>
+              </label>
+              <span className="text-[10px] text-stone-500">
+                Set individual costs per date if the venue charges seasonal rates (e.g., <strong>Crystal Plaza</strong>: $75k June/July vs $85k Sept).
+              </span>
+            </div>
           </div>
 
           {/* Date add bar */}
-          <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200/90 space-y-2.5">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <div className="sm:col-span-1">
-                <label className="text-[10px] font-semibold text-stone-600 block mb-0.5">Date *</label>
+          <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200/90 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div>
+                <label className="text-[10px] font-bold text-stone-700 block mb-1">Available Date *</label>
                 <input
                   type="date"
                   value={newDateInput}
                   onChange={(e) => setNewDateInput(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-xl border border-stone-300 bg-white text-xs font-semibold"
+                  className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs font-semibold"
                 />
               </div>
 
-              <div className="sm:col-span-2">
-                <label className="text-[10px] font-semibold text-stone-600 block mb-0.5">Date Notes / Ballroom</label>
+              <div>
+                <label className="text-[10px] font-bold text-stone-700 block mb-1">
+                  Quoted Price for this Date ($)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-2.5 top-2 text-stone-400 font-bold">$</span>
+                  <input
+                    type="number"
+                    placeholder="e.g. 75000 or 85000"
+                    value={newDateCost}
+                    onChange={(e) => setNewDateCost(e.target.value)}
+                    className="w-full pl-6 pr-2.5 py-2 rounded-xl border border-stone-300 bg-white font-mono font-bold text-xs"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-stone-700 block mb-1">Price Structure</label>
+                <select
+                  value={newDateCostType}
+                  onChange={(e) => setNewDateCostType(e.target.value as 'flat_total' | 'per_person')}
+                  className="w-full px-2.5 py-2 rounded-xl border border-stone-300 bg-white text-xs font-medium"
+                >
+                  <option value="flat_total">🏷️ Flat Lump-Sum Total</option>
+                  <option value="per_person">👤 Per Person ($/guest)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <label className="text-[10px] font-semibold text-stone-600 block mb-1">
+                  Season / Rate Reason Label
+                </label>
                 <input
                   type="text"
-                  placeholder="e.g. Grand Ballroom, or $5k discount for Sunday"
+                  placeholder="e.g. June/July Summer Special, or Peak Sept Saturday"
+                  value={newDateSeasonLabel}
+                  onChange={(e) => setNewDateSeasonLabel(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded-xl border border-stone-300 bg-white text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-semibold text-stone-600 block mb-1">
+                  Ballroom or Date Notes
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Grand Ballroom, holds until Friday"
                   value={newDateNotes}
                   onChange={(e) => setNewDateNotes(e.target.value)}
                   className="w-full px-3 py-1.5 rounded-xl border border-stone-300 bg-white text-xs"
@@ -603,7 +706,7 @@ export const VenueCustomQuoteModal: React.FC<VenueCustomQuoteModalProps> = ({
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-stone-200/60">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-stone-200/60">
               <div className="flex flex-wrap items-center gap-3">
                 <label className="flex items-center gap-1.5 text-[11px] cursor-pointer">
                   <input
@@ -642,64 +745,106 @@ export const VenueCustomQuoteModal: React.FC<VenueCustomQuoteModalProps> = ({
                 type="button"
                 onClick={handleAddDate}
                 disabled={!newDateInput}
-                className="px-3.5 py-1.5 rounded-xl bg-stone-900 hover:bg-stone-800 disabled:opacity-40 text-white font-bold text-xs flex items-center gap-1 cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 disabled:opacity-40 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-sm"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Add Date</span>
+                <span>Add Date to Venue</span>
               </button>
             </div>
           </div>
 
-          {/* List of dates */}
+          {/* List of dates with date-specific pricing */}
           {availableDates.length > 0 && (
-            <div className="space-y-1.5">
-              {availableDates.map((d) => (
-                <div
-                  key={d.id}
-                  className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 ${
-                    d.isHold
-                      ? 'bg-amber-50/80 border-amber-300'
-                      : d.isPreferred
-                      ? 'bg-emerald-50/80 border-emerald-300'
-                      : 'bg-white border-stone-200'
-                  }`}
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono font-bold text-xs text-stone-900">
-                      📅 {d.date}
-                    </span>
-                    {d.dayOfWeek && (
-                      <span className="px-2 py-0.5 rounded-md bg-stone-100 font-semibold text-[10px] text-stone-700">
-                        {d.dayOfWeek}
-                      </span>
-                    )}
-                    {d.isHold && (
-                      <span className="px-2 py-0.5 rounded-md bg-amber-200/90 text-amber-950 font-bold text-[10px]">
-                        ⏳ Held {d.holdExpiresDate ? `until ${d.holdExpiresDate}` : ''}
-                      </span>
-                    )}
-                    {d.isPreferred && (
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-200/90 text-emerald-950 font-bold text-[10px]">
-                        ⭐ Preferred Date
-                      </span>
-                    )}
-                    {d.notes && (
-                      <span className="text-[11px] text-stone-600 italic">
-                        &ldquo;{d.notes}&rdquo;
-                      </span>
-                    )}
-                  </div>
+            <div className="space-y-2">
+              {availableDates.map((d) => {
+                const isSelectedForPricing = selectedDateId === d.id || (!selectedDateId && d.isPreferred);
+                const hasCost = Number(d.customPriceOverride) > 0;
 
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveDate(d.id)}
-                    className="text-stone-400 hover:text-rose-600 p-1 rounded-lg"
-                    title="Remove date"
+                return (
+                  <div
+                    key={d.id}
+                    className={`p-3 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                      isSelectedForPricing && hasCost
+                        ? 'bg-amber-50/90 border-amber-400 ring-2 ring-amber-400/20 shadow-sm'
+                        : d.isHold
+                        ? 'bg-amber-50/50 border-amber-300'
+                        : d.isPreferred
+                        ? 'bg-emerald-50/50 border-emerald-300'
+                        : 'bg-white border-stone-200'
+                    }`}
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono font-bold text-xs text-stone-900 flex items-center gap-1">
+                          <span>📅</span>
+                          <span>{d.date}</span>
+                        </span>
+
+                        {d.dayOfWeek && (
+                          <span className="px-2 py-0.5 rounded-md bg-stone-100 font-semibold text-[10px] text-stone-700">
+                            {d.dayOfWeek}
+                          </span>
+                        )}
+
+                        {hasCost && (
+                          <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-950 font-bold font-mono text-[11px] border border-amber-300">
+                            💰 {d.pricingOverrideType === 'per_person' ? `$${d.customPriceOverride}/pp` : `$${d.customPriceOverride?.toLocaleString()} Flat`}
+                          </span>
+                        )}
+
+                        {d.seasonLabel && (
+                          <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-800 font-bold text-[10px] border border-rose-200">
+                            🏷️ {d.seasonLabel}
+                          </span>
+                        )}
+
+                        {d.isHold && (
+                          <span className="px-2 py-0.5 rounded-md bg-amber-200/90 text-amber-950 font-bold text-[10px]">
+                            ⏳ Held {d.holdExpiresDate ? `until ${d.holdExpiresDate}` : ''}
+                          </span>
+                        )}
+
+                        {d.isPreferred && (
+                          <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 font-bold text-[10px] border border-emerald-300">
+                            ⭐ Top Pick
+                          </span>
+                        )}
+                      </div>
+
+                      {d.notes && (
+                        <p className="text-[11px] text-stone-600 italic">
+                          &ldquo;{d.notes}&rdquo;
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                      {hasCost && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedDateId(d.id)}
+                          className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
+                            selectedDateId === d.id
+                              ? 'bg-amber-600 text-white shadow-2xs'
+                              : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
+                          }`}
+                        >
+                          {selectedDateId === d.id ? '✓ Active Rate' : 'Calculate at this Rate'}
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveDate(d.id)}
+                        className="text-stone-400 hover:text-rose-600 p-1.5 rounded-lg transition-colors"
+                        title="Remove date"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

@@ -31,7 +31,8 @@ export function calculateEffectiveVenuePricing(
   venue: VenueOption,
   quote: UserVenueCustomQuote | undefined,
   guestCount: number,
-  eventFormat: EventPackageFormat = 'all_day'
+  eventFormat: EventPackageFormat = 'all_day',
+  targetDateId?: string
 ): EffectiveVenuePricingResult {
   const safeGuests = Math.max(1, guestCount || 350);
 
@@ -45,67 +46,113 @@ export function calculateEffectiveVenuePricing(
     const taxPct = taxPercent / 100;
     const feeMultiplier = 1 + svcPct + taxPct;
 
+    // Check for date-specific pricing overrides (e.g. 75k for June/July vs 85k for Sept)
+    const availableDates = quote.availableDates || [];
+    const datesWithPricing = availableDates.filter((d) => Number(d.customPriceOverride) > 0);
+    const hasDateSpecificPricing = datesWithPricing.length > 0;
+
+    // Resolve active date: explicit param > quote.selectedDateId > preferred date > first date with price override
+    let activeDate: AvailableVenueDateEntry | undefined;
+    if (targetDateId) {
+      activeDate = availableDates.find((d) => d.id === targetDateId);
+    } else if (quote.selectedDateId) {
+      activeDate = availableDates.find((d) => d.id === quote.selectedDateId);
+    }
+    if (!activeDate && datesWithPricing.length > 0) {
+      activeDate = availableDates.find((d) => d.isPreferred && Number(d.customPriceOverride) > 0) || datesWithPricing[0];
+    }
+    if (!activeDate && availableDates.length > 0) {
+      activeDate = availableDates.find((d) => d.isPreferred) || availableDates[0];
+    }
+
     let estimatedTotal = 0;
     let quoteLabel = '';
     let morningCeremonyTotal = 0;
     let eveningReceptionTotal = 0;
 
-    switch (quote.pricingType) {
-      case 'flat_total': {
-        // Scenario A (e.g. Rockleigh): 1 Flat package price for the whole day
-        const flatAmount = Number(quote.flatTotalAmount) || 0;
-        if (isAllInclusive) {
-          estimatedTotal = flatAmount + ceremonyFee;
-        } else {
-          estimatedTotal = Math.round((flatAmount + ceremonyFee) * feeMultiplier);
-        }
-        quoteLabel = `Flat Package: $${flatAmount.toLocaleString()}`;
-        break;
-      }
+    // 1. If an active date has its own specific cost override, use that date's pricing!
+    if (activeDate && Number(activeDate.customPriceOverride) > 0) {
+      const datePrice = Number(activeDate.customPriceOverride);
+      const dateSeasonTag = activeDate.seasonLabel || `${activeDate.date}${activeDate.dayOfWeek ? ` (${activeDate.dayOfWeek.slice(0, 3)})` : ''}`;
 
-      case 'per_person_whole_day': {
-        // Scenario B (e.g. The Grove): 1 Single rate per person across all events
-        const perPersonRate = Number(quote.perPersonWholeDayRate) || 0;
-        const subtotal = perPersonRate * safeGuests;
+      if (activeDate.pricingOverrideType === 'per_person') {
+        const subtotal = datePrice * safeGuests;
         if (isAllInclusive) {
           estimatedTotal = subtotal + ceremonyFee;
         } else {
           estimatedTotal = Math.round(subtotal * feeMultiplier + ceremonyFee);
         }
-        quoteLabel = `$${perPersonRate}/guest Full Day`;
+        quoteLabel = `$${datePrice}/pp • ${dateSeasonTag}`;
         morningCeremonyTotal = Math.round(estimatedTotal * 0.38);
         eveningReceptionTotal = estimatedTotal - morningCeremonyTotal;
-        break;
-      }
-
-      case 'per_person_per_event': {
-        // Scenario C (e.g. The Legacy Castle): Itemized rate per person for wedding & reception
-        const weddingRate = Number(quote.perPersonWeddingRate) || 0;
-        const receptionRate = Number(quote.perPersonReceptionRate) || 0;
-        const weddingGuests = Number(quote.weddingGuestCountOverride) || safeGuests;
-        const receptionGuests = Number(quote.receptionGuestCountOverride) || safeGuests;
-
-        let activeWeddingCost = weddingRate * weddingGuests;
-        let activeReceptionCost = receptionRate * receptionGuests;
-
-        if (!isAllInclusive) {
-          activeWeddingCost = Math.round(activeWeddingCost * feeMultiplier);
-          activeReceptionCost = Math.round(activeReceptionCost * feeMultiplier);
-        }
-
-        morningCeremonyTotal = activeWeddingCost + ceremonyFee;
-        eveningReceptionTotal = activeReceptionCost;
-
-        if (eventFormat === 'ceremony_only') {
-          estimatedTotal = morningCeremonyTotal;
-        } else if (eventFormat === 'reception_only') {
-          estimatedTotal = eveningReceptionTotal;
+      } else {
+        // Flat lump sum for date (e.g. Crystal Plaza $75k June/July vs $85k Sept)
+        if (isAllInclusive) {
+          estimatedTotal = datePrice + ceremonyFee;
         } else {
-          estimatedTotal = morningCeremonyTotal + eveningReceptionTotal;
+          estimatedTotal = Math.round((datePrice + ceremonyFee) * feeMultiplier);
+        }
+        quoteLabel = `$${datePrice.toLocaleString()} Flat • ${dateSeasonTag}`;
+      }
+    } else {
+      // 2. Otherwise calculate based on the venue's overall pricing model
+      switch (quote.pricingType) {
+        case 'flat_total': {
+          // Scenario A (e.g. Rockleigh): 1 Flat package price for the whole day
+          const flatAmount = Number(quote.flatTotalAmount) || 0;
+          if (isAllInclusive) {
+            estimatedTotal = flatAmount + ceremonyFee;
+          } else {
+            estimatedTotal = Math.round((flatAmount + ceremonyFee) * feeMultiplier);
+          }
+          quoteLabel = `Flat Package: $${flatAmount.toLocaleString()}`;
+          break;
         }
 
-        quoteLabel = `$${weddingRate}/pp Wed + $${receptionRate}/pp Rec`;
-        break;
+        case 'per_person_whole_day': {
+          // Scenario B (e.g. The Grove): 1 Single rate per person across all events
+          const perPersonRate = Number(quote.perPersonWholeDayRate) || 0;
+          const subtotal = perPersonRate * safeGuests;
+          if (isAllInclusive) {
+            estimatedTotal = subtotal + ceremonyFee;
+          } else {
+            estimatedTotal = Math.round(subtotal * feeMultiplier + ceremonyFee);
+          }
+          quoteLabel = `$${perPersonRate}/guest Full Day`;
+          morningCeremonyTotal = Math.round(estimatedTotal * 0.38);
+          eveningReceptionTotal = estimatedTotal - morningCeremonyTotal;
+          break;
+        }
+
+        case 'per_person_per_event': {
+          // Scenario C (e.g. The Legacy Castle): Itemized rate per person for wedding & reception
+          const weddingRate = Number(quote.perPersonWeddingRate) || 0;
+          const receptionRate = Number(quote.perPersonReceptionRate) || 0;
+          const weddingGuests = Number(quote.weddingGuestCountOverride) || safeGuests;
+          const receptionGuests = Number(quote.receptionGuestCountOverride) || safeGuests;
+
+          let activeWeddingCost = weddingRate * weddingGuests;
+          let activeReceptionCost = receptionRate * receptionGuests;
+
+          if (!isAllInclusive) {
+            activeWeddingCost = Math.round(activeWeddingCost * feeMultiplier);
+            activeReceptionCost = Math.round(activeReceptionCost * feeMultiplier);
+          }
+
+          morningCeremonyTotal = activeWeddingCost + ceremonyFee;
+          eveningReceptionTotal = activeReceptionCost;
+
+          if (eventFormat === 'ceremony_only') {
+            estimatedTotal = morningCeremonyTotal;
+          } else if (eventFormat === 'reception_only') {
+            estimatedTotal = eveningReceptionTotal;
+          } else {
+            estimatedTotal = morningCeremonyTotal + eveningReceptionTotal;
+          }
+
+          quoteLabel = `$${weddingRate}/pp Wed + $${receptionRate}/pp Rec`;
+          break;
+        }
       }
     }
 
@@ -119,7 +166,9 @@ export function calculateEffectiveVenuePricing(
       costPerGuest,
       breakdownSummary,
       quoteLabel,
-      availableDates: quote.availableDates || [],
+      availableDates: availableDates,
+      activeDate,
+      hasDateSpecificPricing,
       coordinatorName: quote.coordinatorName,
       coordinatorPhone: quote.coordinatorPhone,
       coordinatorEmail: quote.coordinatorEmail,
@@ -274,14 +323,29 @@ export function useUserVenueQuotes() {
     [quotes]
   );
 
+  const selectActiveDate = useCallback(
+    async (venueId: string, dateId: string) => {
+      const existing = quotes[venueId];
+      if (!existing) return;
+      const updated: UserVenueCustomQuote = {
+        ...existing,
+        selectedDateId: dateId,
+        updatedAt: new Date().toISOString(),
+      };
+      await saveQuote(updated);
+    },
+    [quotes, saveQuote]
+  );
+
   const getEffectivePricing = useCallback(
     (
       venue: VenueOption,
       guestCount: number,
-      eventFormat: EventPackageFormat = 'all_day'
+      eventFormat: EventPackageFormat = 'all_day',
+      targetDateId?: string
     ): EffectiveVenuePricingResult => {
       const userQuote = quotes[venue.id];
-      return calculateEffectiveVenuePricing(venue, userQuote, guestCount, eventFormat);
+      return calculateEffectiveVenuePricing(venue, userQuote, guestCount, eventFormat, targetDateId);
     },
     [quotes]
   );
@@ -291,6 +355,7 @@ export function useUserVenueQuotes() {
     getQuote,
     saveQuote,
     deleteQuote,
+    selectActiveDate,
     getEffectivePricing,
     loading,
   };

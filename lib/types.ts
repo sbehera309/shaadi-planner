@@ -283,6 +283,9 @@ export interface AvailableVenueDateEntry {
   isHold?: boolean;
   holdExpiresDate?: string; // YYYY-MM-DD
   notes?: string; // e.g. "Holds until Friday 5pm" or "Grand Ballroom"
+  customPriceOverride?: number; // e.g. 75000 for June/July vs 85000 for Sept
+  pricingOverrideType?: 'flat_total' | 'per_person'; // Whether date override is a flat lump sum or per person
+  seasonLabel?: string; // e.g. "Summer Rate (June/July)" or "Peak Fall (Sept)"
 }
 
 export interface UserVenueCustomQuote {
@@ -312,8 +315,9 @@ export interface UserVenueCustomQuote {
   taxPercent?: number; // e.g. 6.625%
   isTaxAndServiceIncluded?: boolean; // Whether the quote already includes tax and service
 
-  // Available Dates Logged from Vendor Call
+  // Available Dates & Date-Specific Pricing (e.g. 75k for June/July, 85k for Sept)
   availableDates: AvailableVenueDateEntry[];
+  selectedDateId?: string; // ID of the currently selected date to price against
 
   // Vendor Call & Coordinator Details
   coordinatorName?: string;
@@ -345,6 +349,8 @@ export interface EffectiveVenuePricingResult {
   ceremonyFee?: number;
   morningCeremonyTotal?: number;
   eveningReceptionTotal?: number;
+  activeDate?: AvailableVenueDateEntry;
+  hasDateSpecificPricing?: boolean;
 }
 
 export interface FamilyAddressInput {

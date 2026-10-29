@@ -129,6 +129,7 @@ export default function VenuesPage() {
     getQuote: getUserVenueQuote,
     saveQuote: saveUserVenueQuote,
     deleteQuote: deleteUserVenueQuote,
+    selectActiveDate: selectActiveVenueDate,
     getEffectivePricing,
   } = useUserVenueQuotes();
 
@@ -1499,27 +1500,60 @@ export default function VenuesPage() {
                                     </button>
                                   </div>
                                   <div className="flex flex-wrap gap-1">
-                                    {effective.availableDates.slice(0, 3).map((d) => (
-                                      <span
-                                        key={d.id}
-                                        className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${
-                                          d.isHold
-                                            ? 'bg-amber-100 text-amber-900 border-amber-300'
-                                            : d.isPreferred
-                                            ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
-                                            : 'bg-white text-stone-800 border-stone-200'
-                                        }`}
+                                    {effective.availableDates.slice(0, 4).map((d) => {
+                                      const hasPrice = Number(d.customPriceOverride) > 0;
+                                      const isActiveDate = effective.activeDate?.id === d.id && hasPrice;
+
+                                      return (
+                                        <button
+                                          type="button"
+                                          key={d.id}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (getUserVenueQuote(venue.id)) {
+                                              selectActiveVenueDate(venue.id, d.id);
+                                            } else {
+                                              handleOpenQuoteModal(venue);
+                                            }
+                                          }}
+                                          title={hasPrice ? `Click to calculate estimate for ${d.seasonLabel || d.date}` : undefined}
+                                          className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 cursor-pointer transition-all ${
+                                            isActiveDate
+                                              ? 'bg-amber-200 text-amber-950 border-amber-400 ring-2 ring-amber-400/40 shadow-2xs'
+                                              : d.isHold
+                                              ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200'
+                                              : d.isPreferred
+                                              ? 'bg-emerald-100 text-emerald-900 border-emerald-300 hover:bg-emerald-200'
+                                              : 'bg-white text-stone-800 border-stone-200 hover:bg-stone-50'
+                                          }`}
+                                        >
+                                          <span>📅 {d.date}</span>
+                                          {d.dayOfWeek && <span className="opacity-80">({d.dayOfWeek.slice(0, 3)})</span>}
+                                          {hasPrice && (
+                                            <span className="font-mono text-rose-950 font-extrabold bg-amber-300/90 px-1 rounded text-[10px]">
+                                              {d.pricingOverrideType === 'per_person'
+                                                ? `$${d.customPriceOverride}/pp`
+                                                : `$${(d.customPriceOverride! / 1000).toFixed(0)}k`}
+                                            </span>
+                                          )}
+                                          {d.seasonLabel && (
+                                            <span className="text-[9px] text-stone-600 font-semibold truncate max-w-[80px]">
+                                              {d.seasonLabel}
+                                            </span>
+                                          )}
+                                          {d.isHold && <span className="text-[9px] text-amber-800">⏳ Hold</span>}
+                                          {d.isPreferred && <span className="text-[9px] text-emerald-800">⭐ Top</span>}
+                                        </button>
+                                      );
+                                    })}
+                                    {effective.availableDates.length > 4 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenQuoteModal(venue)}
+                                        className="text-[10px] text-stone-500 hover:text-stone-800 font-medium py-0.5 underline cursor-pointer"
                                       >
-                                        <span>📅 {d.date}</span>
-                                        {d.dayOfWeek && <span className="opacity-80">({d.dayOfWeek.slice(0, 3)})</span>}
-                                        {d.isHold && <span className="text-[9px] text-amber-800">⏳ Hold</span>}
-                                        {d.isPreferred && <span className="text-[9px] text-emerald-800">⭐ Top</span>}
-                                      </span>
-                                    ))}
-                                    {effective.availableDates.length > 3 && (
-                                      <span className="text-[10px] text-stone-500 font-medium py-0.5">
-                                        +{effective.availableDates.length - 3} more
-                                      </span>
+                                        +{effective.availableDates.length - 4} more
+                                      </button>
                                     )}
                                   </div>
                                 </div>
@@ -2020,27 +2054,60 @@ export default function VenuesPage() {
                                     </button>
                                   </div>
                                   <div className="flex flex-wrap gap-1">
-                                    {effective.availableDates.slice(0, 3).map((d) => (
-                                      <span
-                                        key={d.id}
-                                        className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${
-                                          d.isHold
-                                            ? 'bg-amber-100 text-amber-900 border-amber-300'
-                                            : d.isPreferred
-                                            ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
-                                            : 'bg-white text-stone-800 border-stone-200'
-                                        }`}
+                                    {effective.availableDates.slice(0, 4).map((d) => {
+                                      const hasPrice = Number(d.customPriceOverride) > 0;
+                                      const isActiveDate = effective.activeDate?.id === d.id && hasPrice;
+
+                                      return (
+                                        <button
+                                          type="button"
+                                          key={d.id}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (getUserVenueQuote(venue.id)) {
+                                              selectActiveVenueDate(venue.id, d.id);
+                                            } else {
+                                              handleOpenQuoteModal(venue);
+                                            }
+                                          }}
+                                          title={hasPrice ? `Click to calculate estimate for ${d.seasonLabel || d.date}` : undefined}
+                                          className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 cursor-pointer transition-all ${
+                                            isActiveDate
+                                              ? 'bg-amber-200 text-amber-950 border-amber-400 ring-2 ring-amber-400/40 shadow-2xs'
+                                              : d.isHold
+                                              ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200'
+                                              : d.isPreferred
+                                              ? 'bg-emerald-100 text-emerald-900 border-emerald-300 hover:bg-emerald-200'
+                                              : 'bg-white text-stone-800 border-stone-200 hover:bg-stone-50'
+                                          }`}
+                                        >
+                                          <span>📅 {d.date}</span>
+                                          {d.dayOfWeek && <span className="opacity-80">({d.dayOfWeek.slice(0, 3)})</span>}
+                                          {hasPrice && (
+                                            <span className="font-mono text-rose-950 font-extrabold bg-amber-300/90 px-1 rounded text-[10px]">
+                                              {d.pricingOverrideType === 'per_person'
+                                                ? `$${d.customPriceOverride}/pp`
+                                                : `$${(d.customPriceOverride! / 1000).toFixed(0)}k`}
+                                            </span>
+                                          )}
+                                          {d.seasonLabel && (
+                                            <span className="text-[9px] text-stone-600 font-semibold truncate max-w-[80px]">
+                                              {d.seasonLabel}
+                                            </span>
+                                          )}
+                                          {d.isHold && <span className="text-[9px] text-amber-800">⏳ Hold</span>}
+                                          {d.isPreferred && <span className="text-[9px] text-emerald-800">⭐ Top</span>}
+                                        </button>
+                                      );
+                                    })}
+                                    {effective.availableDates.length > 4 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenQuoteModal(venue)}
+                                        className="text-[10px] text-stone-500 hover:text-stone-800 font-medium py-0.5 underline cursor-pointer"
                                       >
-                                        <span>📅 {d.date}</span>
-                                        {d.dayOfWeek && <span className="opacity-80">({d.dayOfWeek.slice(0, 3)})</span>}
-                                        {d.isHold && <span className="text-[9px] text-amber-800">⏳ Hold</span>}
-                                        {d.isPreferred && <span className="text-[9px] text-emerald-800">⭐ Top</span>}
-                                      </span>
-                                    ))}
-                                    {effective.availableDates.length > 3 && (
-                                      <span className="text-[10px] text-stone-500 font-medium py-0.5">
-                                        +{effective.availableDates.length - 3} more
-                                      </span>
+                                        +{effective.availableDates.length - 4} more
+                                      </button>
                                     )}
                                   </div>
                                 </div>
