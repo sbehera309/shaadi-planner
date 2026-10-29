@@ -25,13 +25,23 @@ const KNOWN_COORDINATES: Record<string, { lat: number; lon: number }> = {
   'new york': { lat: 40.7128, lon: -74.006 },
   'newark, nj': { lat: 40.7357, lon: -74.1724 },
   'princeton, nj': { lat: 40.3573, lon: -74.6672 },
+  'princeton': { lat: 40.3573, lon: -74.6672 },
+  'lawrence township, nj': { lat: 40.2984, lon: -74.7299 },
+  'lawrence township': { lat: 40.2984, lon: -74.7299 },
+  'lawrenceville, nj': { lat: 40.2984, lon: -74.7299 },
+  'lawrenceville': { lat: 40.2984, lon: -74.7299 },
+  'trenton, nj': { lat: 40.2206, lon: -74.7597 },
+  'trenton': { lat: 40.2206, lon: -74.7597 },
   'somerset, nj': { lat: 40.4976, lon: -74.4893 },
+  'somerset': { lat: 40.4976, lon: -74.4893 },
   'parsippany, nj': { lat: 40.8653, lon: -74.4174 },
+  'parsippany': { lat: 40.8653, lon: -74.4174 },
+  'livingston, nj': { lat: 40.7891, lon: -74.3418 },
+  'livingston': { lat: 40.7891, lon: -74.3418 },
   'woodbridge, nj': { lat: 40.5576, lon: -74.2846 },
   'mahwah, nj': { lat: 41.0887, lon: -74.1438 },
   'rockleigh, nj': { lat: 41.0025, lon: -73.9392 },
   'shrewsbury, nj': { lat: 40.3204, lon: -74.0626 },
-  'livingston, nj': { lat: 40.7891, lon: -74.3418 },
   'randolph, nj': { lat: 40.8653, lon: -74.5517 },
   'east brunswick, nj': { lat: 40.4072, lon: -74.3989 },
   'florham park, nj': { lat: 40.7937, lon: -74.4098 },
@@ -836,7 +846,7 @@ export function findOptimalTourOrder(
 
       // Score prioritizes low combined distance and balanced travel times
       startFairnessCost = avgStartDist * 0.8 + discrepancyMinutes * 0.6;
-      initialArrivalRaw = addMinutesToTimeString(dayStartTime, maxStartMinutes);
+      initialArrivalRaw = dayStartTime;
 
       const firstArrivalRounded = roundToQuarterHour(initialArrivalRaw);
       const groomDepartureTime = subtractMinutesFromTimeString(
@@ -1088,18 +1098,24 @@ export function findOptimalTourOrder(
         simTime = firstLockedTimeStr;
       }
 
-      // If dual-family start plan exists, synchronize rendezvous arrival to ideal first stop arrival
+      // If dual-family start plan exists, synchronize rendezvous arrival and summary to ideal first stop arrival
       if (candidateDualPlan) {
         const syncFirstArrival = simTime;
         candidateDualPlan.rendezvousArrivalTime = syncFirstArrival;
-        candidateDualPlan.groomDeparture.recommendedDepartureTime = subtractMinutesFromTimeString(
+        const syncGroomDep = subtractMinutesFromTimeString(
           syncFirstArrival,
           candidateDualPlan.groomDeparture.drivingMinutesToFirstStop
         );
-        candidateDualPlan.brideDeparture.recommendedDepartureTime = subtractMinutesFromTimeString(
+        const syncBrideDep = subtractMinutesFromTimeString(
           syncFirstArrival,
           candidateDualPlan.brideDeparture.drivingMinutesToFirstStop
         );
+        candidateDualPlan.groomDeparture.recommendedDepartureTime = syncGroomDep;
+        candidateDualPlan.brideDeparture.recommendedDepartureTime = syncBrideDep;
+        candidateDualPlan.fairnessSummary =
+          candidateDualPlan.travelDiscrepancyMinutes <= 12
+            ? `Equitable starting venue: Groom's family departs ${groomSide.city} at ${syncGroomDep} (~${candidateDualPlan.groomDeparture.drivingMinutesToFirstStop}m drive), Bride's family departs ${brideSide.city} at ${syncBrideDep} (~${candidateDualPlan.brideDeparture.drivingMinutesToFirstStop}m drive). Both arrive smoothly at ${syncFirstArrival}.`
+            : `Meeting at ${candidateOrder[0].name}: Groom departs ${groomSide.city} at ${syncGroomDep} (~${candidateDualPlan.groomDeparture.drivingMinutesToFirstStop}m), Bride departs ${brideSide.city} at ${syncBrideDep} (~${candidateDualPlan.brideDeparture.drivingMinutesToFirstStop}m). Rendezvous at ${syncFirstArrival}.`;
       }
 
       // 3. Step-by-step forward check

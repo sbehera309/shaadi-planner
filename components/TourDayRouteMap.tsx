@@ -307,18 +307,20 @@ export default function TourDayRouteMap({
   // Base tile layer URL resolver (zero watermarks by default; optional CARTO key support)
   const getTileUrl = (layer: 'voyager' | 'satellite' | 'osm'): string => {
     if (layer === 'satellite') {
-      return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{x}/{y}';
+      // ArcGIS REST MapServer tile schema is {z}/{y}/{x} (level/row/col)
+      return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
     }
     if (layer === 'osm') {
-      return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+      return 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
     }
     // Street Map layer:
     const cartoKey = process.env.NEXT_PUBLIC_CARTO_API_KEY;
     if (cartoKey && cartoKey.trim().length > 0) {
       return `https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?api_key=${encodeURIComponent(cartoKey.trim())}`;
     }
-    // Default: Esri World Street Map (100% free, crisp, high-res, zero watermark, no API key needed)
-    return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{x}/{y}';
+    // Default: Esri World Street Map (100% free, crisp, high-res, zero watermark, no API key needed).
+    // Note: ArcGIS REST MapServer expects {z}/{y}/{x} (level/row/col).
+    return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}';
   };
 
   // Initialize Leaflet Map

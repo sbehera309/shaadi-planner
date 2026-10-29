@@ -68,6 +68,7 @@ import {
   Calculator,
   AlertTriangle,
   Lock,
+  Loader2,
 } from 'lucide-react';
 
 type CuratedSortOption = 'best' | 'service_desc' | 'price_asc' | 'price_desc' | 'capacity_desc';
@@ -91,6 +92,8 @@ export default function VenuesPage() {
   const [editingVenue, setEditingVenue] = useState<VenueOption | null>(null);
   const [copiedWhatsApp, setCopiedWhatsApp] = useState(false);
   const [addedSuccessId, setAddedSuccessId] = useState<string | null>(null);
+  const [isCalculating, setIsCalculating] = useState(false);
+  const [justCalculated, setJustCalculated] = useState(false);
 
   // Curated Database Filters & Sorting
   const [curatedVenues, setCuratedVenues] = useState<VenueOption[]>(PRELOADED_CURATED_VENUES);
@@ -205,24 +208,41 @@ export default function VenuesPage() {
   });
 
   const handleSetLockedTime = (venueId: string, time: string) => {
-    setTourForm((prev) => ({
-      ...prev,
+    const updated = {
+      ...tourForm,
       lockedAppointmentTimes: {
-        ...prev.lockedAppointmentTimes,
+        ...tourForm.lockedAppointmentTimes,
         [venueId]: time,
       },
-    }));
+    };
+    setTourForm(updated);
+    if (tourPlan && tourPlan.optimizedStops.length > 0) {
+      recalculateTourPlan(updated);
+    }
   };
 
   const handleClearLockedTime = (venueId: string) => {
-    setTourForm((prev) => {
-      const copy = { ...prev.lockedAppointmentTimes };
-      delete copy[venueId];
-      return {
-        ...prev,
-        lockedAppointmentTimes: copy,
-      };
-    });
+    const copy = { ...tourForm.lockedAppointmentTimes };
+    delete copy[venueId];
+    const updated = {
+      ...tourForm,
+      lockedAppointmentTimes: copy,
+    };
+    setTourForm(updated);
+    if (tourPlan && tourPlan.optimizedStops.length > 0) {
+      recalculateTourPlan(updated);
+    }
+  };
+
+  const handleClearAllLockedTimes = () => {
+    const updated = {
+      ...tourForm,
+      lockedAppointmentTimes: {},
+    };
+    setTourForm(updated);
+    if (tourPlan && tourPlan.optimizedStops.length > 0) {
+      recalculateTourPlan(updated);
+    }
   };
 
   // Quick stats
@@ -537,7 +557,13 @@ export default function VenuesPage() {
       alert('Please select at least 1 or more venues to include in your site tour day.');
       return;
     }
+    setIsCalculating(true);
     recalculateTourPlan(tourForm);
+    setTimeout(() => {
+      setIsCalculating(false);
+      setJustCalculated(true);
+      setTimeout(() => setJustCalculated(false), 3000);
+    }, 250);
   };
 
   const handleCopyWhatsApp = () => {
@@ -2030,22 +2056,41 @@ export default function VenuesPage() {
                 <input
                   type="date"
                   value={tourForm.tourDate}
-                  onChange={(e) => setTourForm({ ...tourForm, tourDate: e.target.value })}
+                  onChange={(e) => {
+                    const newDate = e.target.value;
+                    const updated = { ...tourForm, tourDate: newDate };
+                    setTourForm(updated);
+                    if (tourPlan && tourPlan.optimizedStops.length > 0) {
+                      recalculateTourPlan(updated);
+                    }
+                  }}
                   className="w-full px-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
                 />
               </div>
 
               <div>
-                <label className="font-semibold text-stone-700 block mb-1">Day Start Time *</label>
+                <label className="font-semibold text-stone-700 block mb-1">Stop #1 Tour Start Time *</label>
                 <select
                   value={tourForm.dayStartTime}
-                  onChange={(e) => setTourForm({ ...tourForm, dayStartTime: e.target.value })}
+                  onChange={(e) => {
+                    const newTime = e.target.value;
+                    const updated = { ...tourForm, dayStartTime: newTime };
+                    setTourForm(updated);
+                    if (tourPlan && tourPlan.optimizedStops.length > 0) {
+                      recalculateTourPlan(updated);
+                    }
+                  }}
                   className="w-full px-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
                 >
+                  <option value="08:00 AM">08:00 AM (Early Departure)</option>
+                  <option value="08:30 AM">08:30 AM</option>
                   <option value="09:00 AM">09:00 AM</option>
-                  <option value="09:30 AM">09:30 AM</option>
-                  <option value="10:00 AM">10:00 AM</option>
+                  <option value="09:30 AM">09:30 AM (Popular)</option>
+                  <option value="10:00 AM">10:00 AM (Standard)</option>
                   <option value="10:30 AM">10:30 AM</option>
+                  <option value="11:00 AM">11:00 AM (Late Start)</option>
+                  <option value="11:30 AM">11:30 AM</option>
+                  <option value="12:00 PM">12:00 PM (Noon)</option>
                 </select>
               </div>
 
@@ -2053,9 +2098,14 @@ export default function VenuesPage() {
                 <label className="font-semibold text-stone-700 block mb-1">Tour Length per Venue</label>
                 <select
                   value={tourForm.durationPerTourMinutes}
-                  onChange={(e) =>
-                    setTourForm({ ...tourForm, durationPerTourMinutes: Number(e.target.value) })
-                  }
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    const updated = { ...tourForm, durationPerTourMinutes: val };
+                    setTourForm(updated);
+                    if (tourPlan && tourPlan.optimizedStops.length > 0) {
+                      recalculateTourPlan(updated);
+                    }
+                  }}
                   className="w-full px-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
                 >
                   <option value={45}>45 mins (Quick Walkthrough)</option>
@@ -2068,9 +2118,14 @@ export default function VenuesPage() {
                 <label className="font-semibold text-stone-700 block mb-1">Drive Buffer / Padding</label>
                 <select
                   value={tourForm.bufferBetweenToursMinutes}
-                  onChange={(e) =>
-                    setTourForm({ ...tourForm, bufferBetweenToursMinutes: Number(e.target.value) })
-                  }
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    const updated = { ...tourForm, bufferBetweenToursMinutes: val };
+                    setTourForm(updated);
+                    if (tourPlan && tourPlan.optimizedStops.length > 0) {
+                      recalculateTourPlan(updated);
+                    }
+                  }}
                   className="w-full px-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
                 >
                   <option value={10}>10 mins buffer</option>
@@ -2246,15 +2301,53 @@ export default function VenuesPage() {
               />
             </div>
 
+            {/* Active Locked Slot Advisory */}
+            {Object.keys(tourForm.lockedAppointmentTimes || {}).length > 0 && (
+              <div className="p-3.5 rounded-2xl bg-indigo-50 border border-indigo-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-indigo-950">
+                <div className="flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-indigo-600 shrink-0" />
+                  <span>
+                    <strong>{Object.keys(tourForm.lockedAppointmentTimes).length} Fixed Appointment Active</strong>: Schedule works backwards from your locked venue appointment.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleClearAllLockedTimes}
+                  className="px-3 py-1.5 rounded-xl bg-white border border-indigo-300 hover:bg-indigo-100 text-[11px] font-bold text-indigo-800 transition-colors shrink-0 shadow-2xs"
+                >
+                  Clear Fixed Slot (Make All Flexible)
+                </button>
+              </div>
+            )}
+
             {/* Action to Calculate Optimal Route */}
             <div className="pt-2 flex justify-end">
               <button
                 type="button"
+                disabled={isCalculating}
                 onClick={handleGenerateOptimalTourPlan}
-                className="w-full sm:w-auto px-7 py-3 rounded-xl bg-gradient-to-r from-rose-700 via-rose-800 to-amber-700 hover:from-rose-800 hover:to-amber-800 text-white font-bold text-xs shadow-md shadow-rose-900/25 transition-all flex items-center justify-center gap-2"
+                className={`w-full sm:w-auto px-7 py-3 rounded-xl text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 ${
+                  justCalculated
+                    ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-900/20'
+                    : 'bg-gradient-to-r from-rose-700 via-rose-800 to-amber-700 hover:from-rose-800 hover:to-amber-800 shadow-rose-900/25'
+                }`}
               >
-                <Sparkles className="w-4 h-4 text-amber-300" />
-                <span>⚡ Calculate Optimal Route & Schedule</span>
+                {isCalculating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
+                    <span>Recalculating Schedule &amp; Route...</span>
+                  </>
+                ) : justCalculated ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-white" />
+                    <span>✓ Schedule &amp; Route Updated!</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 text-amber-300" />
+                    <span>⚡ Calculate Optimal Route &amp; Schedule</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
