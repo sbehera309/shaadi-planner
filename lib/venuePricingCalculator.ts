@@ -6,23 +6,34 @@ export interface VenueGuestEstimate {
   maxCapacity: number;
   capacityDelta: number;
   rentalFee: number;
+  cateringBuyoutFeePerGuest: number;
   cateringBuyoutTotal: number;
-  estimatedFoodAndBeverage: number;
+  subtotal: number;
+  serviceChargePercent: number;
   serviceChargeAmount: number;
+  taxPercent: number;
   taxAmount: number;
-  estimatedTotalCost: number;
-  costPerGuest: number;
+  estimatedTotalCost: number; // Pure Venue Contract Total
+  costPerGuest: number;       // Pure Venue Cost Per Guest
   breakdownSummary: string;
 }
 
 /**
- * Calculates a realistic all-in wedding cost estimate for a venue based on
- * a couple's anticipated guest count, historical buyout rates, and state tax/service fees.
+ * Calculates a realistic venue contract estimate based on the couple's anticipated guest count.
+ *
+ * NOTE: As requested by users, this calculation strictly computes the VENUE'S direct bill:
+ * 1. Venue Rental Fee (ballroom / grounds / property fee)
+ * 2. Venue Outside Catering Buyout / Kitchen Fee ($10–$25/guest for venue kitchen usage, tables/chairs, waitstaff)
+ * 3. Venue Service Charge (~20–24%)
+ * 4. State Sales Tax (NJ 6.625% / PA 8.0%)
+ *
+ * It intentionally EXCLUDES separate outside food catering vendor costs (such as Moghul, Bukhara Grill,
+ * Chowpatty, etc. charging $50–$85/plate), which belong under the Food & Beverage Vendor budget category.
  */
 export function calculateVenueEstimateForGuests(
   venue: VenueOption,
   guestCount: number,
-  estimatedCateringPerGuest: number = 65
+  _ignoredLegacyFoodRate?: number
 ): VenueGuestEstimate {
   const safeGuests = Math.max(1, guestCount || 350);
   const maxCapacity = venue.desiFeatures?.maxReceptionCapacity || 500;
@@ -38,20 +49,20 @@ export function calculateVenueEstimateForGuests(
   const taxPercent = venue.pricing?.taxPercent || (venue.state === 'PA' ? 8.0 : 6.625);
   const taxPct = taxPercent / 100;
 
-  // Desi Wedding Food & Beverage calculation:
-  // Includes Indian catering estimate (~$65/plate standard multi-course buffet) plus venue buyout/bar spend,
-  // respecting the venue's historical Food & Beverage minimum if applicable.
-  const calculatedFB = (buyoutFeePerGuest + estimatedCateringPerGuest) * safeGuests;
-  const fbMinimum = venue.pricing?.foodAndBeverageMinimum || 0;
-  const estimatedFoodAndBeverage = Math.max(fbMinimum, calculatedFB);
+  // Venue charges:
+  // If outside catering is allowed, the venue charges Rental + Outside Catering Buyout Total.
+  // If outside catering is not allowed, the venue requires in-house F&B minimum.
+  let subtotal = rentalFee + cateringBuyoutTotal;
+  if (venue.desiFeatures?.allowsOutsideIndianCatering === false && venue.pricing?.foodAndBeverageMinimum) {
+    subtotal = rentalFee + venue.pricing.foodAndBeverageMinimum;
+  }
 
-  const subtotal = rentalFee + estimatedFoodAndBeverage;
   const serviceChargeAmount = Math.round(subtotal * serviceChargePct);
   const taxAmount = Math.round((subtotal + serviceChargeAmount) * taxPct);
   const estimatedTotalCost = Math.round(subtotal + serviceChargeAmount + taxAmount);
   const costPerGuest = Math.round(estimatedTotalCost / safeGuests);
 
-  const breakdownSummary = `${safeGuests} guests • ~$${costPerGuest}/guest all-in (rental + F&B + ${serviceChargePercent}% svc + ${taxPercent}% tax)`;
+  const breakdownSummary = `${safeGuests} guests • ~$${costPerGuest}/guest venue fee (${rentalFee > 0 ? `rental + $${buyoutFeePerGuest}/pp buyout + ` : ''}${serviceChargePercent}% svc + ${taxPercent}% tax)`;
 
   return {
     guestCount: safeGuests,
@@ -59,9 +70,12 @@ export function calculateVenueEstimateForGuests(
     maxCapacity,
     capacityDelta,
     rentalFee,
+    cateringBuyoutFeePerGuest: buyoutFeePerGuest,
     cateringBuyoutTotal,
-    estimatedFoodAndBeverage,
+    subtotal,
+    serviceChargePercent,
     serviceChargeAmount,
+    taxPercent,
     taxAmount,
     estimatedTotalCost,
     costPerGuest,

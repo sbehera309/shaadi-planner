@@ -58,7 +58,6 @@ import {
   Bus,
   Calculator,
   AlertTriangle,
-  UtensilsCrossed,
 } from 'lucide-react';
 
 type CuratedSortOption = 'best' | 'price_asc' | 'price_desc' | 'capacity_desc';
@@ -98,7 +97,6 @@ export default function VenuesPage() {
       : wedding?.guestCount || 350;
 
   const [planningGuestCount, setPlanningGuestCount] = useState<number>(totalGuestHeadcount);
-  const [cateringPerPlate, setCateringPerPlate] = useState<number>(65);
 
   useEffect(() => {
     if (guests && guests.length > 0) {
@@ -489,13 +487,13 @@ export default function VenuesPage() {
         return (b.popularityScore || 90) - (a.popularityScore || 90);
       }
       if (curatedSortBy === 'price_asc') {
-        const costA = calculateVenueEstimateForGuests(a, planningGuestCount, cateringPerPlate).estimatedTotalCost;
-        const costB = calculateVenueEstimateForGuests(b, planningGuestCount, cateringPerPlate).estimatedTotalCost;
+        const costA = calculateVenueEstimateForGuests(a, planningGuestCount).estimatedTotalCost;
+        const costB = calculateVenueEstimateForGuests(b, planningGuestCount).estimatedTotalCost;
         return costA - costB;
       }
       if (curatedSortBy === 'price_desc') {
-        const costA = calculateVenueEstimateForGuests(a, planningGuestCount, cateringPerPlate).estimatedTotalCost;
-        const costB = calculateVenueEstimateForGuests(b, planningGuestCount, cateringPerPlate).estimatedTotalCost;
+        const costA = calculateVenueEstimateForGuests(a, planningGuestCount).estimatedTotalCost;
+        const costB = calculateVenueEstimateForGuests(b, planningGuestCount).estimatedTotalCost;
         return costB - costA;
       }
       if (curatedSortBy === 'capacity_desc') {
@@ -687,14 +685,14 @@ export default function VenuesPage() {
                   <Calculator className="w-4 h-4" />
                 </div>
                 <h3 className="font-bold text-stone-900 text-sm">
-                  Live Venue Pricing & Capacity Estimator
+                  Live Venue Contract &amp; Capacity Estimator
                 </h3>
                 <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold">
-                  Dynamic Quotes
+                  Venue Direct Quotes
                 </span>
               </div>
               <p className="text-xs text-stone-600 max-w-xl">
-                Enter your expected wedding guest count. Every venue card automatically calculates a customized all-in quote factoring rental fees, catering buyout rates, food &amp; beverage commitments, 22% service charges, and state taxes.
+                Enter your expected wedding guest count. Calculates pure venue invoice costs: ballroom rental, outside catering buyout / kitchen fees, 22% venue service charges, and state taxes. <em>Separate outside food caterer bills (e.g. Moghul, Bukhara Grill) are tracked under Food &amp; Beverage Vendors.</em>
               </p>
             </div>
 
@@ -732,18 +730,11 @@ export default function VenuesPage() {
                 ))}
               </div>
 
-              {/* Catering Menu Quality Level */}
-              <div className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-2xl border border-stone-300 shadow-2xs">
-                <UtensilsCrossed className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                <select
-                  value={cateringPerPlate}
-                  onChange={(e) => setCateringPerPlate(Number(e.target.value))}
-                  className="text-xs font-semibold text-stone-800 bg-transparent focus:outline-none cursor-pointer"
-                >
-                  <option value={50}>Indian Buffet (~$50/pp)</option>
-                  <option value={65}>Standard Multi-Course (~$65/pp)</option>
-                  <option value={85}>Grand Live Stations (~$85/pp)</option>
-                </select>
+              {/* Venue-Only Indicator Pill */}
+              <div className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-2xl border border-stone-300 shadow-2xs text-xs font-semibold text-stone-800">
+                <Building2 className="w-3.5 h-3.5 text-rose-700 shrink-0" />
+                <span>Venue Bill Only</span>
+                <span className="text-[10px] text-stone-400 font-normal hidden sm:inline">(Excludes outside food caterer)</span>
               </div>
             </div>
           </div>
@@ -1078,8 +1069,7 @@ export default function VenuesPage() {
                       {(() => {
                         const estimate = calculateVenueEstimateForGuests(
                           venue,
-                          planningGuestCount,
-                          cateringPerPlate
+                          planningGuestCount
                         );
 
                         return (
@@ -1089,7 +1079,7 @@ export default function VenuesPage() {
                                 <div>
                                   <span className="text-[10px] font-bold uppercase tracking-wider text-amber-950 flex items-center gap-1">
                                     <Calculator className="w-3 h-3 text-rose-700" />
-                                    <span>Est. All-In for {planningGuestCount} Guests:</span>
+                                    <span>Est. Venue Contract for {planningGuestCount} Guests:</span>
                                   </span>
                                   <strong className="text-stone-900 text-xl font-extrabold block">
                                     {formatCurr(estimate.estimatedTotalCost)}
@@ -1099,7 +1089,7 @@ export default function VenuesPage() {
                                   <span className="inline-block px-2.5 py-1 rounded-lg bg-white border border-amber-300 font-extrabold text-xs text-rose-900 shadow-2xs">
                                     ~{formatCurr(estimate.costPerGuest)} / guest
                                   </span>
-                                  <span className="block text-[10px] text-stone-500 mt-0.5">all-in quote</span>
+                                  <span className="block text-[10px] text-stone-500 mt-0.5">venue direct bill</span>
                                 </div>
                               </div>
 
@@ -1116,12 +1106,12 @@ export default function VenuesPage() {
                               {/* Breakdown Pills */}
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1.5 text-[10px] text-stone-600 border-t border-amber-200/60">
                                 <div>
-                                  <span className="text-stone-400 block">Rental:</span>
+                                  <span className="text-stone-400 block">Rental Fee:</span>
                                   <span className="font-semibold text-stone-800">{formatCurr(estimate.rentalFee)}</span>
                                 </div>
                                 <div>
-                                  <span className="text-stone-400 block">F&B + Buyout:</span>
-                                  <span className="font-semibold text-stone-800">{formatCurr(estimate.estimatedFoodAndBeverage)}</span>
+                                  <span className="text-stone-400 block">Buyout (${estimate.cateringBuyoutFeePerGuest}/pp):</span>
+                                  <span className="font-semibold text-stone-800">{formatCurr(estimate.cateringBuyoutTotal)}</span>
                                 </div>
                                 <div>
                                   <span className="text-stone-400 block">{venue.pricing.serviceChargePercent}% Svc:</span>
@@ -1131,6 +1121,10 @@ export default function VenuesPage() {
                                   <span className="text-stone-400 block">{venue.pricing.taxPercent}% Tax:</span>
                                   <span className="font-semibold text-stone-800">{formatCurr(estimate.taxAmount)}</span>
                                 </div>
+                              </div>
+
+                              <div className="text-[10px] text-stone-500 italic pt-1 border-t border-amber-200/40">
+                                <span>* Venue contract charges only. Outside food caterer (e.g. Moghul, Bukhara) is billed separately under Food Vendors.</span>
                               </div>
                             </div>
                           </div>
@@ -1483,8 +1477,7 @@ export default function VenuesPage() {
                       {(() => {
                         const estimate = calculateVenueEstimateForGuests(
                           venue,
-                          planningGuestCount,
-                          cateringPerPlate
+                          planningGuestCount
                         );
 
                         return (
@@ -1494,7 +1487,7 @@ export default function VenuesPage() {
                                 <div>
                                   <span className="text-[10px] font-bold uppercase tracking-wider text-amber-950 flex items-center gap-1">
                                     <Calculator className="w-3 h-3 text-rose-700" />
-                                    <span>Est. All-In for {planningGuestCount} Guests:</span>
+                                    <span>Est. Venue Contract for {planningGuestCount} Guests:</span>
                                   </span>
                                   <strong className="text-stone-900 text-xl font-extrabold block">
                                     {formatCurr(estimate.estimatedTotalCost)}
@@ -1504,7 +1497,7 @@ export default function VenuesPage() {
                                   <span className="inline-block px-2.5 py-1 rounded-lg bg-white border border-amber-300 font-extrabold text-xs text-rose-900 shadow-2xs">
                                     ~{formatCurr(estimate.costPerGuest)} / guest
                                   </span>
-                                  <span className="block text-[10px] text-stone-500 mt-0.5">all-in quote</span>
+                                  <span className="block text-[10px] text-stone-500 mt-0.5">venue direct bill</span>
                                 </div>
                               </div>
 
@@ -1521,12 +1514,12 @@ export default function VenuesPage() {
                               {/* Breakdown Pills */}
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1.5 text-[10px] text-stone-600 border-t border-amber-200/60">
                                 <div>
-                                  <span className="text-stone-400 block">Rental:</span>
+                                  <span className="text-stone-400 block">Rental Fee:</span>
                                   <span className="font-semibold text-stone-800">{formatCurr(estimate.rentalFee)}</span>
                                 </div>
                                 <div>
-                                  <span className="text-stone-400 block">F&B + Buyout:</span>
-                                  <span className="font-semibold text-stone-800">{formatCurr(estimate.estimatedFoodAndBeverage)}</span>
+                                  <span className="text-stone-400 block">Buyout (${estimate.cateringBuyoutFeePerGuest}/pp):</span>
+                                  <span className="font-semibold text-stone-800">{formatCurr(estimate.cateringBuyoutTotal)}</span>
                                 </div>
                                 <div>
                                   <span className="text-stone-400 block">{venue.pricing.serviceChargePercent}% Svc:</span>
@@ -1536,6 +1529,10 @@ export default function VenuesPage() {
                                   <span className="text-stone-400 block">{venue.pricing.taxPercent}% Tax:</span>
                                   <span className="font-semibold text-stone-800">{formatCurr(estimate.taxAmount)}</span>
                                 </div>
+                              </div>
+
+                              <div className="text-[10px] text-stone-500 italic pt-1 border-t border-amber-200/40">
+                                <span>* Venue contract charges only. Outside food caterer (e.g. Moghul, Bukhara) is billed separately under Food Vendors.</span>
                               </div>
                             </div>
                           </div>
@@ -2403,8 +2400,7 @@ export default function VenuesPage() {
                           availableDates: [],
                           tourStatus: 'shortlisted',
                         } as any,
-                        planningGuestCount,
-                        cateringPerPlate
+                        planningGuestCount
                       );
                       setFormData({ ...formData, estimatedTotalCost: calculated.estimatedTotalCost });
                     }}
