@@ -2000,17 +2000,17 @@ export default function VenuesPage() {
                       <span>Operating Tour Windows for {dayName}</span>
                     </span>
                     <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
-                      {isSat ? 'Morning Walkthroughs Only (9:30 AM – 1:30 PM)' : isSun ? 'Morning & Midday Tours (10:00 AM – 2:30 PM)' : 'Full Day Appointments (10:00 AM – 6:00 PM)'}
+                      {isSat ? 'Saturday Touring Hours (10:00 AM – 5:00 PM)' : isSun ? 'Sunday Touring Hours (10:00 AM – 4:30 PM)' : 'Full Day Appointments (10:00 AM – 6:00 PM)'}
                     </span>
                   </div>
                   <p className="text-[11px] text-amber-900/90 leading-relaxed">
                     {isSat ? (
                       <>
-                        <strong>Saturday Peak Wedding Policy:</strong> Tri-State luxury wedding estates (e.g., The Legacy Castle, The Palace at Somerset, Florentine Gardens, Rockleigh) only conduct tours between <strong>9:30 AM and 1:30 PM</strong>. By 2:00 PM, ballrooms strictly lock down for evening Mandap decor, Baraat arrivals, and wedding guests. The route optimizer automatically arranges your stops to fit available hours. We recommend selecting <strong>maximum 2 to 3 venues</strong>.
+                        <strong>Saturday Tour Policy:</strong> Tri-State luxury wedding estates (e.g., The Legacy Castle, The Palace at Somerset, Florentine Gardens, The Rockleigh, Crystal Plaza) conduct walkthrough appointments throughout the day until <strong>5:00 PM</strong> (with latest tour start around 4:15 PM before evening receptions begin). The route optimizer automatically arranges your stops to fit available hours. We recommend selecting <strong>maximum 2 to 3 venues</strong>.
                       </>
                     ) : isSun ? (
                       <>
-                        <strong>Sunday Walkthrough Window:</strong> Venues typically open tour appointments between <strong>10:00 AM and 2:30 PM</strong>. Afternoon slots may be restricted if daytime wedding receptions or Sangeet events are in progress.
+                        <strong>Sunday Walkthrough Window:</strong> Venues open tour appointments between <strong>10:00 AM and 4:30 PM</strong>.
                       </>
                     ) : (
                       <>
