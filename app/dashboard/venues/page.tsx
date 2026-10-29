@@ -64,7 +64,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 
-type CuratedSortOption = 'best' | 'price_asc' | 'price_desc' | 'capacity_desc';
+type CuratedSortOption = 'best' | 'service_desc' | 'price_asc' | 'price_desc' | 'capacity_desc';
 
 export default function VenuesPage() {
   const {
@@ -491,6 +491,9 @@ export default function VenuesPage() {
       if (curatedSortBy === 'best') {
         return (b.popularityScore || 90) - (a.popularityScore || 90);
       }
+      if (curatedSortBy === 'service_desc') {
+        return (b.serviceRating?.score || 80) - (a.serviceRating?.score || 80);
+      }
       if (curatedSortBy === 'price_asc') {
         const costA = calculateVenueEstimateForGuests(a, planningGuestCount, eventFormat).estimatedTotalCost;
         const costB = calculateVenueEstimateForGuests(b, planningGuestCount, eventFormat).estimatedTotalCost;
@@ -837,7 +840,8 @@ export default function VenuesPage() {
                   onChange={(e) => setCuratedSortBy(e.target.value as CuratedSortOption)}
                   className="px-3 py-1.5 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs focus:ring-2 focus:ring-rose-500"
                 >
-                  <option value="best">⭐ Best Desi Venues (Top Popularity)</option>
+                  <option value="best">⭐ Best Overall (Desi Rank)</option>
+                  <option value="service_desc">👑 Highest Service &amp; Hospitality Rating</option>
                   <option value="price_asc">💰 Historical Pricing (Low to High)</option>
                   <option value="price_desc">💎 Historical Pricing (High to Low)</option>
                   <option value="capacity_desc">👥 Guest Capacity (Largest First)</option>
@@ -945,6 +949,16 @@ export default function VenuesPage() {
                                 title={tierInfo.label}
                               >
                                 <span>{tierInfo.badgeLabel}</span>
+                              </span>
+                            )}
+
+                            {venue.serviceRating && (
+                              <span
+                                className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-900 border border-emerald-300 inline-flex items-center gap-1"
+                                title={`Service Score: ${venue.serviceRating.score}/100 • Server Ratio: ${venue.serviceRating.serverToGuestRatio}`}
+                              >
+                                <Sparkles className="w-3 h-3 text-emerald-600" />
+                                <span>{venue.serviceRating.score}/100 Service</span>
                               </span>
                             )}
 
@@ -1114,7 +1128,46 @@ export default function VenuesPage() {
                         </div>
                       )}
 
-                      {/* Live Calculated Estimate for Guest Count */}
+                      {/* Service & Hospitality Excellence Card */}
+                      {venue.serviceRating && (
+                        <div className="p-3.5 rounded-2xl bg-gradient-to-br from-amber-50/70 via-stone-50/60 to-rose-50/40 border border-amber-200/80 space-y-2 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-amber-950 flex items-center gap-1.5 text-[11px] uppercase tracking-wide">
+                              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                              <span>Service &amp; Hospitality Rating:</span>
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 text-[10px] font-bold">
+                                ⭐ {venue.serviceRating.starRating} / 5.0
+                              </span>
+                              <span className="px-2 py-0.5 rounded-md bg-stone-100 text-stone-800 text-[10px] font-bold">
+                                {venue.serviceRating.score}/100 Score
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-0.5 text-[11px]">
+                            <div className="bg-white/80 p-2 rounded-xl border border-stone-200/60">
+                              <span className="text-stone-500 block text-[10px] font-medium">Server Ratio:</span>
+                              <span className="font-bold text-stone-900">{venue.serviceRating.serverToGuestRatio}</span>
+                            </div>
+                            <div className="bg-white/80 p-2 rounded-xl border border-stone-200/60">
+                              <span className="text-stone-500 block text-[10px] font-medium">Bridal Attendant:</span>
+                              <span className="font-bold text-stone-900">
+                                {venue.serviceRating.hasDedicatedBridalAttendant ? '✓ Dedicated Butler' : 'Shared / Standard Staff'}
+                              </span>
+                            </div>
+                            <div className="bg-white/80 p-2 rounded-xl border border-stone-200/60 col-span-2 sm:col-span-1">
+                              <span className="text-stone-500 block text-[10px] font-medium">Vendor Coordination:</span>
+                              <span className="font-bold text-stone-900">{venue.serviceRating.vendorCoordinationScore}/100 Mandap &amp; DJ</span>
+                            </div>
+                          </div>
+
+                          <p className="text-[11px] text-amber-950/90 italic pt-1 border-t border-amber-200/60">
+                            &ldquo;{venue.serviceRating.highlight}&rdquo;
+                          </p>
+                        </div>
+                      )}
                       {(() => {
                         const estimate = calculateVenueEstimateForGuests(
                           venue,

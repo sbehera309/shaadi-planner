@@ -207,6 +207,15 @@ export interface NearestHotelInfo {
   shuttleProvided: boolean;
 }
 
+export interface VenueServiceRating {
+  score: number;                   // 1 to 100 (e.g. 98)
+  starRating: number;              // 1.0 to 5.0 (e.g. 4.95)
+  serverToGuestRatio: string;      // e.g. "1:8 (5-Star White-Glove)" or "1:16 (Standard Banquet)"
+  hasDedicatedBridalAttendant: boolean;
+  vendorCoordinationScore: number; // 1 to 100 (smoothness with decorator, priest, caterer)
+  highlight: string;
+}
+
 export interface VenueOption {
   id: string;
   weddingId: string;
@@ -227,6 +236,7 @@ export interface VenueOption {
   nearestHotel?: NearestHotelInfo;
   curatedState?: 'NJ' | 'PA' | string;
   popularityScore?: number; // 1 to 100
+  serviceRating?: VenueServiceRating;
   historicalPriceTier?: '$' | '$$' | '$$$' | '$$$$';
   availableDates: string[]; // e.g. ["2026-10-24 (Sat)", "2026-11-07 (Sat)"]
   tourStatus: VenueStatus;
