@@ -16,7 +16,12 @@ import {
   Calendar,
   Layers,
 } from 'lucide-react';
-import { ScheduledTourStop, VenueOption } from '@/lib/types';
+import {
+  ScheduledTourStop,
+  VenueOption,
+  VenueTouringHours,
+  StopTouringStatus,
+} from '@/lib/types';
 import { getCoordinates } from '@/lib/venueRouteOptimizer';
 
 interface LocationMarker {
@@ -38,6 +43,8 @@ interface LocationMarker {
   distanceMilesFromPrev?: number;
   notes?: string[];
   isPrimaryStart?: boolean;
+  touringHours?: VenueTouringHours;
+  touringStatus?: StopTouringStatus;
 }
 
 interface TourDayRouteMapProps {
@@ -172,6 +179,8 @@ export default function TourDayRouteMap({
         drivingMinutesFromPrev: stop.drivingTimeToNextMinutes,
         distanceMilesFromPrev: stop.distanceToNextMiles,
         notes: stop.notesOrQuestionsToAsk,
+        touringHours: stop.touringHours,
+        touringStatus: stop.touringStatus,
       });
     });
 
@@ -720,9 +729,36 @@ export default function TourDayRouteMap({
 
             {/* Tour appointment window */}
             {activeMarker.tourWindow && (
-              <div className="p-2 rounded-xl bg-stone-800/80 border border-stone-700/80 text-[11px] text-stone-300 flex items-center justify-between">
-                <span className="text-amber-300 font-semibold">Appointment Window:</span>
-                <span>{activeMarker.tourWindow}</span>
+              <div className="space-y-1.5">
+                <div className="p-2 rounded-xl bg-stone-800/80 border border-stone-700/80 text-[11px] text-stone-300 flex items-center justify-between">
+                  <span className="text-amber-300 font-semibold">Appointment Window:</span>
+                  <span>{activeMarker.tourWindow}</span>
+                </div>
+
+                {activeMarker.touringStatus && (
+                  <div
+                    className={`p-2 rounded-xl text-[10px] leading-tight border ${
+                      activeMarker.touringStatus.isWithinHours
+                        ? 'bg-emerald-950/40 border-emerald-700/60 text-emerald-300'
+                        : 'bg-rose-950/50 border-rose-700/70 text-rose-200'
+                    }`}
+                  >
+                    <div className="font-bold flex items-center gap-1 mb-0.5">
+                      <span>{activeMarker.touringStatus.isWithinHours ? '✓' : '⚠️'}</span>
+                      <span>{activeMarker.touringStatus.badgeLabel}</span>
+                    </div>
+                    {activeMarker.touringStatus.warningMessage && (
+                      <p className="text-stone-300/90 text-[10px]">
+                        {activeMarker.touringStatus.warningMessage}
+                      </p>
+                    )}
+                    {activeMarker.touringHours && (
+                      <span className="text-stone-400 block text-[9px] mt-1">
+                        Official Hours: {activeMarker.touringHours.saturdayHours}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 

@@ -3,6 +3,8 @@ import {
   FamilyAddressInput,
   ScheduledTourStop,
   SiteTourDayPlan,
+  VenueTouringHours,
+  StopTouringStatus,
 } from './types';
 
 // Known coordinates for common wedding hub cities & metro areas
@@ -182,11 +184,403 @@ function permute<T>(arr: T[]): T[][] {
 }
 
 /**
+ * Converts a time string like "09:30 AM" or "02:15 PM" to minutes from midnight
+ */
+export function timeStringToMinutes(timeStr: string): number {
+  if (!timeStr) return 0;
+  const parts = timeStr.trim().split(' ');
+  const timePart = parts[0];
+  const modifier = parts[1] || 'AM';
+  let [hours, minutes] = timePart.split(':').map(Number);
+  if (modifier === 'PM' && hours < 12) hours += 12;
+  if (modifier === 'AM' && hours === 12) hours = 0;
+  return hours * 60 + (isNaN(minutes) ? 0 : minutes);
+}
+
+/**
+ * Helper to add minutes to a time string like "09:30 AM"
+ */
+export function addMinutesToTimeString(timeStr: string, minutesToAdd: number): string {
+  const [timePart, modifier] = timeStr.trim().split(' ');
+  let [hours, minutes] = timePart.split(':').map(Number);
+
+  if (modifier === 'PM' && hours < 12) hours += 12;
+  if (modifier === 'AM' && hours === 12) hours = 0;
+
+  const totalMinutes = hours * 60 + minutes + minutesToAdd;
+  const newHours24 = Math.floor(totalMinutes / 60) % 24;
+  const newMinutes = totalMinutes % 60;
+
+  const newModifier = newHours24 >= 12 ? 'PM' : 'AM';
+  const newHours12 = newHours24 % 12 === 0 ? 12 : newHours24 % 12;
+
+  const padMin = newMinutes < 10 ? `0${newMinutes}` : `${newMinutes}`;
+  return `${newHours12}:${padMin} ${newModifier}`;
+}
+
+/**
+ * Rounds a time string to the closest 15-minute slot (e.g. 10:08 AM -> 10:15 AM)
+ */
+export function roundToQuarterHour(timeStr: string): string {
+  const [timePart, modifier] = timeStr.trim().split(' ');
+  let [hours, minutes] = timePart.split(':').map(Number);
+
+  if (modifier === 'PM' && hours < 12) hours += 12;
+  if (modifier === 'AM' && hours === 12) hours = 0;
+
+  const roundedMinutes = Math.round(minutes / 15) * 15;
+  const totalMinutes = hours * 60 + roundedMinutes;
+
+  const newHours24 = Math.floor(totalMinutes / 60) % 24;
+  const newMinutes = totalMinutes % 60;
+
+  const newModifier = newHours24 >= 12 ? 'PM' : 'AM';
+  const newHours12 = newHours24 % 12 === 0 ? 12 : newHours24 % 12;
+
+  const padMin = newMinutes < 10 ? `0${newMinutes}` : `${newMinutes}`;
+  return `${newHours12}:${padMin} ${newModifier}`;
+}
+
+/**
+ * Returns official site touring hours for a venue, reflecting real-world wedding venue scheduling rules:
+ * - Saturdays: Luxury estates only tour morning hours (9:30 AM – 1:30 PM) before evening Baraat/weddings start.
+ * - Sundays: 10:00 AM – 2:30 PM
+ * - Weekdays (Tue–Fri): 10:00 AM – 6:00 PM (Ideal for viewing empty ballrooms)
+ * - Mondays: Closed/dark for maintenance
+ */
+export function getDefaultTouringHours(venue: VenueOption): VenueTouringHours {
+  if (venue.touringHours) {
+    return venue.touringHours;
+  }
+
+  const nameLower = venue.name.toLowerCase();
+
+  // Top Estate & Historic Venue Specific Overrides
+  if (nameLower.includes('palace at somerset')) {
+    return {
+      weekdayHours: '10:00 AM – 6:00 PM (Tue–Fri, Closed Mon)',
+      saturdayHours: '09:30 AM – 1:30 PM (Morning Only before evening Baraat)',
+      sundayHours: '10:00 AM – 2:30 PM',
+      latestSaturdayTourStart: '12:30 PM',
+      latestWeekdayTourStart: '05:00 PM',
+      appointmentRequirement: 'appointment_only',
+      closedDays: ['Monday'],
+      specialTouringNotes:
+        'Dual-wing complex. Saturday tours shut down strictly at 1:30 PM so evening Mandap load-in remains completely private.',
+    };
+  }
+
+  if (nameLower.includes('legacy castle')) {
+    return {
+      weekdayHours: '11:00 AM – 6:00 PM (Tue–Fri, Closed Mon)',
+      saturdayHours: '09:30 AM – 1:00 PM (Strict Morning Window)',
+      sundayHours: '10:30 AM – 2:30 PM',
+      latestSaturdayTourStart: '12:00 PM',
+      latestWeekdayTourStart: '05:00 PM',
+      appointmentRequirement: 'appointment_only',
+      closedDays: ['Monday'],
+      specialTouringNotes:
+        'Security gate check-in required. No tours once bridal party arrives for afternoon photo sessions & Baraat.',
+    };
+  }
+
+  if (nameLower.includes('florentine gardens')) {
+    return {
+      weekdayHours: '10:00 AM – 6:00 PM (Tue–Fri)',
+      saturdayHours: '09:00 AM – 1:00 PM (One-wedding exclusivity)',
+      sundayHours: '10:00 AM – 2:00 PM',
+      latestSaturdayTourStart: '12:00 PM',
+      latestWeekdayTourStart: '05:00 PM',
+      appointmentRequirement: 'appointment_only',
+      closedDays: ['Monday'],
+      specialTouringNotes:
+        'Single-event private estate: Saturday tours end strictly at 1:00 PM so the booked wedding party enjoys 100% exclusive access.',
+    };
+  }
+
+  if (nameLower.includes('crystal plaza')) {
+    return {
+      weekdayHours: '10:00 AM – 6:00 PM (Tue–Fri)',
+      saturdayHours: '09:30 AM – 1:30 PM (Morning Walkthroughs)',
+      sundayHours: '10:00 AM – 2:30 PM',
+      latestSaturdayTourStart: '12:30 PM',
+      latestWeekdayTourStart: '05:00 PM',
+      appointmentRequirement: 'appointment_only',
+      closedDays: ['Monday'],
+      specialTouringNotes:
+        'Gardens and grand ballroom close to outside couples at 1:30 PM on Saturday event dates.',
+    };
+  }
+
+  if (nameLower.includes('grove')) {
+    return {
+      weekdayHours: '10:00 AM – 6:30 PM (Tue–Fri)',
+      saturdayHours: '10:00 AM – 2:00 PM',
+      sundayHours: '10:30 AM – 3:00 PM',
+      latestSaturdayTourStart: '01:00 PM',
+      latestWeekdayTourStart: '05:30 PM',
+      appointmentRequirement: 'appointment_only',
+      closedDays: ['Monday'],
+      specialTouringNotes:
+        'Saturday walkthroughs must conclude prior to 2:00 PM event preparation.',
+    };
+  }
+
+  if (nameLower.includes('rockleigh')) {
+    return {
+      weekdayHours: '10:00 AM – 6:00 PM (Tue–Fri)',
+      saturdayHours: '09:30 AM – 1:00 PM (Strict Morning Window)',
+      sundayHours: '10:00 AM – 2:00 PM',
+      latestSaturdayTourStart: '12:00 PM',
+      latestWeekdayTourStart: '05:00 PM',
+      appointmentRequirement: 'appointment_only',
+      closedDays: ['Monday'],
+      specialTouringNotes:
+        'Georgian estate gates close to outside guests by 1:30 PM on Saturday wedding days.',
+    };
+  }
+
+  if (nameLower.includes('pleasantdale')) {
+    return {
+      weekdayHours: '10:00 AM – 5:30 PM (Tue–Fri, Guard Gate)',
+      saturdayHours: '09:30 AM – 12:30 PM (Limited 3 slots only)',
+      sundayHours: '10:00 AM – 1:30 PM',
+      latestSaturdayTourStart: '11:30 AM',
+      latestWeekdayTourStart: '04:30 PM',
+      appointmentRequirement: 'appointment_only',
+      closedDays: ['Monday'],
+      specialTouringNotes:
+        'Gated gatehouse check-in. Saturday tours are strictly limited to morning to preserve privacy for evening wedding guests.',
+    };
+  }
+
+  if (nameLower.includes('shadowbrook') || nameLower.includes('park chateau') || nameLower.includes('nanina')) {
+    return {
+      weekdayHours: '10:00 AM – 6:00 PM (Tue–Fri)',
+      saturdayHours: '09:30 AM – 1:30 PM (Morning Only)',
+      sundayHours: '10:00 AM – 2:30 PM',
+      latestSaturdayTourStart: '12:30 PM',
+      latestWeekdayTourStart: '05:00 PM',
+      appointmentRequirement: 'appointment_only',
+      closedDays: ['Monday'],
+      specialTouringNotes:
+        'Grounds close to public tours by early afternoon for active wedding and photography sessions.',
+    };
+  }
+
+  if (nameLower.includes('cescaphe') || nameLower.includes('water works') || nameLower.includes('vie')) {
+    return {
+      weekdayHours: '10:00 AM – 6:00 PM (Tue–Fri)',
+      saturdayHours: '09:30 AM – 1:00 PM (Morning Showcase)',
+      sundayHours: '10:00 AM – 2:00 PM',
+      latestSaturdayTourStart: '12:00 PM',
+      latestWeekdayTourStart: '05:00 PM',
+      appointmentRequirement: 'appointment_only',
+      closedDays: ['Monday'],
+      specialTouringNotes:
+        'Cescaphe event directors conduct morning walkthroughs before active Saturday evening galas.',
+    };
+  }
+
+  // General Estate Default
+  if (venue.type === 'historic_estate') {
+    return {
+      weekdayHours: '10:00 AM – 6:00 PM (Tue–Fri, Closed Mon)',
+      saturdayHours: '09:30 AM – 1:30 PM (Morning Only before evening wedding)',
+      sundayHours: '10:00 AM – 2:30 PM',
+      latestSaturdayTourStart: '12:30 PM',
+      latestWeekdayTourStart: '05:00 PM',
+      appointmentRequirement: 'appointment_only',
+      closedDays: ['Monday'],
+      specialTouringNotes:
+        'Private estate grounds close at 2:00 PM for private evening wedding setup & Baraats.',
+    };
+  }
+
+  // Hotel Ballrooms & Resorts
+  if (venue.type === 'hotel_ballroom' || venue.type === 'resort' || venue.type === 'convention_center') {
+    return {
+      weekdayHours: '09:00 AM – 6:30 PM (Mon–Fri)',
+      saturdayHours: '10:00 AM – 3:30 PM',
+      sundayHours: '10:00 AM – 4:00 PM',
+      latestSaturdayTourStart: '02:30 PM',
+      latestWeekdayTourStart: '05:30 PM',
+      appointmentRequirement: 'advance_booking_required',
+      closedDays: [],
+      specialTouringNotes:
+        'Catering sales director escort required. Ballroom viewing depends on corporate conference or wedding floor availability.',
+    };
+  }
+
+  // Dedicated Desi Banquet Halls & Golf Clubs
+  return {
+    weekdayHours: '11:00 AM – 7:00 PM (Tue–Sun, Closed Mon)',
+    saturdayHours: '10:00 AM – 3:30 PM',
+    sundayHours: '10:00 AM – 4:00 PM',
+    latestSaturdayTourStart: '02:30 PM',
+    latestWeekdayTourStart: '06:00 PM',
+    appointmentRequirement: 'appointment_only',
+    closedDays: ['Monday'],
+    specialTouringNotes:
+      'Banquet manager appointment required; evening walkthroughs restricted during active Sangeet or Garba celebrations.',
+  };
+}
+
+/**
+ * Validates whether a proposed tour time falls within the venue's official touring hours
+ */
+export function evaluateTourStopTiming(
+  venue: VenueOption,
+  tourDate: string,
+  arrivalStr: string,
+  departureStr: string
+): StopTouringStatus {
+  const touringHours = getDefaultTouringHours(venue);
+  const arrivalMinutes = timeStringToMinutes(arrivalStr);
+
+  let dayOfWeek = 6; // default Saturday
+  if (tourDate) {
+    const d = new Date(`${tourDate}T12:00:00`);
+    if (!isNaN(d.getTime())) {
+      dayOfWeek = d.getDay();
+    }
+  }
+
+  const isSaturday = dayOfWeek === 6;
+  const isSunday = dayOfWeek === 0;
+  const isMonday = dayOfWeek === 1;
+
+  // 1. Saturday Check (Core scenario for weekend site tours)
+  if (isSaturday) {
+    const latestSaturdayStartMins = timeStringToMinutes(touringHours.latestSaturdayTourStart || '12:30 PM');
+    const earliestSaturdayOpenMins = 570; // 9:30 AM
+
+    if (arrivalMinutes < earliestSaturdayOpenMins) {
+      return {
+        isWithinHours: false,
+        status: 'outside_hours',
+        badgeLabel: 'Too Early (Before 9:30 AM)',
+        warningMessage: `${venue.name} sales office does not open for tours before 9:30 AM on Saturdays.`,
+        recommendedTimeWindow: touringHours.saturdayHours,
+      };
+    }
+
+    if (arrivalMinutes > latestSaturdayStartMins) {
+      return {
+        isWithinHours: false,
+        status: 'outside_hours',
+        badgeLabel: 'Outside Saturday Tour Hours',
+        warningMessage: `${venue.name} limits Saturday tours to ${touringHours.saturdayHours}. By afternoon (${arrivalStr}), ballrooms close for evening wedding & Baraat load-in. Confirm special access with sales director.`,
+        recommendedTimeWindow: `Saturday mornings (${touringHours.saturdayHours}) or Weekday afternoons`,
+      };
+    }
+
+    if (arrivalMinutes >= latestSaturdayStartMins - 30) {
+      return {
+        isWithinHours: true,
+        status: 'closing_soon',
+        badgeLabel: 'Tight Saturday Window',
+        warningMessage: `Late morning tour slot (${arrivalStr}): Ensure walkthrough concludes before afternoon wedding decorator load-in begins.`,
+        recommendedTimeWindow: touringHours.saturdayHours,
+      };
+    }
+
+    return {
+      isWithinHours: true,
+      status: 'valid',
+      badgeLabel: '✓ Within Saturday Tour Hours',
+      recommendedTimeWindow: touringHours.saturdayHours,
+    };
+  }
+
+  // 2. Sunday Check
+  if (isSunday) {
+    const earliestSundayOpenMins = 600; // 10:00 AM
+    const latestSundayStartMins = 870; // 2:30 PM
+
+    if (arrivalMinutes < earliestSundayOpenMins) {
+      return {
+        isWithinHours: false,
+        status: 'outside_hours',
+        badgeLabel: 'Too Early (Before 10:00 AM)',
+        warningMessage: `${venue.name} begins Sunday tour appointments at 10:00 AM.`,
+        recommendedTimeWindow: touringHours.sundayHours,
+      };
+    }
+
+    if (arrivalMinutes > latestSundayStartMins) {
+      return {
+        isWithinHours: false,
+        status: 'outside_hours',
+        badgeLabel: 'Outside Sunday Tour Hours',
+        warningMessage: `Sunday walkthroughs conclude by ~2:30 PM. Please verify weekend afternoon availability with sales office.`,
+        recommendedTimeWindow: touringHours.sundayHours,
+      };
+    }
+
+    return {
+      isWithinHours: true,
+      status: 'valid',
+      badgeLabel: '✓ Within Sunday Tour Hours',
+      recommendedTimeWindow: touringHours.sundayHours,
+    };
+  }
+
+  // 3. Monday Check
+  if (isMonday && touringHours.closedDays?.includes('Monday')) {
+    return {
+      isWithinHours: false,
+      status: 'closed_day',
+      badgeLabel: 'Venue Closed Mondays',
+      warningMessage: `${venue.name} is dark/closed on Mondays for post-weekend maintenance. Tour requests must be arranged by private appointment.`,
+      recommendedTimeWindow: touringHours.weekdayHours,
+    };
+  }
+
+  // 4. Weekdays (Tue–Fri)
+  const earliestWeekdayOpenMins = 570; // 9:30 AM
+  const latestWeekdayStartMins = timeStringToMinutes(touringHours.latestWeekdayTourStart || '05:30 PM');
+
+  if (arrivalMinutes < earliestWeekdayOpenMins) {
+    return {
+      isWithinHours: false,
+      status: 'outside_hours',
+      badgeLabel: 'Before Sales Office Opens',
+      warningMessage: `Sales office opens at 10:00 AM.`,
+      recommendedTimeWindow: touringHours.weekdayHours,
+    };
+  }
+
+  if (arrivalMinutes > latestWeekdayStartMins) {
+    return {
+      isWithinHours: false,
+      status: 'outside_hours',
+      badgeLabel: 'After Hours (Sales Closed)',
+      warningMessage: `Sales office closes by 6:00 PM. Evening viewings require pre-scheduled director confirmation.`,
+      recommendedTimeWindow: touringHours.weekdayHours,
+    };
+  }
+
+  return {
+    isWithinHours: true,
+    status: 'valid',
+    badgeLabel: '✓ Within Weekday Tour Hours',
+    recommendedTimeWindow: touringHours.weekdayHours,
+  };
+}
+
+/**
  * Finds the optimal touring order that minimizes total driving time/distance
+ * while also factoring in venue operating and site tour hours to avoid after-hours appointments
  */
 export function findOptimalTourOrder(
   startLocation: FamilyAddressInput,
-  venues: VenueOption[]
+  venues: VenueOption[],
+  tourDate: string = '2026-11-14',
+  dayStartTime: string = '09:30 AM',
+  durationPerTourMinutes: number = 60,
+  bufferBetweenToursMinutes: number = 15,
+  includesLunchBreak: boolean = true
 ): {
   orderedVenues: VenueOption[];
   totalDistanceMiles: number;
@@ -244,9 +638,10 @@ export function findOptimalTourOrder(
 
   const permutations = permute(venues);
   let bestOrder: VenueOption[] = permutations[0];
-  let minDistance = Infinity;
+  let minWeightedScore = Infinity;
   let bestLegMetrics: Array<{ distanceMiles: number; durationMinutes: number }> = [];
   let bestDrivingMinutes = 0;
+  let bestDistance = 0;
 
   for (const candidateOrder of permutations) {
     let currentDistance = 0;
@@ -280,64 +675,53 @@ export function findOptimalTourOrder(
       currentLegs.push(leg);
     }
 
-    if (currentDistance < minDistance) {
-      minDistance = currentDistance;
+    // Simulate timeline to assess touring hours feasibility
+    let simTime = dayStartTime;
+    let timingPenalty = 0;
+
+    for (let i = 0; i < candidateOrder.length; i++) {
+      const v = candidateOrder[i];
+      const leg = currentLegs[i];
+      const arrivalRaw = addMinutesToTimeString(simTime, leg.durationMinutes);
+      const arrival = roundToQuarterHour(arrivalRaw);
+      const departure = addMinutesToTimeString(arrival, durationPerTourMinutes);
+
+      const timingCheck = evaluateTourStopTiming(v, tourDate, arrival, departure);
+      if (!timingCheck.isWithinHours) {
+        // Heavy penalty so orders that visit venues during closed / after-hours are strongly avoided
+        timingPenalty += 500;
+      } else if (timingCheck.status === 'closing_soon') {
+        timingPenalty += 15;
+      }
+
+      simTime = departure;
+      if (
+        includesLunchBreak &&
+        i < candidateOrder.length - 1 &&
+        (departure.includes('12:') || departure.includes('1:'))
+      ) {
+        simTime = addMinutesToTimeString(departure, 60);
+      } else {
+        simTime = addMinutesToTimeString(simTime, bufferBetweenToursMinutes);
+      }
+    }
+
+    const totalWeightedScore = currentDistance + timingPenalty;
+    if (totalWeightedScore < minWeightedScore) {
+      minWeightedScore = totalWeightedScore;
       bestOrder = candidateOrder;
       bestLegMetrics = currentLegs;
       bestDrivingMinutes = currentMinutes;
+      bestDistance = currentDistance;
     }
   }
 
   return {
     orderedVenues: bestOrder,
-    totalDistanceMiles: Math.round(minDistance * 10) / 10,
+    totalDistanceMiles: Math.round(bestDistance * 10) / 10,
     totalDrivingMinutes: bestDrivingMinutes,
     legMetrics: bestLegMetrics,
   };
-}
-
-/**
- * Helper to add minutes to a time string like "09:30 AM"
- */
-function addMinutesToTimeString(timeStr: string, minutesToAdd: number): string {
-  const [timePart, modifier] = timeStr.trim().split(' ');
-  let [hours, minutes] = timePart.split(':').map(Number);
-
-  if (modifier === 'PM' && hours < 12) hours += 12;
-  if (modifier === 'AM' && hours === 12) hours = 0;
-
-  const totalMinutes = hours * 60 + minutes + minutesToAdd;
-  const newHours24 = Math.floor(totalMinutes / 60) % 24;
-  const newMinutes = totalMinutes % 60;
-
-  const newModifier = newHours24 >= 12 ? 'PM' : 'AM';
-  const newHours12 = newHours24 % 12 === 0 ? 12 : newHours24 % 12;
-
-  const padMin = newMinutes < 10 ? `0${newMinutes}` : `${newMinutes}`;
-  return `${newHours12}:${padMin} ${newModifier}`;
-}
-
-/**
- * Rounds a time string to the closest 15-minute slot (e.g. 10:08 AM -> 10:15 AM)
- */
-function roundToQuarterHour(timeStr: string): string {
-  const [timePart, modifier] = timeStr.trim().split(' ');
-  let [hours, minutes] = timePart.split(':').map(Number);
-
-  if (modifier === 'PM' && hours < 12) hours += 12;
-  if (modifier === 'AM' && hours === 12) hours = 0;
-
-  const roundedMinutes = Math.round(minutes / 15) * 15;
-  const totalMinutes = hours * 60 + roundedMinutes;
-
-  const newHours24 = Math.floor(totalMinutes / 60) % 24;
-  const newMinutes = totalMinutes % 60;
-
-  const newModifier = newHours24 >= 12 ? 'PM' : 'AM';
-  const newHours12 = newHours24 % 12 === 0 ? 12 : newHours24 % 12;
-
-  const padMin = newMinutes < 10 ? `0${newMinutes}` : `${newMinutes}`;
-  return `${newHours12}:${padMin} ${newModifier}`;
 }
 
 /**
@@ -415,10 +799,19 @@ export function generateSiteTourSchedule({
     totalDistanceMiles,
     totalDrivingMinutes,
     legMetrics,
-  } = findOptimalTourOrder(startLocation, venues);
+  } = findOptimalTourOrder(
+    startLocation,
+    venues,
+    tourDate,
+    dayStartTime,
+    durationPerTourMinutes,
+    bufferBetweenToursMinutes,
+    includesLunchBreak
+  );
 
   let currentTime = dayStartTime;
   const stops: ScheduledTourStop[] = [];
+  let timingWarningsCount = 0;
 
   // Determine if a lunch break should be scheduled around midday (~12:30 PM - 1:30 PM)
   let lunchBreakScheduled = false;
@@ -436,6 +829,12 @@ export function generateSiteTourSchedule({
     const nextVenue = i < orderedVenues.length - 1 ? orderedVenues[i + 1] : undefined;
     const nextLeg = i < orderedVenues.length - 1 ? legMetrics[i + 1] : undefined;
 
+    const touringHours = getDefaultTouringHours(venue);
+    const timingStatus = evaluateTourStopTiming(venue, tourDate, suggestedArrival, suggestedDeparture);
+    if (!timingStatus.isWithinHours || timingStatus.status === 'closing_soon') {
+      timingWarningsCount++;
+    }
+
     stops.push({
       stopOrder: i + 1,
       venueId: venue.id,
@@ -449,6 +848,8 @@ export function generateSiteTourSchedule({
       distanceToNextMiles: nextLeg?.distanceMiles,
       nextStopName: nextVenue?.name,
       notesOrQuestionsToAsk: getQuestionsForVenue(venue),
+      touringHours,
+      touringStatus: timingStatus,
     });
 
     currentTime = suggestedDeparture;
@@ -494,6 +895,8 @@ export function generateSiteTourSchedule({
     totalEstDrivingMinutes: totalDrivingMinutes,
     totalEstDistanceMiles: totalDistanceMiles,
     googleMapsMultiStopUrl: googleMapsUrl,
+    hasTimingWarnings: timingWarningsCount > 0,
+    timingWarningsCount,
   };
 }
 
@@ -532,6 +935,14 @@ export function formatTourPlanForWhatsApp(
       `📍 ${stop.address}, ${stop.city}`,
       `🕒 *Tour Window:* ${stop.suggestedTourWindow}`
     );
+
+    if (stop.touringHours) {
+      lines.push(`⏰ *Official Tour Hours:* ${stop.touringHours.saturdayHours}`);
+    }
+
+    if (stop.touringStatus && !stop.touringStatus.isWithinHours) {
+      lines.push(`⚠️ *Notice:* ${stop.touringStatus.warningMessage}`);
+    }
 
     if (venue?.contactPerson || venue?.contactPhone) {
       lines.push(

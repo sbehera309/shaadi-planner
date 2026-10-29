@@ -216,6 +216,25 @@ export interface VenueServiceRating {
   highlight: string;
 }
 
+export interface VenueTouringHours {
+  weekdayHours: string;          // e.g. "10:00 AM – 6:00 PM (Tue–Fri, Closed Mon)"
+  saturdayHours: string;         // e.g. "09:30 AM – 1:30 PM (Morning Only before evening Baraat)"
+  sundayHours: string;           // e.g. "10:00 AM – 2:30 PM"
+  latestSaturdayTourStart: string; // e.g. "12:30 PM"
+  latestWeekdayTourStart: string;  // e.g. "05:00 PM"
+  appointmentRequirement: 'appointment_only' | 'advance_booking_required' | 'open_walkthrough';
+  closedDays?: string[];         // e.g. ["Monday"]
+  specialTouringNotes?: string;  // e.g. "Private estate grounds close at 2:00 PM for private evening wedding setup."
+}
+
+export interface StopTouringStatus {
+  isWithinHours: boolean;
+  status: 'valid' | 'closing_soon' | 'outside_hours' | 'closed_day';
+  badgeLabel: string;
+  warningMessage?: string;
+  recommendedTimeWindow?: string;
+}
+
 export interface VenueOption {
   id: string;
   weddingId: string;
@@ -238,6 +257,7 @@ export interface VenueOption {
   popularityScore?: number; // 1 to 100
   serviceRating?: VenueServiceRating;
   historicalPriceTier?: '$' | '$$' | '$$$' | '$$$$';
+  touringHours?: VenueTouringHours;
   availableDates: string[]; // e.g. ["2026-10-24 (Sat)", "2026-11-07 (Sat)"]
   tourStatus: VenueStatus;
   tourScheduledDate?: string;
@@ -274,6 +294,8 @@ export interface ScheduledTourStop {
   distanceToNextMiles?: number;
   nextStopName?: string;
   notesOrQuestionsToAsk: string[];
+  touringHours?: VenueTouringHours;
+  touringStatus?: StopTouringStatus;
 }
 
 export interface SiteTourDayPlan {
@@ -293,6 +315,8 @@ export interface SiteTourDayPlan {
   totalEstDistanceMiles: number;
   googleMapsMultiStopUrl: string;
   notes?: string;
+  hasTimingWarnings?: boolean;
+  timingWarningsCount?: number;
 }
 
 export type WeddingTradition = 'traditional_desi' | 'south_indian' | 'fusion_mixed';

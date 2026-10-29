@@ -14,6 +14,7 @@ import { Modal } from '@/components/Modal';
 import {
   generateSiteTourSchedule,
   formatTourPlanForWhatsApp,
+  getDefaultTouringHours,
 } from '@/lib/venueRouteOptimizer';
 import {
   PRELOADED_CURATED_VENUES,
@@ -1882,6 +1883,44 @@ export default function VenuesPage() {
               </div>
             </div>
 
+            {/* Real-world Venue Touring Hours Guidance Alert */}
+            {(() => {
+              const d = new Date(`${tourForm.tourDate}T12:00:00`);
+              const dayIndex = isNaN(d.getTime()) ? 6 : d.getDay();
+              const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dayIndex];
+              const isSat = dayIndex === 6;
+              const isSun = dayIndex === 0;
+
+              return (
+                <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/90 text-xs space-y-1.5 shadow-2xs">
+                  <div className="flex flex-wrap items-center justify-between gap-1.5">
+                    <span className="font-bold text-amber-950 flex items-center gap-1.5 text-xs">
+                      <Clock className="w-4 h-4 text-amber-700" />
+                      <span>Operating Tour Windows for {dayName}</span>
+                    </span>
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                      {isSat ? 'Morning Walkthroughs Only (9:30 AM – 1:30 PM)' : isSun ? 'Morning & Midday Tours (10:00 AM – 2:30 PM)' : 'Full Day Appointments (10:00 AM – 6:00 PM)'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-amber-900/90 leading-relaxed">
+                    {isSat ? (
+                      <>
+                        <strong>Saturday Peak Wedding Policy:</strong> Tri-State luxury wedding estates (e.g., The Legacy Castle, The Palace at Somerset, Florentine Gardens, Rockleigh) only conduct tours between <strong>9:30 AM and 1:30 PM</strong>. By 2:00 PM, ballrooms strictly lock down for evening Mandap decor, Baraat arrivals, and wedding guests. The route optimizer automatically arranges your stops to fit available hours. We recommend selecting <strong>maximum 2 to 3 venues</strong>.
+                      </>
+                    ) : isSun ? (
+                      <>
+                        <strong>Sunday Walkthrough Window:</strong> Venues typically open tour appointments between <strong>10:00 AM and 2:30 PM</strong>. Afternoon slots may be restricted if daytime wedding receptions or Sangeet events are in progress.
+                      </>
+                    ) : (
+                      <>
+                        <strong>Weekday Flexibility ({dayName}):</strong> Weekday appointments (typically <strong>10:00 AM – 6:00 PM</strong>, Tue–Fri) offer the best opportunity to see completely empty ballrooms without wedding noise. Note: Many independent catering halls are closed on Mondays.
+                      </>
+                    )}
+                  </p>
+                </div>
+              );
+            })()}
+
             {/* Venues Selection Checkboxes */}
             <div className="space-y-2 pt-2">
               <label className="font-bold text-stone-800 text-xs block">
@@ -1890,6 +1929,7 @@ export default function VenuesPage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 {venues.map((v) => {
                   const isChecked = tourForm.selectedVenueIds.includes(v.id);
+                  const touring = getDefaultTouringHours(v);
                   return (
                     <label
                       key={v.id}
@@ -1905,10 +1945,13 @@ export default function VenuesPage() {
                         onChange={() => handleToggleVenueSelectionForTour(v.id)}
                         className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500"
                       />
-                      <div className="truncate">
+                      <div className="truncate flex-1">
                         <span className="font-bold text-xs truncate block">{v.name}</span>
                         <span className="text-[10px] text-stone-500 truncate block">
                           {v.city}, {v.state} • {formatCurr(v.pricing.estimatedTotalCost)}
+                        </span>
+                        <span className="text-[9px] text-amber-800 font-semibold truncate block mt-0.5">
+                          Sat: {touring.saturdayHours.split('(')[0].trim()}
                         </span>
                       </div>
                     </label>
@@ -1993,6 +2036,21 @@ export default function VenuesPage() {
                 </div>
               </div>
 
+              {/* Timing Warnings Advisory Banner */}
+              {tourPlan.hasTimingWarnings && (
+                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-xs text-amber-950 flex items-start gap-3 shadow-2xs">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <h5 className="font-bold text-sm text-amber-900">
+                      Site Tour Operating Hours Advisory ({tourPlan.timingWarningsCount} {tourPlan.timingWarningsCount === 1 ? 'stop' : 'stops'} flagged)
+                    </h5>
+                    <p className="text-amber-800 leading-relaxed text-xs">
+                      One or more scheduled walkthroughs extend close to or past the venue’s standard weekend touring window. Remember that luxury wedding venues (like Legacy Castle, Florentine Gardens, Rockleigh, and Palace at Somerset) typically shut down ballroom tours by 1:30 PM – 2:00 PM on Saturdays for evening Baraats, decorator load-in, and Mandap ceremonies. Please call the sales director in advance to confirm your appointment window.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Interactive All-in-One Route & Stop Map */}
               <TourDayRouteMap
                 groomAddress={tourForm.groomAddress}
@@ -2047,13 +2105,33 @@ export default function VenuesPage() {
                         <div className="bg-white p-5 rounded-2xl border border-stone-200 hover:border-amber-400 shadow-2xs space-y-3 transition-all">
                           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
                             <div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
                                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-50 text-rose-800 border border-rose-200">
                                   Appointment #{stop.stopOrder}
                                 </span>
                                 <span className="text-xs font-bold text-amber-800">
                                   ⏰ {stop.suggestedTourWindow}
                                 </span>
+                                {stop.touringStatus && (
+                                  <span
+                                    className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                      stop.touringStatus.isWithinHours
+                                        ? stop.touringStatus.status === 'closing_soon'
+                                          ? 'bg-amber-50 text-amber-800 border-amber-300'
+                                          : 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                        : 'bg-rose-100 text-rose-900 border-rose-300'
+                                    }`}
+                                  >
+                                    <span>
+                                      {stop.touringStatus.isWithinHours
+                                        ? stop.touringStatus.status === 'closing_soon'
+                                          ? '⚠️'
+                                          : '✓'
+                                        : '⚠️'}
+                                    </span>
+                                    <span>{stop.touringStatus.badgeLabel}</span>
+                                  </span>
+                                )}
                               </div>
                               <h4 className="font-bold text-lg text-stone-900 font-serif mt-1">
                                 {stop.venueName}
@@ -2086,6 +2164,39 @@ export default function VenuesPage() {
                               </div>
                             )}
                           </div>
+
+                          {/* Warning Alert if tour is outside venue's standard hours */}
+                          {stop.touringStatus && !stop.touringStatus.isWithinHours && (
+                            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-900 flex items-start gap-2.5">
+                              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                              <div className="space-y-0.5">
+                                <strong className="font-bold text-xs">Site Tour Operating Hours Warning:</strong>
+                                <p className="text-[11px] text-rose-800 leading-relaxed">
+                                  {stop.touringStatus.warningMessage}
+                                </p>
+                                {stop.touringStatus.recommendedTimeWindow && (
+                                  <span className="text-[10px] text-stone-600 block mt-0.5">
+                                    Recommended Window: <strong>{stop.touringStatus.recommendedTimeWindow}</strong>
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Official Venue Touring Hours Summary */}
+                          {stop.touringHours && (
+                            <div className="p-2.5 rounded-xl bg-stone-50 border border-stone-200 text-[11px] text-stone-600 flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5 font-medium text-stone-700">
+                                <Clock className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                                <span>
+                                  <strong>Touring Windows:</strong> Sat: {stop.touringHours.saturdayHours} • Sun: {stop.touringHours.sundayHours} • Weekdays: {stop.touringHours.weekdayHours}
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-stone-500 uppercase tracking-wider font-bold px-2 py-0.5 rounded-md bg-stone-200/70 shrink-0">
+                                {stop.touringHours.appointmentRequirement === 'appointment_only' ? 'Appointment Required' : 'Advance Booking'}
+                              </span>
+                            </div>
+                          )}
 
                           {/* Specific Questions to Ask on Site */}
                           <div className="p-3.5 rounded-xl bg-amber-50/60 border border-amber-200/70 space-y-1.5 text-xs">
