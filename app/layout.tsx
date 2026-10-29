@@ -1,4 +1,5 @@
 import './globals.css';
+import 'leaflet/dist/leaflet.css';
 import { WeddingProvider } from '@/lib/store';
 import { AuthProvider } from '@/lib/authContext';
 import type { Metadata, Viewport } from 'next';

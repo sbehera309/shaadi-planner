@@ -809,63 +809,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // 3. Fallback: Query US Census Bureau Geocoder API (100% free US Gov API covering all US street addresses)
-  try {
-    const censusController = new AbortController();
-    const censusTimeout = setTimeout(() => censusController.abort(), 2000);
-    const censusRes = await fetch(
-      `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=${encodeURIComponent(
-        query
-      )}&benchmark=2020&format=json`,
-      {
-        signal: censusController.signal,
-        headers: { 'User-Agent': 'ShaadiPlanner/1.0' },
-      }
-    );
-    clearTimeout(censusTimeout);
-
-    if (censusRes.ok) {
-      const censusData = await censusRes.json();
-      const matches = censusData.result?.addressMatches || [];
-      if (matches.length > 0) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const censusSuggestions: AddressSuggestion[] = matches.map((m: any, idx: number) => {
-          const comp = m.addressComponents || {};
-          const street = m.matchedAddress.split(',')[0].trim();
-          const city = comp.city || '';
-          const state = comp.state || '';
-          const zipCode = comp.zip || '';
-          const secondaryText = `${city}, ${state} ${zipCode}, USA`;
-          const fullAddress = `${street}, ${secondaryText}`;
-
-          return {
-            id: `census-${idx}-${Date.now()}`,
-            primaryText: street,
-            secondaryText,
-            fullAddress,
-            street,
-            city,
-            state,
-            zipCode,
-            latitude: m.coordinates?.y,
-            longitude: m.coordinates?.x,
-            source: 'local' as const,
-          };
-        });
-
-        if (censusSuggestions.length > 0) {
-          return NextResponse.json({
-            suggestions: censusSuggestions.slice(0, 6),
-            provider: 'census',
-          });
-        }
-      }
-    }
-  } catch {
-    // Continue to next fallback
-  }
-
-  // 4. Fallback: Query OpenStreetMap / Photon geocoder (public global coverage)
+  // 3. Primary Free Geocoder: OpenStreetMap / Photon geocoder (instant keystroke search, no key required)
   let osmSuggestions: AddressSuggestion[] = [];
   try {
     const controller = new AbortController();
@@ -918,20 +862,73 @@ export async function GET(request: NextRequest) {
             };
           })
           .filter((s: AddressSuggestion) => s.city.length > 0);
+
+        if (osmSuggestions.length > 0) {
+          return NextResponse.json({
+            suggestions: osmSuggestions.slice(0, 6),
+            provider: 'osm',
+          });
+        }
       }
     }
   } catch {
     // Ignore network abort
   }
 
-  // Combine local matches + OSM suggestions
-  const combined = [...localMatches, ...osmSuggestions];
-  const unique = Array.from(new Map(combined.map((item) => [item.fullAddress, item])).values());
-  if (unique.length > 0) {
-    return NextResponse.json({
-      suggestions: unique.slice(0, 6),
-      provider: osmSuggestions.length > 0 ? 'osm' : 'local',
-    });
+  // 4. Secondary Free Geocoder: US Census Bureau Geocoder API (covers US street addresses)
+  try {
+    const censusController = new AbortController();
+    const censusTimeout = setTimeout(() => censusController.abort(), 2000);
+    const censusRes = await fetch(
+      `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=${encodeURIComponent(
+        query
+      )}&benchmark=2020&format=json`,
+      {
+        signal: censusController.signal,
+        headers: { 'User-Agent': 'ShaadiPlanner/1.0' },
+      }
+    );
+    clearTimeout(censusTimeout);
+
+    if (censusRes.ok) {
+      const censusData = await censusRes.json();
+      const matches = censusData.result?.addressMatches || [];
+      if (matches.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const censusSuggestions: AddressSuggestion[] = matches.map((m: any, idx: number) => {
+          const comp = m.addressComponents || {};
+          const street = m.matchedAddress.split(',')[0].trim();
+          const city = comp.city || '';
+          const state = comp.state || '';
+          const zipCode = comp.zip || '';
+          const secondaryText = `${city}, ${state} ${zipCode}, USA`;
+          const fullAddress = `${street}, ${secondaryText}`;
+
+          return {
+            id: `census-${idx}-${Date.now()}`,
+            primaryText: street,
+            secondaryText,
+            fullAddress,
+            street,
+            city,
+            state,
+            zipCode,
+            latitude: m.coordinates?.y,
+            longitude: m.coordinates?.x,
+            source: 'local' as const,
+          };
+        });
+
+        if (censusSuggestions.length > 0) {
+          return NextResponse.json({
+            suggestions: censusSuggestions.slice(0, 6),
+            provider: 'census',
+          });
+        }
+      }
+    }
+  } catch {
+    // Continue to smart decomposition fallback
   }
 
   // 5. Smart Address Structure Parser:
