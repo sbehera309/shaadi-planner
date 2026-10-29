@@ -745,7 +745,8 @@ export function findOptimalTourOrder(
   bufferBetweenToursMinutes: number = 15,
   includesLunchBreak: boolean = true,
   lockedAppointmentTimes: Record<string, string> = {},
-  startTimePlanningMode: StartTimePlanningMode = 'venue_arrival'
+  startTimePlanningMode: StartTimePlanningMode = 'venue_arrival',
+  customVenueDurations: Record<string, number> = {}
 ): {
   orderedVenues: VenueOption[];
   totalDistanceMiles: number;
@@ -1070,10 +1071,14 @@ export function findOptimalTourOrder(
         if (minsA >= minsB) {
           timingPenalty += 100000; // Impossible order (e.g. 1pm after 2pm)
         } else {
-          let minNeeded = durationPerTourMinutes;
+          const durationA = (customVenueDurations && customVenueDurations[candidateOrder[idxA].id]) || durationPerTourMinutes;
+          let minNeeded = durationA;
           for (let legIdx = idxA + 1; legIdx <= idxB; legIdx++) {
             minNeeded += currentLegs[legIdx]?.durationMinutes || 15;
-            if (legIdx < idxB) minNeeded += durationPerTourMinutes;
+            if (legIdx < idxB) {
+              const legVenueDuration = (customVenueDurations && customVenueDurations[candidateOrder[legIdx].id]) || durationPerTourMinutes;
+              minNeeded += legVenueDuration;
+            }
           }
           if (minsB - minsA < minNeeded) {
             timingPenalty += 50000; // Travel + tour time exceeds gap
@@ -1089,7 +1094,8 @@ export function findOptimalTourOrder(
       if (firstLockedIdx > 0) {
         let leadNeeded = 0;
         for (let b = 0; b < firstLockedIdx; b++) {
-          leadNeeded += durationPerTourMinutes;
+          const bDuration = (customVenueDurations && customVenueDurations[candidateOrder[b].id]) || durationPerTourMinutes;
+          leadNeeded += bDuration;
           leadNeeded += currentLegs[b + 1]?.durationMinutes || 15;
           leadNeeded += bufferBetweenToursMinutes;
         }
@@ -1144,7 +1150,8 @@ export function findOptimalTourOrder(
           currentMins = timeStringToMinutes(arrival);
         }
 
-        const departure = addMinutesToTimeString(arrival, durationPerTourMinutes);
+        const vDuration = (customVenueDurations && customVenueDurations[v.id]) || durationPerTourMinutes;
+        const departure = addMinutesToTimeString(arrival, vDuration);
         const timingCheck = evaluateTourStopTiming(v, tourDate, arrival, departure);
         if (!timingCheck.isWithinHours) {
           timingPenalty += 500;
@@ -1290,6 +1297,7 @@ export function generateSiteTourSchedule({
   includesLunchBreak = true,
   lockedAppointmentTimes = {},
   startTimePlanningMode = 'venue_arrival',
+  customVenueDurations = {},
 }: {
   weddingId: string;
   tourDate: string;
@@ -1303,6 +1311,7 @@ export function generateSiteTourSchedule({
   bufferBetweenToursMinutes?: number;
   includesLunchBreak?: boolean;
   lockedAppointmentTimes?: Record<string, string>;
+  customVenueDurations?: Record<string, number>;
 }): SiteTourDayPlan {
   const {
     orderedVenues,
@@ -1321,7 +1330,8 @@ export function generateSiteTourSchedule({
     bufferBetweenToursMinutes,
     includesLunchBreak,
     lockedAppointmentTimes,
-    startTimePlanningMode
+    startTimePlanningMode,
+    customVenueDurations
   );
 
   const lockedIndices: number[] = [];
@@ -1342,7 +1352,8 @@ export function generateSiteTourSchedule({
     if (firstLockedIdx > 0) {
       let leadNeeded = 0;
       for (let b = 0; b < firstLockedIdx; b++) {
-        leadNeeded += durationPerTourMinutes;
+        const bDuration = (customVenueDurations && customVenueDurations[orderedVenues[b].id]) || durationPerTourMinutes;
+        leadNeeded += bDuration;
         leadNeeded += legMetrics[b + 1]?.durationMinutes || 15;
         leadNeeded += bufferBetweenToursMinutes;
       }
@@ -1375,6 +1386,7 @@ export function generateSiteTourSchedule({
     const leg = legMetrics[i] || { distanceMiles: 5, durationMinutes: 15 };
     const isLockedTime = Boolean(lockedAppointmentTimes && lockedAppointmentTimes[venue.id]);
     const lockedTime = isLockedTime ? lockedAppointmentTimes[venue.id] : undefined;
+    const vDuration = (customVenueDurations && customVenueDurations[venue.id]) || durationPerTourMinutes;
 
     let suggestedArrival: string;
     if (isLockedTime && lockedTime) {
@@ -1385,7 +1397,7 @@ export function generateSiteTourSchedule({
       const arrivalRaw = addMinutesToTimeString(currentTime, leg.durationMinutes);
       suggestedArrival = roundToQuarterHour(arrivalRaw);
     }
-    const suggestedDeparture = addMinutesToTimeString(suggestedArrival, durationPerTourMinutes);
+    const suggestedDeparture = addMinutesToTimeString(suggestedArrival, vDuration);
 
     const nextVenue = i < orderedVenues.length - 1 ? orderedVenues[i + 1] : undefined;
     const nextLeg = i < orderedVenues.length - 1 ? legMetrics[i + 1] : undefined;
@@ -1406,7 +1418,7 @@ export function generateSiteTourSchedule({
       const firstLockedTime = lockedAppointmentTimes[firstLockedVenue.id];
 
       if (i < firstLockedIdx) {
-        appointmentBookingAdvice = `📞 Recommended Booking Slot: Call ${venue.name} sales office to schedule between ${suggestedArrival} – ${suggestedDeparture}. This provides a ${durationPerTourMinutes}-min walkthrough and travel buffer to comfortably make your locked ${firstLockedTime} appointment at ${firstLockedVenue.name}.`;
+        appointmentBookingAdvice = `📞 Recommended Booking Slot: Call ${venue.name} sales office to schedule between ${suggestedArrival} – ${suggestedDeparture}. This provides a ${vDuration}-min walkthrough and travel buffer to comfortably make your locked ${firstLockedTime} appointment at ${firstLockedVenue.name}.`;
       } else {
         const prevLockedIdx = lockedIndices.filter((idx) => idx < i).pop() ?? firstLockedIdx;
         const prevLockedVenue = orderedVenues[prevLockedIdx];
@@ -1417,6 +1429,15 @@ export function generateSiteTourSchedule({
       appointmentBookingAdvice = `✨ Flexible Slot: Call ${venue.name} sales office to reserve this recommended ${suggestedArrival} walkthrough window.`;
     }
 
+    let windowLabel = `${vDuration} min tour & Q&A`;
+    if (vDuration <= 30) {
+      windowLabel = `${vDuration} min quick walkthrough (lower interest)`;
+    } else if (vDuration <= 45) {
+      windowLabel = `${vDuration} min short tour`;
+    } else if (vDuration >= 75) {
+      windowLabel = `${vDuration} min in-depth tour & catering review`;
+    }
+
     stops.push({
       stopOrder: i + 1,
       venueId: venue.id,
@@ -1424,8 +1445,9 @@ export function generateSiteTourSchedule({
       address: venue.address,
       city: `${venue.city}, ${venue.state}`,
       suggestedArrivalTime: suggestedArrival,
-      suggestedTourWindow: `${suggestedArrival} – ${suggestedDeparture} (${durationPerTourMinutes} min tour & Q&A)`,
+      suggestedTourWindow: `${suggestedArrival} – ${suggestedDeparture} (${windowLabel})`,
       suggestedDepartureTime: suggestedDeparture,
+      tourDurationMinutes: vDuration,
       drivingTimeToNextMinutes: nextLeg?.durationMinutes,
       distanceToNextMiles: nextLeg?.distanceMiles,
       nextStopName: nextVenue?.name,
@@ -1495,6 +1517,7 @@ export function generateSiteTourSchedule({
     dayStartTime,
     startTimePlanningMode,
     durationPerTourMinutes,
+    customVenueDurations,
     bufferBetweenToursMinutes,
     includesLunchBreak,
     lunchBreakWindow: lunchWindow,

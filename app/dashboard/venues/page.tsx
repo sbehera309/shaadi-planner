@@ -254,7 +254,36 @@ export default function VenuesPage() {
     meetingMode: (tourPlan?.meetingMode || 'meet_at_first_venue') as DualFamilyMeetingMode,
     selectedVenueIds: tourPlan?.selectedVenueIds || venues.slice(0, 3).map((v) => v.id),
     lockedAppointmentTimes: (tourPlan?.lockedAppointmentTimes || {}) as Record<string, string>,
+    customVenueDurations: (tourPlan?.customVenueDurations || {}) as Record<string, number>,
   });
+
+  const handleSetVenueDuration = (venueId: string, durationMinutes: number) => {
+    const updatedDurations = {
+      ...tourForm.customVenueDurations,
+      [venueId]: durationMinutes,
+    };
+    const updated = {
+      ...tourForm,
+      customVenueDurations: updatedDurations,
+    };
+    setTourForm(updated);
+    if (tourPlan && tourPlan.optimizedStops.length > 0) {
+      recalculateTourPlan(updated);
+    }
+  };
+
+  const handleResetVenueDuration = (venueId: string) => {
+    const copy = { ...tourForm.customVenueDurations };
+    delete copy[venueId];
+    const updated = {
+      ...tourForm,
+      customVenueDurations: copy,
+    };
+    setTourForm(updated);
+    if (tourPlan && tourPlan.optimizedStops.length > 0) {
+      recalculateTourPlan(updated);
+    }
+  };
 
   const handleSetLockedTime = (venueId: string, time: string) => {
     const updated = {
@@ -538,10 +567,17 @@ export default function VenuesPage() {
         ? prev.selectedVenueIds.filter((id) => id !== venueId)
         : [...prev.selectedVenueIds, venueId];
       const updatedLocked = { ...prev.lockedAppointmentTimes };
+      const updatedDurations = { ...prev.customVenueDurations };
       if (exists) {
         delete updatedLocked[venueId];
+        delete updatedDurations[venueId];
       }
-      return { ...prev, selectedVenueIds: updated, lockedAppointmentTimes: updatedLocked };
+      return {
+        ...prev,
+        selectedVenueIds: updated,
+        lockedAppointmentTimes: updatedLocked,
+        customVenueDurations: updatedDurations,
+      };
     });
   };
 
@@ -564,6 +600,7 @@ export default function VenuesPage() {
       dayStartTime: formToUse.dayStartTime,
       startTimePlanningMode: formToUse.startTimePlanningMode,
       durationPerTourMinutes: formToUse.durationPerTourMinutes,
+      customVenueDurations: formToUse.customVenueDurations,
       bufferBetweenToursMinutes: formToUse.bufferBetweenToursMinutes,
       includesLunchBreak: formToUse.includesLunchBreak,
       lockedAppointmentTimes: formToUse.lockedAppointmentTimes,
@@ -2699,7 +2736,7 @@ export default function VenuesPage() {
                 </div>
 
               <div>
-                <label className="font-semibold text-stone-700 block mb-1">Tour Length per Venue</label>
+                <label className="font-semibold text-stone-700 block mb-1">Default Tour Length</label>
                 <select
                   value={tourForm.durationPerTourMinutes}
                   onChange={(e) => {
@@ -2712,10 +2749,15 @@ export default function VenuesPage() {
                   }}
                   className="w-full px-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
                 >
-                  <option value={45}>45 mins (Quick Walkthrough)</option>
+                  <option value={30}>30 mins (Quick Walkthrough)</option>
+                  <option value={45}>45 mins (Short Walkthrough)</option>
                   <option value={60}>60 mins (Standard Tour + Q&A)</option>
                   <option value={75}>75 mins (Deep Dive & Catering)</option>
+                  <option value={90}>90 mins (Comprehensive Tour)</option>
                 </select>
+                <span className="text-[10px] text-stone-500 mt-0.5 block">
+                  Customize per venue below
+                </span>
               </div>
 
               <div>
@@ -2830,57 +2872,115 @@ export default function VenuesPage() {
                       </label>
 
                       {isChecked && (
-                        <div className="mt-2.5 pt-2 border-t border-stone-200/70 flex items-center justify-between text-xs">
-                          <span className="text-[10px] font-semibold text-stone-500 flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-stone-400" />
-                            <span>Tour Slot:</span>
-                          </span>
-                          <div className="flex items-center gap-1.5">
-                            {lockedTime ? (
-                              <div className="flex items-center gap-1.5 bg-white px-2 py-0.5 rounded-lg border border-indigo-300 shadow-2xs">
-                                <span className="font-mono font-bold text-[11px] text-indigo-950 flex items-center gap-1">
-                                  <Lock className="w-2.5 h-2.5 text-indigo-600" />
-                                  <span>{lockedTime}</span>
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleClearLockedTime(v.id);
+                        <div className="mt-2.5 pt-2 border-t border-stone-200/70 space-y-2 text-xs">
+                          {/* Row 1: Hard vs Flexible Appointment */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-semibold text-stone-500 flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-stone-400" />
+                              <span>Tour Slot:</span>
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              {lockedTime ? (
+                                <div className="flex items-center gap-1.5 bg-white px-2 py-0.5 rounded-lg border border-indigo-300 shadow-2xs">
+                                  <span className="font-mono font-bold text-[11px] text-indigo-950 flex items-center gap-1">
+                                    <Lock className="w-2.5 h-2.5 text-indigo-600" />
+                                    <span>{lockedTime}</span>
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleClearLockedTime(v.id);
+                                    }}
+                                    className="text-stone-400 hover:text-stone-800 text-xs px-0.5 font-bold"
+                                    title="Clear hard appointment (make flexible)"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              ) : (
+                                <select
+                                  value=""
+                                  onChange={(e) => {
+                                    if (e.target.value) {
+                                      handleSetLockedTime(v.id, e.target.value);
+                                    }
                                   }}
-                                  className="text-stone-400 hover:text-stone-800 text-xs px-0.5 font-bold"
-                                  title="Clear hard appointment (make flexible)"
+                                  className="text-[10px] font-semibold py-0.5 px-2 rounded-lg bg-white border border-stone-300 text-stone-700 hover:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
                                 >
-                                  ✕
-                                </button>
-                              </div>
-                            ) : (
-                              <select
-                                value=""
-                                onChange={(e) => {
-                                  if (e.target.value) {
-                                    handleSetLockedTime(v.id, e.target.value);
-                                  }
-                                }}
-                                className="text-[10px] font-semibold py-0.5 px-2 rounded-lg bg-white border border-stone-300 text-stone-700 hover:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-                              >
-                                <option value="">✨ Flexible Slot</option>
-                                <option value="10:00 AM">🔒 Hard Appt: 10:00 AM</option>
-                                <option value="10:30 AM">🔒 Hard Appt: 10:30 AM</option>
-                                <option value="11:00 AM">🔒 Hard Appt: 11:00 AM</option>
-                                <option value="11:30 AM">🔒 Hard Appt: 11:30 AM</option>
-                                <option value="12:00 PM">🔒 Hard Appt: 12:00 PM</option>
-                                <option value="12:30 PM">🔒 Hard Appt: 12:30 PM</option>
-                                <option value="01:00 PM">🔒 Hard Appt: 1:00 PM</option>
-                                <option value="01:30 PM">🔒 Hard Appt: 1:30 PM</option>
-                                <option value="02:00 PM">🔒 Hard Appt: 2:00 PM</option>
-                                <option value="02:30 PM">🔒 Hard Appt: 2:30 PM</option>
-                                <option value="03:00 PM">🔒 Hard Appt: 3:00 PM</option>
-                                <option value="03:30 PM">🔒 Hard Appt: 3:30 PM</option>
-                                <option value="04:00 PM">🔒 Hard Appt: 4:00 PM</option>
-                              </select>
-                            )}
+                                  <option value="">✨ Flexible Slot</option>
+                                  <option value="10:00 AM">🔒 Hard Appt: 10:00 AM</option>
+                                  <option value="10:30 AM">🔒 Hard Appt: 10:30 AM</option>
+                                  <option value="11:00 AM">🔒 Hard Appt: 11:00 AM</option>
+                                  <option value="11:30 AM">🔒 Hard Appt: 11:30 AM</option>
+                                  <option value="12:00 PM">🔒 Hard Appt: 12:00 PM</option>
+                                  <option value="12:30 PM">🔒 Hard Appt: 12:30 PM</option>
+                                  <option value="01:00 PM">🔒 Hard Appt: 1:00 PM</option>
+                                  <option value="01:30 PM">🔒 Hard Appt: 1:30 PM</option>
+                                  <option value="02:00 PM">🔒 Hard Appt: 2:00 PM</option>
+                                  <option value="02:30 PM">🔒 Hard Appt: 2:30 PM</option>
+                                  <option value="03:00 PM">🔒 Hard Appt: 3:00 PM</option>
+                                  <option value="03:30 PM">🔒 Hard Appt: 3:30 PM</option>
+                                  <option value="04:00 PM">🔒 Hard Appt: 4:00 PM</option>
+                                </select>
+                              )}
+                            </div>
                           </div>
+
+                          {/* Row 2: Custom Time Options Spent at Venue */}
+                          {(() => {
+                            const venueDuration = tourForm.customVenueDurations?.[v.id] || tourForm.durationPerTourMinutes;
+                            const isCustom = Boolean(tourForm.customVenueDurations?.[v.id]);
+                            return (
+                              <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-dashed border-stone-200">
+                                <span className="text-[10px] font-bold text-stone-700 flex items-center gap-1">
+                                  <span>⏱️ Time:</span>
+                                  {venueDuration <= 30 ? (
+                                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300">
+                                      ⚡ Low Interest (30m)
+                                    </span>
+                                  ) : venueDuration >= 75 ? (
+                                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-purple-100 text-purple-900 border border-purple-300">
+                                      🔥 Priority ({venueDuration}m)
+                                    </span>
+                                  ) : isCustom ? (
+                                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-blue-100 text-blue-900 border border-blue-300">
+                                      Custom ({venueDuration}m)
+                                    </span>
+                                  ) : null}
+                                </span>
+
+                                <div className="flex items-center gap-1">
+                                  <select
+                                    value={venueDuration}
+                                    onChange={(e) => handleSetVenueDuration(v.id, Number(e.target.value))}
+                                    className={`text-[10px] font-semibold py-0.5 px-2 rounded-lg bg-white border cursor-pointer ${
+                                      isCustom
+                                        ? 'border-amber-500 font-bold text-amber-950 bg-amber-50/50'
+                                        : 'border-stone-300 text-stone-700 hover:border-amber-400'
+                                    }`}
+                                  >
+                                    <option value={30}>⚡ 30m (Quick Look / Lower Interest)</option>
+                                    <option value={45}>⏱️ 45m (Short Walkthrough)</option>
+                                    <option value={60}>⭐ 60m (Standard Tour + Q&A)</option>
+                                    <option value={75}>✨ 75m (In-Depth Tour & Catering)</option>
+                                    <option value={90}>🔥 90m (Top Priority / VIP)</option>
+                                    <option value={120}>💎 120m (Full Consultation)</option>
+                                  </select>
+                                  {isCustom && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleResetVenueDuration(v.id)}
+                                      className="text-[9px] text-stone-400 hover:text-stone-700 font-bold px-1"
+                                      title="Reset to default duration"
+                                    >
+                                      ↺
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
                       )}
                     </div>
@@ -3312,6 +3412,73 @@ export default function VenuesPage() {
                             )}
                           </div>
 
+                          {/* Interactive Custom Time Spent per Venue Control */}
+                          <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-stone-50 border border-stone-200 text-xs">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] font-bold text-stone-700 flex items-center gap-1">
+                                <span>⏱️</span>
+                                <span>Time Allocated:</span>
+                              </span>
+                              {(() => {
+                                const curDur = stop.tourDurationMinutes || tourForm.durationPerTourMinutes;
+                                if (curDur <= 30) {
+                                  return (
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-950 border border-amber-300">
+                                      ⚡ 30m (Quick Walkthrough — Lower Interest)
+                                    </span>
+                                  );
+                                }
+                                if (curDur <= 45) {
+                                  return (
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-100 text-blue-950 border border-blue-300">
+                                      ⏱️ 45m (Short Tour)
+                                    </span>
+                                  );
+                                }
+                                if (curDur >= 75) {
+                                  return (
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-100 text-purple-950 border border-purple-300">
+                                      🔥 {curDur}m (Top Contender / Detailed)
+                                    </span>
+                                  );
+                                }
+                                return (
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-stone-200 text-stone-800">
+                                    ⭐ 60m (Standard Tour)
+                                  </span>
+                                );
+                              })()}
+                            </div>
+
+                            {/* 1-Click Duration Switcher Pills */}
+                            <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-stone-300 shadow-2xs">
+                              <span className="text-[10px] font-semibold text-stone-500 pl-1.5 pr-0.5">Adjust time:</span>
+                              {[30, 45, 60, 75, 90].map((mins) => {
+                                const currentDur = stop.tourDurationMinutes || tourForm.durationPerTourMinutes;
+                                const isCurrent = currentDur === mins;
+                                return (
+                                  <button
+                                    key={mins}
+                                    type="button"
+                                    onClick={() => handleSetVenueDuration(stop.venueId, mins)}
+                                    className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                                      isCurrent
+                                        ? mins <= 30
+                                          ? 'bg-amber-400 text-stone-950 shadow-2xs'
+                                          : mins >= 75
+                                          ? 'bg-purple-900 text-white shadow-2xs'
+                                          : 'bg-stone-900 text-white shadow-2xs'
+                                        : 'text-stone-600 hover:bg-stone-100'
+                                    }`}
+                                    title={mins <= 30 ? 'Allocate less time for lower interest venue' : `${mins} minutes`}
+                                  >
+                                    {mins}m
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
                           {/* Booking Advice Card with Lock Slot button */}
                           {stop.appointmentBookingAdvice && (
                             <div className={`p-3 rounded-xl border text-xs flex items-start justify-between gap-3 ${
@@ -3355,7 +3522,9 @@ export default function VenuesPage() {
                                       meetingMode: tourForm.meetingMode,
                                       venues: selectedVenues,
                                       dayStartTime: tourForm.dayStartTime,
+                                      startTimePlanningMode: tourForm.startTimePlanningMode,
                                       durationPerTourMinutes: tourForm.durationPerTourMinutes,
+                                      customVenueDurations: tourForm.customVenueDurations,
                                       bufferBetweenToursMinutes: tourForm.bufferBetweenToursMinutes,
                                       includesLunchBreak: tourForm.includesLunchBreak,
                                       lockedAppointmentTimes: updatedLocked,

@@ -392,6 +392,7 @@ export interface ScheduledTourStop {
   suggestedArrivalTime: string; // e.g. "10:00 AM"
   suggestedTourWindow: string; // e.g. "10:00 AM - 11:00 AM (60 min tour & Q&A)"
   suggestedDepartureTime: string; // e.g. "11:00 AM"
+  tourDurationMinutes?: number; // Custom time allocated for this venue (e.g. 30, 45, 60, 75, 90 mins)
   drivingMinutesFromPrev?: number;
   distanceMilesFromPrev?: number;
   drivingTimeToNextMinutes?: number;
@@ -453,6 +454,7 @@ export interface SiteTourDayPlan {
   dayStartTime: string; // e.g. "09:30 AM"
   startTimePlanningMode?: StartTimePlanningMode;
   durationPerTourMinutes: number; // e.g. 60
+  customVenueDurations?: Record<string, number>; // venueId -> minutes (e.g. { 'v-1': 30, 'v-2': 75 })
   bufferBetweenToursMinutes: number; // e.g. 15
   includesLunchBreak: boolean;
   lunchBreakWindow?: { startTime: string; durationMinutes: number; note: string };
