@@ -9,6 +9,8 @@ import {
   FamilyAddressInput,
   SiteTourDayPlan,
   NearestHotelInfo,
+  DualFamilyMeetingMode,
+  DualFamilyStartPlan,
 } from '@/lib/types';
 import { Modal } from '@/components/Modal';
 import {
@@ -190,6 +192,7 @@ export default function VenuesPage() {
       state: tourPlan?.secondFamilyLocation?.state || 'NJ',
       zipCode: tourPlan?.secondFamilyLocation?.zipCode || '08820',
     },
+    meetingMode: (tourPlan?.meetingMode || 'meet_at_first_venue') as DualFamilyMeetingMode,
     selectedVenueIds: tourPlan?.selectedVenueIds || venues.slice(0, 3).map((v) => v.id),
   });
 
@@ -451,6 +454,7 @@ export default function VenuesPage() {
       tourDate: tourForm.tourDate,
       startLocation,
       secondFamilyLocation,
+      meetingMode: tourForm.meetingMode,
       venues: selectedVenues,
       dayStartTime: tourForm.dayStartTime,
       durationPerTourMinutes: tourForm.durationPerTourMinutes,
@@ -1742,6 +1746,83 @@ export default function VenuesPage() {
               </p>
             </div>
 
+            {/* Dual-Family Route Planning Strategy Selection */}
+            <div className="space-y-2 pt-1">
+              <label className="text-xs font-bold text-stone-700 uppercase tracking-wider block">
+                Dual-Family Route Planning Strategy
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {/* Option 1: Balanced Stop #1 */}
+                <button
+                  type="button"
+                  onClick={() => setTourForm({ ...tourForm, meetingMode: 'meet_at_first_venue' })}
+                  className={`p-3.5 rounded-2xl border text-left transition-all ${
+                    tourForm.meetingMode === 'meet_at_first_venue'
+                      ? 'bg-amber-50/80 border-amber-500 ring-2 ring-amber-400/20 shadow-xs'
+                      : 'bg-stone-50 hover:bg-stone-100/70 border-stone-200'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="font-bold text-xs text-stone-900 flex items-center gap-1.5">
+                      <span>🤝</span>
+                      <span>Meet at Balanced Stop #1</span>
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-200 text-amber-900 font-bold">
+                      Recommended
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-stone-600 leading-relaxed">
+                    Picks a fair, central 1st venue between both homes. Computes synchronized departure times so Groom and Bride families arrive together without waiting.
+                  </p>
+                </button>
+
+                {/* Option 2: Carpool Morning Chai */}
+                <button
+                  type="button"
+                  onClick={() => setTourForm({ ...tourForm, meetingMode: 'carpool_pickup' })}
+                  className={`p-3.5 rounded-2xl border text-left transition-all ${
+                    tourForm.meetingMode === 'carpool_pickup'
+                      ? 'bg-amber-50/80 border-amber-500 ring-2 ring-amber-400/20 shadow-xs'
+                      : 'bg-stone-50 hover:bg-stone-100/70 border-stone-200'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="font-bold text-xs text-stone-900 flex items-center gap-1.5">
+                      <span>🚙</span>
+                      <span>Carpool &amp; Morning Chai</span>
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-stone-200 text-stone-700 font-semibold">
+                      20m Chai
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-stone-600 leading-relaxed">
+                    One family drives to the other for a 20-min morning chai break. Auto-selects driver to minimize driving and eliminate backtracking.
+                  </p>
+                </button>
+
+                {/* Option 3: Single Family Origin */}
+                <button
+                  type="button"
+                  onClick={() => setTourForm({ ...tourForm, meetingMode: 'single_family_start' })}
+                  className={`p-3.5 rounded-2xl border text-left transition-all ${
+                    tourForm.meetingMode === 'single_family_start'
+                      ? 'bg-amber-50/80 border-amber-500 ring-2 ring-amber-400/20 shadow-xs'
+                      : 'bg-stone-50 hover:bg-stone-100/70 border-stone-200'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="font-bold text-xs text-stone-900 flex items-center gap-1.5">
+                      <span>🏠</span>
+                      <span>Single Family Origin</span>
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-stone-600 leading-relaxed">
+                    Caravan starts directly from the selected primary family residence.
+                  </p>
+                </button>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
               {/* Family Address 1: Groom's Side */}
               <div className="p-4 sm:p-5 rounded-2xl bg-stone-50/70 border border-stone-200 space-y-3">
@@ -1750,15 +1831,21 @@ export default function VenuesPage() {
                     <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
                     <span>Family Address 1 (Groom's Side)</span>
                   </span>
-                  <label className="text-[11px] font-semibold text-stone-500 flex items-center gap-1 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="primarySide"
-                      checked={tourForm.primarySide === 'groom'}
-                      onChange={() => setTourForm({ ...tourForm, primarySide: 'groom' })}
-                    />
-                    <span>Start Day Here</span>
-                  </label>
+                  {tourForm.meetingMode === 'meet_at_first_venue' ? (
+                    <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                      Simultaneous Departure
+                    </span>
+                  ) : (
+                    <label className="text-[11px] font-semibold text-stone-500 flex items-center gap-1 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="primarySide"
+                        checked={tourForm.primarySide === 'groom'}
+                        onChange={() => setTourForm({ ...tourForm, primarySide: 'groom' })}
+                      />
+                      <span>{tourForm.meetingMode === 'carpool_pickup' ? 'Driver (Starts Here)' : 'Start Day Here'}</span>
+                    </label>
+                  )}
                 </div>
 
                 <AddressAutocompleteInput
@@ -1791,15 +1878,21 @@ export default function VenuesPage() {
                     <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
                     <span>Family Address 2 (Bride's Side)</span>
                   </span>
-                  <label className="text-[11px] font-semibold text-stone-500 flex items-center gap-1 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="primarySide"
-                      checked={tourForm.primarySide === 'bride'}
-                      onChange={() => setTourForm({ ...tourForm, primarySide: 'bride' })}
-                    />
-                    <span>Start Day Here</span>
-                  </label>
+                  {tourForm.meetingMode === 'meet_at_first_venue' ? (
+                    <span className="text-[11px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
+                      Simultaneous Departure
+                    </span>
+                  ) : (
+                    <label className="text-[11px] font-semibold text-stone-500 flex items-center gap-1 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="primarySide"
+                        checked={tourForm.primarySide === 'bride'}
+                        onChange={() => setTourForm({ ...tourForm, primarySide: 'bride' })}
+                      />
+                      <span>{tourForm.meetingMode === 'carpool_pickup' ? 'Driver (Starts Here)' : 'Start Day Here'}</span>
+                    </label>
+                  )}
                 </div>
 
                 <AddressAutocompleteInput
@@ -2056,6 +2149,8 @@ export default function VenuesPage() {
                 groomAddress={tourForm.groomAddress}
                 brideAddress={tourForm.brideAddress}
                 primarySide={tourForm.primarySide}
+                meetingMode={tourPlan.meetingMode || tourForm.meetingMode}
+                dualFamilyStartPlan={tourPlan.dualFamilyStartPlan}
                 tourDate={tourPlan.tourDate}
                 stops={tourPlan.optimizedStops}
                 lunchBreakWindow={tourPlan.lunchBreakWindow}
@@ -2065,9 +2160,112 @@ export default function VenuesPage() {
                 allShortlistedVenues={venues}
               />
 
-              {/* Sequential Stops Timeline */}
-              <div className="space-y-4">
-                {/* Starting Origin */}
+              {/* Dual-Family Starting & Departure Coordination Card */}
+              {tourPlan.dualFamilyStartPlan ? (
+                <div className="bg-gradient-to-br from-stone-900 via-stone-900 to-stone-950 text-white rounded-3xl p-5 sm:p-6 border border-stone-800 shadow-lg space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-stone-800">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center font-bold text-base border border-amber-500/30">
+                        {tourPlan.meetingMode === 'meet_at_first_venue' ? '🤝' : tourPlan.meetingMode === 'carpool_pickup' ? '🚙' : '🏠'}
+                      </span>
+                      <div>
+                        <h4 className="font-bold text-base text-amber-100 font-serif">
+                          {tourPlan.meetingMode === 'meet_at_first_venue'
+                            ? 'Dual-Family Simultaneous Departure Coordination'
+                            : tourPlan.meetingMode === 'carpool_pickup'
+                            ? 'Carpool Caravan with Morning Chai'
+                            : 'Single Family Starting Point'}
+                        </h4>
+                        <p className="text-xs text-stone-400">
+                          {tourPlan.dualFamilyStartPlan.fairnessSummary}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="px-3 py-1 rounded-xl bg-amber-400/20 text-amber-300 font-bold text-xs border border-amber-400/30 self-start sm:self-auto flex items-center gap-1.5">
+                      <span>📍 Rendezvous at Stop #1:</span>
+                      <span className="underline decoration-amber-400 font-mono text-sm">{tourPlan.dualFamilyStartPlan.rendezvousArrivalTime}</span>
+                    </div>
+                  </div>
+
+                  {tourPlan.meetingMode === 'meet_at_first_venue' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                      {/* Groom side departure card */}
+                      <div className="p-4 rounded-2xl bg-stone-800/60 border border-blue-900/40 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs text-blue-300 flex items-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                            <span>🤵 Groom's Family Departure</span>
+                          </span>
+                          <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-md bg-blue-950 text-blue-200 border border-blue-800/60">
+                            ~{tourPlan.dualFamilyStartPlan.groomDeparture.drivingMinutesToFirstStop} min drive
+                          </span>
+                        </div>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-2xl font-extrabold font-mono text-white">
+                            {tourPlan.dualFamilyStartPlan.groomDeparture.recommendedDepartureTime}
+                          </span>
+                          <span className="text-xs text-stone-400">
+                            from {tourPlan.dualFamilyStartPlan.groomDeparture.homeCity}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-stone-400">
+                          📍 {tourPlan.dualFamilyStartPlan.groomDeparture.homeAddress} ({tourPlan.dualFamilyStartPlan.groomDeparture.distanceMilesToFirstStop} mi to {tourPlan.dualFamilyStartPlan.firstMeetingPointName})
+                        </div>
+                      </div>
+
+                      {/* Bride side departure card */}
+                      <div className="p-4 rounded-2xl bg-stone-800/60 border border-rose-900/40 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs text-rose-300 flex items-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                            <span>👰 Bride's Family Departure</span>
+                          </span>
+                          <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-md bg-rose-950 text-rose-200 border border-rose-800/60">
+                            ~{tourPlan.dualFamilyStartPlan.brideDeparture.drivingMinutesToFirstStop} min drive
+                          </span>
+                        </div>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-2xl font-extrabold font-mono text-white">
+                            {tourPlan.dualFamilyStartPlan.brideDeparture.recommendedDepartureTime}
+                          </span>
+                          <span className="text-xs text-stone-400">
+                            from {tourPlan.dualFamilyStartPlan.brideDeparture.homeCity}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-stone-400">
+                          📍 {tourPlan.dualFamilyStartPlan.brideDeparture.homeAddress} ({tourPlan.dualFamilyStartPlan.brideDeparture.distanceMilesToFirstStop} mi to {tourPlan.dualFamilyStartPlan.firstMeetingPointName})
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {tourPlan.meetingMode === 'carpool_pickup' && tourPlan.dualFamilyStartPlan.pickupOrder && (
+                    <div className="p-4 rounded-2xl bg-stone-800/60 border border-amber-900/40 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-2xl">☕</span>
+                          <div>
+                            <div className="font-bold text-xs text-amber-200">
+                              Morning Chai &amp; Carpool Stop in {tourPlan.dualFamilyStartPlan.pickupOrder.pickupCity}
+                            </div>
+                            <div className="text-[11px] text-stone-400">
+                              {tourPlan.dualFamilyStartPlan.pickupOrder.driverSide === 'groom' ? "Groom's family" : "Bride's family"} arrives at {tourPlan.dualFamilyStartPlan.pickupOrder.pickupTime} ({tourPlan.dualFamilyStartPlan.pickupOrder.chaiBufferMinutes}-min chai buffer)
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right text-xs">
+                          <span className="font-bold text-stone-300">Caravan departs together: </span>
+                          <span className="font-mono text-amber-300 font-bold">
+                            {tourPlan.dualFamilyStartPlan.groomDeparture.side === tourPlan.dualFamilyStartPlan.pickupOrder.passengerSide
+                              ? tourPlan.dualFamilyStartPlan.groomDeparture.recommendedDepartureTime
+                              : tourPlan.dualFamilyStartPlan.brideDeparture.recommendedDepartureTime}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
                 <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-stone-50 border border-stone-200 text-xs">
                   <div className="w-8 h-8 rounded-full bg-stone-900 text-white flex items-center justify-center font-bold shrink-0">
                     🏁
@@ -2085,6 +2283,10 @@ export default function VenuesPage() {
                     </span>
                   </div>
                 </div>
+              )}
+
+              {/* Sequential Stops Timeline */}
+              <div className="space-y-4">
 
                 {/* Stops in optimal order */}
                 {tourPlan.optimizedStops.map((stop, index) => {

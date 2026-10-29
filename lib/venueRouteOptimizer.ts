@@ -5,6 +5,9 @@ import {
   SiteTourDayPlan,
   VenueTouringHours,
   StopTouringStatus,
+  DualFamilyMeetingMode,
+  DualFamilyStartPlan,
+  FamilyDepartureDetail,
 } from './types';
 
 // Known coordinates for common wedding hub cities & metro areas
@@ -231,6 +234,28 @@ export function roundToQuarterHour(timeStr: string): string {
   const roundedMinutes = Math.round(minutes / 15) * 15;
   const totalMinutes = hours * 60 + roundedMinutes;
 
+  const newHours24 = Math.floor(totalMinutes / 60) % 24;
+  const newMinutes = totalMinutes % 60;
+
+  const newModifier = newHours24 >= 12 ? 'PM' : 'AM';
+  const newHours12 = newHours24 % 12 === 0 ? 12 : newHours24 % 12;
+
+  const padMin = newMinutes < 10 ? `0${newMinutes}` : `${newMinutes}`;
+  return `${newHours12}:${padMin} ${newModifier}`;
+}
+
+/**
+ * Helper to subtract minutes from a time string like "10:00 AM" -> "09:35 AM"
+ */
+export function subtractMinutesFromTimeString(timeStr: string, minutesToSubtract: number): string {
+  const [timePart, modifier] = timeStr.trim().split(' ');
+  let [hours, minutes] = timePart.split(':').map(Number);
+
+  if (modifier === 'PM' && hours < 12) hours += 12;
+  if (modifier === 'AM' && hours === 12) hours = 0;
+
+  let totalMinutes = hours * 60 + minutes - minutesToSubtract;
+  while (totalMinutes < 0) totalMinutes += 24 * 60;
   const newHours24 = Math.floor(totalMinutes / 60) % 24;
   const newMinutes = totalMinutes % 60;
 
@@ -571,11 +596,15 @@ export function evaluateTourStopTiming(
 
 /**
  * Finds the optimal touring order that minimizes total driving time/distance
- * while also factoring in venue operating and site tour hours to avoid after-hours appointments
+ * while factoring in:
+ * 1. Dual-family starting locations (Groom & Bride homes) to choose an equitable starting venue or pickup order
+ * 2. Venue operating and site tour hours to avoid after-hours appointments
  */
 export function findOptimalTourOrder(
   startLocation: FamilyAddressInput,
   venues: VenueOption[],
+  secondFamilyLocation?: FamilyAddressInput,
+  meetingMode: DualFamilyMeetingMode = 'meet_at_first_venue',
   tourDate: string = '2026-11-14',
   dayStartTime: string = '09:30 AM',
   durationPerTourMinutes: number = 60,
@@ -586,31 +615,9 @@ export function findOptimalTourOrder(
   totalDistanceMiles: number;
   totalDrivingMinutes: number;
   legMetrics: Array<{ distanceMiles: number; durationMinutes: number }>;
+  dualFamilyStartPlan?: DualFamilyStartPlan;
 } {
-  if (venues.length <= 1) {
-    const startCoord = getCoordinates(
-      startLocation.address,
-      startLocation.city,
-      startLocation.state,
-      startLocation.latitude,
-      startLocation.longitude
-    );
-    if (venues.length === 1) {
-      const v = venues[0];
-      const vCoord = getCoordinates(v.address, v.city, v.state, v.latitude, v.longitude);
-      const leg = estimateDrivingDistanceAndMinutes(
-        startCoord.lat,
-        startCoord.lon,
-        vCoord.lat,
-        vCoord.lon
-      );
-      return {
-        orderedVenues: venues,
-        totalDistanceMiles: leg.distanceMiles,
-        totalDrivingMinutes: leg.durationMinutes,
-        legMetrics: [leg],
-      };
-    }
+  if (venues.length === 0) {
     return {
       orderedVenues: [],
       totalDistanceMiles: 0,
@@ -618,14 +625,6 @@ export function findOptimalTourOrder(
       legMetrics: [],
     };
   }
-
-  const startCoord = getCoordinates(
-    startLocation.address,
-    startLocation.city,
-    startLocation.state,
-    startLocation.latitude,
-    startLocation.longitude
-  );
 
   // Cache venue coordinates
   const venueCoords = new Map<string, { lat: number; lon: number }>();
@@ -636,29 +635,263 @@ export function findOptimalTourOrder(
     );
   });
 
+  // Check if two family locations are present
+  const hasBothFamilies =
+    secondFamilyLocation &&
+    secondFamilyLocation.address &&
+    secondFamilyLocation.address.trim().length > 0;
+
+  const groomSide =
+    startLocation.side === 'groom'
+      ? startLocation
+      : secondFamilyLocation?.side === 'groom'
+      ? secondFamilyLocation
+      : startLocation;
+
+  const brideSide =
+    startLocation.side === 'bride'
+      ? startLocation
+      : secondFamilyLocation?.side === 'bride'
+      ? secondFamilyLocation
+      : secondFamilyLocation || startLocation;
+
+  const groomCoord = getCoordinates(
+    groomSide.address,
+    groomSide.city,
+    groomSide.state,
+    groomSide.latitude,
+    groomSide.longitude
+  );
+
+  const brideCoord = getCoordinates(
+    brideSide.address,
+    brideSide.city,
+    brideSide.state,
+    brideSide.latitude,
+    brideSide.longitude
+  );
+
   const permutations = permute(venues);
   let bestOrder: VenueOption[] = permutations[0];
   let minWeightedScore = Infinity;
   let bestLegMetrics: Array<{ distanceMiles: number; durationMinutes: number }> = [];
   let bestDrivingMinutes = 0;
   let bestDistance = 0;
+  let bestDualPlan: DualFamilyStartPlan | undefined = undefined;
 
   for (const candidateOrder of permutations) {
-    let currentDistance = 0;
-    let currentMinutes = 0;
-    const currentLegs: Array<{ distanceMiles: number; durationMinutes: number }> = [];
+    const v1 = candidateOrder[0];
+    const v1Coord = venueCoords.get(v1.id)!;
 
-    // First leg: from start point to 1st venue
-    const firstCoord = venueCoords.get(candidateOrder[0].id)!;
-    const firstLeg = estimateDrivingDistanceAndMinutes(
-      startCoord.lat,
-      startCoord.lon,
-      firstCoord.lat,
-      firstCoord.lon
-    );
-    currentDistance += firstLeg.distanceMiles;
-    currentMinutes += firstLeg.durationMinutes;
-    currentLegs.push(firstLeg);
+    let startFairnessCost = 0;
+    let initialArrivalRaw = dayStartTime;
+    const currentLegs: Array<{ distanceMiles: number; durationMinutes: number }> = [];
+    let initialDistance = 0;
+    let initialMinutes = 0;
+
+    let candidateDualPlan: DualFamilyStartPlan | undefined = undefined;
+
+    if (hasBothFamilies && meetingMode === 'meet_at_first_venue') {
+      // Both families drive separately to meet at the 1st venue
+      const groomLeg = estimateDrivingDistanceAndMinutes(
+        groomCoord.lat,
+        groomCoord.lon,
+        v1Coord.lat,
+        v1Coord.lon
+      );
+      const brideLeg = estimateDrivingDistanceAndMinutes(
+        brideCoord.lat,
+        brideCoord.lon,
+        v1Coord.lat,
+        v1Coord.lon
+      );
+
+      const maxStartMinutes = Math.max(groomLeg.durationMinutes, brideLeg.durationMinutes);
+      const avgStartDist = (groomLeg.distanceMiles + brideLeg.distanceMiles) / 2;
+      const discrepancyMinutes = Math.abs(groomLeg.durationMinutes - brideLeg.durationMinutes);
+
+      // Score prioritizes low combined distance and balanced travel times
+      startFairnessCost = avgStartDist * 0.8 + discrepancyMinutes * 0.6;
+      initialArrivalRaw = addMinutesToTimeString(dayStartTime, maxStartMinutes);
+
+      const firstArrivalRounded = roundToQuarterHour(initialArrivalRaw);
+      const groomDepartureTime = subtractMinutesFromTimeString(
+        firstArrivalRounded,
+        groomLeg.durationMinutes
+      );
+      const brideDepartureTime = subtractMinutesFromTimeString(
+        firstArrivalRounded,
+        brideLeg.durationMinutes
+      );
+
+      const fairnessSummary =
+        discrepancyMinutes <= 12
+          ? `Equitable starting venue: Groom's family departs ${groomSide.city} at ${groomDepartureTime} (~${groomLeg.durationMinutes}m drive), Bride's family departs ${brideSide.city} at ${brideDepartureTime} (~${brideLeg.durationMinutes}m drive). Both arrive smoothly at ${firstArrivalRounded}.`
+          : `Meeting at ${v1.name}: Groom departs ${groomSide.city} at ${groomDepartureTime} (~${groomLeg.durationMinutes}m), Bride departs ${brideSide.city} at ${brideDepartureTime} (~${brideLeg.durationMinutes}m). Rendezvous at ${firstArrivalRounded}.`;
+
+      candidateDualPlan = {
+        mode: 'meet_at_first_venue',
+        firstMeetingPointName: v1.name,
+        groomDeparture: {
+          side: 'groom',
+          familyLabel: groomSide.label || "Groom's Family",
+          homeAddress: groomSide.address,
+          homeCity: groomSide.city,
+          recommendedDepartureTime: groomDepartureTime,
+          drivingMinutesToFirstStop: groomLeg.durationMinutes,
+          distanceMilesToFirstStop: groomLeg.distanceMiles,
+        },
+        brideDeparture: {
+          side: 'bride',
+          familyLabel: brideSide.label || "Bride's Family",
+          homeAddress: brideSide.address,
+          homeCity: brideSide.city,
+          recommendedDepartureTime: brideDepartureTime,
+          drivingMinutesToFirstStop: brideLeg.durationMinutes,
+          distanceMilesToFirstStop: brideLeg.distanceMiles,
+        },
+        rendezvousArrivalTime: firstArrivalRounded,
+        travelDiscrepancyMinutes: discrepancyMinutes,
+        fairnessSummary,
+      };
+
+      initialDistance = avgStartDist;
+      initialMinutes = maxStartMinutes;
+      currentLegs.push({
+        distanceMiles: avgStartDist,
+        durationMinutes: maxStartMinutes,
+      });
+    } else if (hasBothFamilies && meetingMode === 'carpool_pickup') {
+      // Carpool: Groom picks up Bride vs Bride picks up Groom
+      const gToB = estimateDrivingDistanceAndMinutes(
+        groomCoord.lat,
+        groomCoord.lon,
+        brideCoord.lat,
+        brideCoord.lon
+      );
+      const bToV1 = estimateDrivingDistanceAndMinutes(
+        brideCoord.lat,
+        brideCoord.lon,
+        v1Coord.lat,
+        v1Coord.lon
+      );
+
+      const bToG = estimateDrivingDistanceAndMinutes(
+        brideCoord.lat,
+        brideCoord.lon,
+        groomCoord.lat,
+        groomCoord.lon
+      );
+      const gToV1 = estimateDrivingDistanceAndMinutes(
+        groomCoord.lat,
+        groomCoord.lon,
+        v1Coord.lat,
+        v1Coord.lon
+      );
+
+      const optionA_Miles = gToB.distanceMiles + bToV1.distanceMiles;
+      const optionB_Miles = bToG.distanceMiles + gToV1.distanceMiles;
+
+      const groomPicksUpBride = optionA_Miles <= optionB_Miles;
+      const pickupLeg = groomPicksUpBride ? gToB : bToG;
+      const venueLeg = groomPicksUpBride ? bToV1 : gToV1;
+
+      const pickupTime = addMinutesToTimeString(dayStartTime, pickupLeg.durationMinutes);
+      const chaiBufferMins = 20; // 20 mins morning chai / boarding
+      const departPickupTime = addMinutesToTimeString(pickupTime, chaiBufferMins);
+      const firstArrival = roundToQuarterHour(
+        addMinutesToTimeString(departPickupTime, venueLeg.durationMinutes)
+      );
+
+      const driverSide = groomPicksUpBride ? 'groom' : 'bride';
+      const passengerSide = groomPicksUpBride ? 'bride' : 'groom';
+      const passengerAddress = groomPicksUpBride ? brideSide.address : groomSide.address;
+      const passengerCity = groomPicksUpBride ? brideSide.city : groomSide.city;
+
+      candidateDualPlan = {
+        mode: 'carpool_pickup',
+        firstMeetingPointName: v1.name,
+        groomDeparture: {
+          side: 'groom',
+          familyLabel: groomSide.label || "Groom's Family",
+          homeAddress: groomSide.address,
+          homeCity: groomSide.city,
+          recommendedDepartureTime: groomPicksUpBride
+            ? dayStartTime
+            : subtractMinutesFromTimeString(firstArrival, venueLeg.durationMinutes),
+          drivingMinutesToFirstStop: groomPicksUpBride
+            ? pickupLeg.durationMinutes + venueLeg.durationMinutes
+            : venueLeg.durationMinutes,
+          distanceMilesToFirstStop: groomPicksUpBride
+            ? pickupLeg.distanceMiles + venueLeg.distanceMiles
+            : venueLeg.distanceMiles,
+        },
+        brideDeparture: {
+          side: 'bride',
+          familyLabel: brideSide.label || "Bride's Family",
+          homeAddress: brideSide.address,
+          homeCity: brideSide.city,
+          recommendedDepartureTime: groomPicksUpBride
+            ? departPickupTime
+            : dayStartTime,
+          drivingMinutesToFirstStop: groomPicksUpBride
+            ? venueLeg.durationMinutes
+            : pickupLeg.durationMinutes + venueLeg.durationMinutes,
+          distanceMilesToFirstStop: groomPicksUpBride
+            ? venueLeg.distanceMiles
+            : pickupLeg.distanceMiles + venueLeg.distanceMiles,
+        },
+        rendezvousArrivalTime: firstArrival,
+        travelDiscrepancyMinutes: 0,
+        fairnessSummary: `Carpool Sequence: ${
+          groomPicksUpBride ? "Groom's family" : "Bride's family"
+        } departs at ${dayStartTime}, picks up ${
+          groomPicksUpBride ? "Bride's family" : "Groom's family"
+        } in ${passengerCity} at ${pickupTime} (with morning chai), and both travel together to ${v1.name} for ${firstArrival}.`,
+        pickupOrder: {
+          driverSide,
+          passengerSide,
+          pickupTime,
+          chaiBufferMinutes: chaiBufferMins,
+          pickupAddress: passengerAddress,
+          pickupCity: passengerCity,
+          drivingMinutesToPickup: pickupLeg.durationMinutes,
+          distanceMilesToPickup: pickupLeg.distanceMiles,
+        },
+      };
+
+      initialArrivalRaw = firstArrival;
+      initialDistance = pickupLeg.distanceMiles + venueLeg.distanceMiles;
+      initialMinutes = pickupLeg.durationMinutes + chaiBufferMins + venueLeg.durationMinutes;
+      startFairnessCost = initialDistance;
+      currentLegs.push({
+        distanceMiles: initialDistance,
+        durationMinutes: initialMinutes,
+      });
+    } else {
+      // Single family origin start
+      const startCoord = getCoordinates(
+        startLocation.address,
+        startLocation.city,
+        startLocation.state,
+        startLocation.latitude,
+        startLocation.longitude
+      );
+      const firstLeg = estimateDrivingDistanceAndMinutes(
+        startCoord.lat,
+        startCoord.lon,
+        v1Coord.lat,
+        v1Coord.lon
+      );
+      initialDistance = firstLeg.distanceMiles;
+      initialMinutes = firstLeg.durationMinutes;
+      startFairnessCost = firstLeg.distanceMiles;
+      initialArrivalRaw = addMinutesToTimeString(dayStartTime, firstLeg.durationMinutes);
+      currentLegs.push(firstLeg);
+    }
+
+    let routeDistance = initialDistance;
+    let routeMinutes = initialMinutes;
 
     // Subsequent legs: from venue i to venue i+1
     for (let i = 0; i < candidateOrder.length - 1; i++) {
@@ -670,25 +903,27 @@ export function findOptimalTourOrder(
         toCoord.lat,
         toCoord.lon
       );
-      currentDistance += leg.distanceMiles;
-      currentMinutes += leg.durationMinutes;
+      routeDistance += leg.distanceMiles;
+      routeMinutes += leg.durationMinutes;
       currentLegs.push(leg);
     }
 
     // Simulate timeline to assess touring hours feasibility
-    let simTime = dayStartTime;
+    let simTime = roundToQuarterHour(initialArrivalRaw);
     let timingPenalty = 0;
 
     for (let i = 0; i < candidateOrder.length; i++) {
       const v = candidateOrder[i];
-      const leg = currentLegs[i];
-      const arrivalRaw = addMinutesToTimeString(simTime, leg.durationMinutes);
-      const arrival = roundToQuarterHour(arrivalRaw);
+      let arrival = simTime;
+      if (i > 0) {
+        const leg = currentLegs[i];
+        const arrivalRaw = addMinutesToTimeString(simTime, leg.durationMinutes);
+        arrival = roundToQuarterHour(arrivalRaw);
+      }
       const departure = addMinutesToTimeString(arrival, durationPerTourMinutes);
 
       const timingCheck = evaluateTourStopTiming(v, tourDate, arrival, departure);
       if (!timingCheck.isWithinHours) {
-        // Heavy penalty so orders that visit venues during closed / after-hours are strongly avoided
         timingPenalty += 500;
       } else if (timingCheck.status === 'closing_soon') {
         timingPenalty += 15;
@@ -706,13 +941,14 @@ export function findOptimalTourOrder(
       }
     }
 
-    const totalWeightedScore = currentDistance + timingPenalty;
+    const totalWeightedScore = startFairnessCost + routeDistance + timingPenalty;
     if (totalWeightedScore < minWeightedScore) {
       minWeightedScore = totalWeightedScore;
       bestOrder = candidateOrder;
       bestLegMetrics = currentLegs;
-      bestDrivingMinutes = currentMinutes;
-      bestDistance = currentDistance;
+      bestDrivingMinutes = routeMinutes;
+      bestDistance = routeDistance;
+      bestDualPlan = candidateDualPlan;
     }
   }
 
@@ -721,6 +957,7 @@ export function findOptimalTourOrder(
     totalDistanceMiles: Math.round(bestDistance * 10) / 10,
     totalDrivingMinutes: bestDrivingMinutes,
     legMetrics: bestLegMetrics,
+    dualFamilyStartPlan: bestDualPlan,
   };
 }
 
@@ -778,6 +1015,7 @@ export function generateSiteTourSchedule({
   tourDate,
   startLocation,
   secondFamilyLocation,
+  meetingMode = 'meet_at_first_venue',
   venues,
   dayStartTime = '09:30 AM',
   durationPerTourMinutes = 60,
@@ -788,6 +1026,7 @@ export function generateSiteTourSchedule({
   tourDate: string;
   startLocation: FamilyAddressInput;
   secondFamilyLocation?: FamilyAddressInput;
+  meetingMode?: DualFamilyMeetingMode;
   venues: VenueOption[];
   dayStartTime?: string;
   durationPerTourMinutes?: number;
@@ -799,9 +1038,12 @@ export function generateSiteTourSchedule({
     totalDistanceMiles,
     totalDrivingMinutes,
     legMetrics,
+    dualFamilyStartPlan,
   } = findOptimalTourOrder(
     startLocation,
     venues,
+    secondFamilyLocation,
+    meetingMode,
     tourDate,
     dayStartTime,
     durationPerTourMinutes,
@@ -821,9 +1063,13 @@ export function generateSiteTourSchedule({
     const venue = orderedVenues[i];
     const leg = legMetrics[i] || { distanceMiles: 5, durationMinutes: 15 };
 
-    // Driving to venue
-    const arrivalRaw = addMinutesToTimeString(currentTime, leg.durationMinutes);
-    const suggestedArrival = roundToQuarterHour(arrivalRaw);
+    let suggestedArrival: string;
+    if (i === 0 && dualFamilyStartPlan?.rendezvousArrivalTime) {
+      suggestedArrival = dualFamilyStartPlan.rendezvousArrivalTime;
+    } else {
+      const arrivalRaw = addMinutesToTimeString(currentTime, leg.durationMinutes);
+      suggestedArrival = roundToQuarterHour(arrivalRaw);
+    }
     const suggestedDeparture = addMinutesToTimeString(suggestedArrival, durationPerTourMinutes);
 
     const nextVenue = i < orderedVenues.length - 1 ? orderedVenues[i + 1] : undefined;
@@ -885,6 +1131,8 @@ export function generateSiteTourSchedule({
     tourDate,
     startLocation,
     secondFamilyLocation,
+    meetingMode,
+    dualFamilyStartPlan,
     dayStartTime,
     durationPerTourMinutes,
     bufferBetweenToursMinutes,
@@ -915,12 +1163,25 @@ export function formatTourPlanForWhatsApp(
 
   if (plan.secondFamilyLocation?.address) {
     lines.push(
-      `🤝 *Second Family Rendezvous:* ${plan.secondFamilyLocation.label} (${plan.secondFamilyLocation.address})`
+      `🤝 *Second Family Location:* ${plan.secondFamilyLocation.label} (${plan.secondFamilyLocation.address})`
+    );
+  }
+
+  if (plan.dualFamilyStartPlan) {
+    const df = plan.dualFamilyStartPlan;
+    lines.push(
+      ``,
+      `🤝 *DUAL-FAMILY STARTING COORDINATION:*`,
+      `• 🤵 *Groom's Side (${df.groomDeparture.homeCity}):* Depart at ${df.groomDeparture.recommendedDepartureTime} (~${df.groomDeparture.drivingMinutesToFirstStop} mins drive)`,
+      `• 👰 *Bride's Side (${df.brideDeparture.homeCity}):* Depart at ${df.brideDeparture.recommendedDepartureTime} (~${df.brideDeparture.drivingMinutesToFirstStop} mins drive)`,
+      `• 📍 *Rendezvous at Stop #1:* ${df.firstMeetingPointName} at ${df.rendezvousArrivalTime}`,
+      `• ⚖️ *Fair Balance:* ${df.fairnessSummary}`
     );
   }
 
   lines.push(
-    `⏰ *Start Time:* ${plan.dayStartTime}`,
+    ``,
+    `⏰ *Target Tour Start Time:* ${plan.dayStartTime}`,
     `⏱️ *Total Estimated Drive Time:* ~${plan.totalEstDrivingMinutes} mins (${plan.totalEstDistanceMiles} miles total)`,
     ``,
     `--------------------------------------`,

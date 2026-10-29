@@ -21,6 +21,8 @@ import {
   VenueOption,
   VenueTouringHours,
   StopTouringStatus,
+  DualFamilyMeetingMode,
+  DualFamilyStartPlan,
 } from '@/lib/types';
 import { getCoordinates } from '@/lib/venueRouteOptimizer';
 
@@ -65,6 +67,8 @@ interface TourDayRouteMapProps {
     longitude?: number;
   };
   primarySide: 'groom' | 'bride';
+  meetingMode?: DualFamilyMeetingMode;
+  dualFamilyStartPlan?: DualFamilyStartPlan;
   tourDate: string;
   stops: ScheduledTourStop[];
   lunchBreakWindow?: {
@@ -87,6 +91,8 @@ export default function TourDayRouteMap({
   groomAddress,
   brideAddress,
   primarySide,
+  meetingMode = 'meet_at_first_venue',
+  dualFamilyStartPlan,
   tourDate,
   stops,
   lunchBreakWindow,
@@ -114,18 +120,30 @@ export default function TourDayRouteMap({
       groomAddress.latitude,
       groomAddress.longitude
     );
+    let groomSubtitle = primarySide === 'groom' ? 'Tour Day Starting Point' : 'Second Family Pickup';
+    if (dualFamilyStartPlan) {
+      if (meetingMode === 'meet_at_first_venue') {
+        groomSubtitle = `Departs at ${dualFamilyStartPlan.groomDeparture.recommendedDepartureTime} (~${dualFamilyStartPlan.groomDeparture.drivingMinutesToFirstStop}m drive)`;
+      } else if (meetingMode === 'carpool_pickup') {
+        const isDriver = dualFamilyStartPlan.pickupOrder?.driverSide === 'groom';
+        groomSubtitle = isDriver
+          ? `Driver Origin (Departs ${dualFamilyStartPlan.groomDeparture.recommendedDepartureTime})`
+          : `Pickup & Morning Chai (${dualFamilyStartPlan.pickupOrder?.pickupTime})`;
+      }
+    }
+
     list.push({
       id: 'groom-home',
       type: 'groom_home',
       title: "Groom's Family Home",
-      subtitle: primarySide === 'groom' ? 'Tour Day Starting Point' : 'Second Family Pickup',
+      subtitle: groomSubtitle,
       address: groomAddress.address,
       city: groomAddress.city,
       state: groomAddress.state,
       zipCode: groomAddress.zipCode,
       lat: groomCoords.lat,
       lon: groomCoords.lon,
-      isPrimaryStart: primarySide === 'groom',
+      isPrimaryStart: meetingMode === 'meet_at_first_venue' || primarySide === 'groom',
     });
 
     // Bride's Home
@@ -136,18 +154,30 @@ export default function TourDayRouteMap({
       brideAddress.latitude,
       brideAddress.longitude
     );
+    let brideSubtitle = primarySide === 'bride' ? 'Tour Day Starting Point' : 'Second Family Pickup';
+    if (dualFamilyStartPlan) {
+      if (meetingMode === 'meet_at_first_venue') {
+        brideSubtitle = `Departs at ${dualFamilyStartPlan.brideDeparture.recommendedDepartureTime} (~${dualFamilyStartPlan.brideDeparture.drivingMinutesToFirstStop}m drive)`;
+      } else if (meetingMode === 'carpool_pickup') {
+        const isDriver = dualFamilyStartPlan.pickupOrder?.driverSide === 'bride';
+        brideSubtitle = isDriver
+          ? `Driver Origin (Departs ${dualFamilyStartPlan.brideDeparture.recommendedDepartureTime})`
+          : `Pickup & Morning Chai (${dualFamilyStartPlan.pickupOrder?.pickupTime})`;
+      }
+    }
+
     list.push({
       id: 'bride-home',
       type: 'bride_home',
       title: "Bride's Family Home",
-      subtitle: primarySide === 'bride' ? 'Tour Day Starting Point' : 'Second Family Pickup',
+      subtitle: brideSubtitle,
       address: brideAddress.address,
       city: brideAddress.city,
       state: brideAddress.state,
       zipCode: brideAddress.zipCode,
       lat: brideCoords.lat,
       lon: brideCoords.lon,
-      isPrimaryStart: primarySide === 'bride',
+      isPrimaryStart: meetingMode === 'meet_at_first_venue' || primarySide === 'bride',
     });
 
     // Tour Stop Venues in Sequence
@@ -162,11 +192,15 @@ export default function TourDayRouteMap({
         matchedVenue?.longitude
       );
 
+      const isFirstRendezvous = stop.stopOrder === 1 && meetingMode === 'meet_at_first_venue';
+
       list.push({
         id: `stop-${stop.venueId}`,
         type: 'tour_stop',
-        title: stop.venueName,
-        subtitle: `Stop #${stop.stopOrder} • ${stop.suggestedArrivalTime}`,
+        title: isFirstRendezvous ? `🤝 ${stop.venueName} (Rendezvous)` : stop.venueName,
+        subtitle: isFirstRendezvous
+          ? `Stop #1 Mutual Rendezvous • ${stop.suggestedArrivalTime}`
+          : `Stop #${stop.stopOrder} • ${stop.suggestedArrivalTime}`,
         address: stop.address,
         city: stop.city,
         state: 'NJ',
@@ -214,6 +248,8 @@ export default function TourDayRouteMap({
     stops,
     allShortlistedVenues,
     showAllShortlisted,
+    meetingMode,
+    dualFamilyStartPlan,
   ]);
 
   // 2. Compute coordinate bounds for the SVG canvas
@@ -262,31 +298,53 @@ export default function TourDayRouteMap({
     return { x: scaledX, y: scaledY };
   };
 
-  // 3. Sequential Route Points for the Driving Path
+  // 3. Separate points for dual-family starting & tour venue stops
+  const groomMarker = useMemo(() => markers.find((m) => m.type === 'groom_home'), [markers]);
+  const brideMarker = useMemo(() => markers.find((m) => m.type === 'bride_home'), [markers]);
+  const tourStopMarkers = useMemo(
+    () =>
+      markers
+        .filter((m) => m.type === 'tour_stop')
+        .sort((a, b) => (a.stopOrder || 0) - (b.stopOrder || 0)),
+    [markers]
+  );
+
+  const groomPt = useMemo(
+    () => (groomMarker ? { ...project(groomMarker.lat, groomMarker.lon), marker: groomMarker } : null),
+    [groomMarker, bounds, zoomLevel, viewOffset]
+  );
+  const bridePt = useMemo(
+    () => (brideMarker ? { ...project(brideMarker.lat, brideMarker.lon), marker: brideMarker } : null),
+    [brideMarker, bounds, zoomLevel, viewOffset]
+  );
+  const tourStopPts = useMemo(
+    () =>
+      tourStopMarkers.map((stop) => ({
+        ...project(stop.lat, stop.lon),
+        marker: stop,
+      })),
+    [tourStopMarkers, bounds, zoomLevel, viewOffset]
+  );
+
+  // Fallback sequential route points for single family mode
   const routePoints = useMemo(() => {
     const points: Array<{ x: number; y: number; marker: LocationMarker }> = [];
 
     // Start with primary family home
-    const startMarker = markers.find((m) =>
-      primarySide === 'groom' ? m.type === 'groom_home' : m.type === 'bride_home'
-    );
+    const startMarker = primarySide === 'groom' ? groomMarker : brideMarker;
     if (startMarker) {
       const p = project(startMarker.lat, startMarker.lon);
       points.push({ ...p, marker: startMarker });
     }
 
     // Then tour stops in order
-    const tourStops = markers
-      .filter((m) => m.type === 'tour_stop')
-      .sort((a, b) => (a.stopOrder || 0) - (b.stopOrder || 0));
-
-    tourStops.forEach((stop) => {
+    tourStopMarkers.forEach((stop) => {
       const p = project(stop.lat, stop.lon);
       points.push({ ...p, marker: stop });
     });
 
     return points;
-  }, [markers, primarySide, bounds, zoomLevel, viewOffset]);
+  }, [markers, primarySide, groomMarker, brideMarker, tourStopMarkers, bounds, zoomLevel, viewOffset]);
 
   // Active marker info for popover
   const activeMarker = useMemo(
@@ -406,6 +464,61 @@ export default function TourDayRouteMap({
         </div>
       </div>
 
+      {/* Dual-Family Morning Coordination Banner */}
+      {dualFamilyStartPlan && (
+        <div className="p-3.5 rounded-2xl bg-stone-800/80 border border-stone-700/80 text-xs space-y-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold text-[10px] uppercase tracking-wide border border-amber-500/30 flex items-center gap-1">
+                <span>{meetingMode === 'meet_at_first_venue' ? '🤝' : meetingMode === 'carpool_pickup' ? '🚙' : '🏠'}</span>
+                <span>
+                  {meetingMode === 'meet_at_first_venue'
+                    ? 'Dual-Family Balanced Rendezvous'
+                    : meetingMode === 'carpool_pickup'
+                    ? 'Carpool Caravan & Morning Chai'
+                    : 'Single Origin Departure'}
+                </span>
+              </span>
+              <span className="text-stone-300 font-medium text-[11px]">
+                {dualFamilyStartPlan.fairnessSummary}
+              </span>
+            </div>
+            <span className="text-[11px] text-amber-200 font-bold flex items-center gap-1">
+              <span>📍 Meet at Stop #1:</span>
+              <span className="underline decoration-amber-400">{dualFamilyStartPlan.rendezvousArrivalTime}</span>
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-blue-950/40 border border-blue-800/40">
+              <span className="flex items-center gap-1.5 font-semibold text-blue-200">
+                <span>🤵</span>
+                <span>Groom ({dualFamilyStartPlan.groomDeparture.homeCity}):</span>
+              </span>
+              <span className="font-mono font-bold text-blue-100 flex items-center gap-1.5">
+                <span>Depart {dualFamilyStartPlan.groomDeparture.recommendedDepartureTime}</span>
+                <span className="text-[10px] text-blue-300 font-normal">
+                  (~{dualFamilyStartPlan.groomDeparture.drivingMinutesToFirstStop}m / {dualFamilyStartPlan.groomDeparture.distanceMilesToFirstStop}mi)
+                </span>
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-rose-950/40 border border-rose-800/40">
+              <span className="flex items-center gap-1.5 font-semibold text-rose-200">
+                <span>👰</span>
+                <span>Bride ({dualFamilyStartPlan.brideDeparture.homeCity}):</span>
+              </span>
+              <span className="font-mono font-bold text-rose-100 flex items-center gap-1.5">
+                <span>Depart {dualFamilyStartPlan.brideDeparture.recommendedDepartureTime}</span>
+                <span className="text-[10px] text-rose-300 font-normal">
+                  (~{dualFamilyStartPlan.brideDeparture.drivingMinutesToFirstStop}m / {dualFamilyStartPlan.brideDeparture.distanceMilesToFirstStop}mi)
+                </span>
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* SVG Map Canvas */}
       <div className="relative rounded-2xl bg-radial from-stone-800 via-stone-900 to-stone-950 border border-stone-800 overflow-hidden shadow-inner aspect-16/10 sm:aspect-21/10 min-h-[360px]">
         {/* Subtle grid pattern background */}
@@ -440,14 +553,226 @@ export default function TourDayRouteMap({
             </filter>
           </defs>
 
-          {/* Connecting Driving Route Path */}
-          {routePoints.length > 1 && (
+          {/* MODE 1: MEET AT FIRST VENUE (Dual independent approach legs converging at Stop #1) */}
+          {meetingMode === 'meet_at_first_venue' && tourStopPts.length > 0 && (
+            <g>
+              {/* Groom approach leg to Stop #1 */}
+              {groomPt && (
+                <g>
+                  <path
+                    d={`M ${groomPt.x} ${groomPt.y} Q ${(groomPt.x + tourStopPts[0].x) / 2} ${(groomPt.y + tourStopPts[0].y) / 2}, ${tourStopPts[0].x} ${tourStopPts[0].y}`}
+                    fill="none"
+                    stroke="#3b82f6"
+                    strokeWidth="4"
+                    strokeOpacity="0.4"
+                    filter="url(#routeGlow)"
+                  />
+                  <path
+                    d={`M ${groomPt.x} ${groomPt.y} Q ${(groomPt.x + tourStopPts[0].x) / 2} ${(groomPt.y + tourStopPts[0].y) / 2}, ${tourStopPts[0].x} ${tourStopPts[0].y}`}
+                    fill="none"
+                    stroke="#60a5fa"
+                    strokeWidth="2.5"
+                    strokeDasharray="6 4"
+                    className="animate-pulse"
+                  />
+                  <g transform={`translate(${(groomPt.x + tourStopPts[0].x) / 2}, ${(groomPt.y + tourStopPts[0].y) / 2})`}>
+                    <rect x="-56" y="-11" width="112" height="22" rx="11" fill="#1e3a8a" stroke="#60a5fa" strokeWidth="1" />
+                    <text x="0" y="4" textAnchor="middle" fill="#bfdbfe" fontSize="9" fontWeight="bold">
+                      🤵 Groom Leg (~{dualFamilyStartPlan?.groomDeparture.drivingMinutesToFirstStop || 25}m)
+                    </text>
+                  </g>
+                </g>
+              )}
+
+              {/* Bride approach leg to Stop #1 */}
+              {bridePt && (
+                <g>
+                  <path
+                    d={`M ${bridePt.x} ${bridePt.y} Q ${(bridePt.x + tourStopPts[0].x) / 2} ${(bridePt.y + tourStopPts[0].y) / 2}, ${tourStopPts[0].x} ${tourStopPts[0].y}`}
+                    fill="none"
+                    stroke="#e11d48"
+                    strokeWidth="4"
+                    strokeOpacity="0.4"
+                    filter="url(#routeGlow)"
+                  />
+                  <path
+                    d={`M ${bridePt.x} ${bridePt.y} Q ${(bridePt.x + tourStopPts[0].x) / 2} ${(bridePt.y + tourStopPts[0].y) / 2}, ${tourStopPts[0].x} ${tourStopPts[0].y}`}
+                    fill="none"
+                    stroke="#fb7185"
+                    strokeWidth="2.5"
+                    strokeDasharray="6 4"
+                    className="animate-pulse"
+                  />
+                  <g transform={`translate(${(bridePt.x + tourStopPts[0].x) / 2}, ${(bridePt.y + tourStopPts[0].y) / 2})`}>
+                    <rect x="-54" y="-11" width="108" height="22" rx="11" fill="#881337" stroke="#fb7185" strokeWidth="1" />
+                    <text x="0" y="4" textAnchor="middle" fill="#fecdd3" fontSize="9" fontWeight="bold">
+                      👰 Bride Leg (~{dualFamilyStartPlan?.brideDeparture.drivingMinutesToFirstStop || 25}m)
+                    </text>
+                  </g>
+                </g>
+              )}
+
+              {/* Rendezvous Halo around Stop #1 */}
+              <circle
+                cx={tourStopPts[0].x}
+                cy={tourStopPts[0].y}
+                r="30"
+                fill="#f59e0b"
+                fillOpacity="0.15"
+                stroke="#fbbf24"
+                strokeWidth="2"
+                strokeDasharray="4 3"
+                className="animate-pulse"
+              />
+
+              {/* Consecutive Venue Stops (Stop 1 -> Stop 2 -> Stop 3...) */}
+              {tourStopPts.length > 1 && (
+                <g>
+                  <path
+                    d={tourStopPts.reduce((acc, curr, idx) => {
+                      if (idx === 0) return `M ${curr.x} ${curr.y}`;
+                      const prev = tourStopPts[idx - 1];
+                      const midX = (prev.x + curr.x) / 2;
+                      const midY = (prev.y + curr.y) / 2;
+                      return `${acc} Q ${prev.x} ${midY}, ${curr.x} ${curr.y}`;
+                    }, '')}
+                    fill="none"
+                    stroke="url(#routeGradient)"
+                    strokeWidth="5"
+                    strokeOpacity="0.4"
+                    filter="url(#routeGlow)"
+                  />
+                  <path
+                    d={tourStopPts.reduce((acc, curr, idx) => {
+                      if (idx === 0) return `M ${curr.x} ${curr.y}`;
+                      const prev = tourStopPts[idx - 1];
+                      const midX = (prev.x + curr.x) / 2;
+                      const midY = (prev.y + curr.y) / 2;
+                      return `${acc} Q ${prev.x} ${midY}, ${curr.x} ${curr.y}`;
+                    }, '')}
+                    fill="none"
+                    stroke="url(#routeGradient)"
+                    strokeWidth="2.5"
+                    strokeDasharray="6 4"
+                    className="animate-pulse"
+                  />
+                  {tourStopPts.map((pt, idx) => {
+                    if (idx === 0) return null;
+                    const prev = tourStopPts[idx - 1];
+                    const midX = (prev.x + pt.x) / 2;
+                    const midY = (prev.y + pt.y) / 2;
+                    return (
+                      <g key={`venue-leg-${idx}`} transform={`translate(${midX}, ${midY})`}>
+                        <rect x="-46" y="-11" width="92" height="22" rx="11" fill="#1c1917" stroke="#44403c" strokeWidth="1" />
+                        <text x="0" y="4" textAnchor="middle" fill="#fde68a" fontSize="9" fontWeight="bold">
+                          🚗 Stop #{idx} → #{idx + 1}
+                        </text>
+                      </g>
+                    );
+                  })}
+                </g>
+              )}
+
+              {/* Light dashed tie line between homes */}
+              {groomPt && bridePt && (
+                <line
+                  x1={groomPt.x}
+                  y1={groomPt.y}
+                  x2={bridePt.x}
+                  y2={bridePt.y}
+                  stroke="#64748b"
+                  strokeWidth="1.5"
+                  strokeDasharray="3 3"
+                  strokeOpacity="0.35"
+                />
+              )}
+            </g>
+          )}
+
+          {/* MODE 2: CARPOOL PICKUP (Driver Home -> Passenger Home with Chai -> Stop #1 -> Subsequent Venues) */}
+          {meetingMode === 'carpool_pickup' && tourStopPts.length > 0 && (() => {
+            const driverSide = dualFamilyStartPlan?.pickupOrder?.driverSide || primarySide;
+            const driverPt = driverSide === 'groom' ? groomPt : bridePt;
+            const passengerPt = driverSide === 'groom' ? bridePt : groomPt;
+            if (!driverPt || !passengerPt) return null;
+
+            return (
+              <g>
+                {/* Leg 1: Driver to Passenger Home for Morning Chai */}
+                <path
+                  d={`M ${driverPt.x} ${driverPt.y} Q ${(driverPt.x + passengerPt.x) / 2} ${(driverPt.y + passengerPt.y) / 2}, ${passengerPt.x} ${passengerPt.y}`}
+                  fill="none"
+                  stroke="#eab308"
+                  strokeWidth="3.5"
+                  strokeDasharray="5 3"
+                  className="animate-pulse"
+                />
+                <g transform={`translate(${(driverPt.x + passengerPt.x) / 2}, ${(driverPt.y + passengerPt.y) / 2})`}>
+                  <rect x="-62" y="-11" width="124" height="22" rx="11" fill="#78350f" stroke="#f59e0b" strokeWidth="1" />
+                  <text x="0" y="4" textAnchor="middle" fill="#fde68a" fontSize="9" fontWeight="bold">
+                    ☕ Chai &amp; Pickup (20m)
+                  </text>
+                </g>
+
+                {/* Leg 2: Passenger Home to Stop #1 */}
+                <path
+                  d={`M ${passengerPt.x} ${passengerPt.y} Q ${(passengerPt.x + tourStopPts[0].x) / 2} ${(passengerPt.y + tourStopPts[0].y) / 2}, ${tourStopPts[0].x} ${tourStopPts[0].y}`}
+                  fill="none"
+                  stroke="url(#routeGradient)"
+                  strokeWidth="3"
+                  strokeDasharray="6 4"
+                  className="animate-pulse"
+                />
+                <g transform={`translate(${(passengerPt.x + tourStopPts[0].x) / 2}, ${(passengerPt.y + tourStopPts[0].y) / 2})`}>
+                  <rect x="-56" y="-11" width="112" height="22" rx="11" fill="#1c1917" stroke="#44403c" strokeWidth="1" />
+                  <text x="0" y="4" textAnchor="middle" fill="#fde68a" fontSize="9" fontWeight="bold">
+                    🚙 Caravan to Stop #1
+                  </text>
+                </g>
+
+                {/* Subsequent Venues (Stop 1 -> Stop 2...) */}
+                {tourStopPts.length > 1 && (
+                  <g>
+                    <path
+                      d={tourStopPts.reduce((acc, curr, idx) => {
+                        if (idx === 0) return `M ${curr.x} ${curr.y}`;
+                        const prev = tourStopPts[idx - 1];
+                        const midX = (prev.x + curr.x) / 2;
+                        const midY = (prev.y + curr.y) / 2;
+                        return `${acc} Q ${prev.x} ${midY}, ${curr.x} ${curr.y}`;
+                      }, '')}
+                      fill="none"
+                      stroke="url(#routeGradient)"
+                      strokeWidth="4"
+                      strokeDasharray="6 4"
+                    />
+                    {tourStopPts.map((pt, idx) => {
+                      if (idx === 0) return null;
+                      const prev = tourStopPts[idx - 1];
+                      const midX = (prev.x + pt.x) / 2;
+                      const midY = (prev.y + pt.y) / 2;
+                      return (
+                        <g key={`carpool-venue-leg-${idx}`} transform={`translate(${midX}, ${midY})`}>
+                          <rect x="-46" y="-11" width="92" height="22" rx="11" fill="#1c1917" stroke="#44403c" strokeWidth="1" />
+                          <text x="0" y="4" textAnchor="middle" fill="#fde68a" fontSize="9" fontWeight="bold">
+                            🚗 Stop #{idx} → #{idx + 1}
+                          </text>
+                        </g>
+                      );
+                    })}
+                  </g>
+                )}
+              </g>
+            );
+          })()}
+
+          {/* MODE 3: SINGLE FAMILY START OR FALLBACK */}
+          {meetingMode === 'single_family_start' && routePoints.length > 1 && (
             <g>
               {/* Outer Glow */}
               <path
                 d={routePoints.reduce((acc, curr, idx) => {
                   if (idx === 0) return `M ${curr.x} ${curr.y}`;
-                  // Smooth curve to next point
                   const prev = routePoints[idx - 1];
                   const midX = (prev.x + curr.x) / 2;
                   const midY = (prev.y + curr.y) / 2;
@@ -482,10 +807,9 @@ export default function TourDayRouteMap({
                 const prev = routePoints[idx - 1];
                 const midX = (prev.x + pt.x) / 2;
                 const midY = (prev.y + pt.y) / 2;
-                const stop = pt.marker;
 
                 return (
-                  <g key={`leg-${idx}`} transform={`translate(${midX}, ${midY})`}>
+                  <g key={`single-leg-${idx}`} transform={`translate(${midX}, ${midY})`}>
                     <rect
                       x="-38"
                       y="-11"
@@ -509,32 +833,22 @@ export default function TourDayRouteMap({
                   </g>
                 );
               })}
-            </g>
-          )}
 
-          {/* Connection between Groom & Bride Homes if not already starting point */}
-          {(() => {
-            const groomMarker = markers.find((m) => m.type === 'groom_home');
-            const brideMarker = markers.find((m) => m.type === 'bride_home');
-            if (!groomMarker || !brideMarker) return null;
-            const gPt = project(groomMarker.lat, groomMarker.lon);
-            const bPt = project(brideMarker.lat, brideMarker.lon);
-
-            return (
-              <g>
+              {/* Light connection between Groom & Bride Homes */}
+              {groomPt && bridePt && (
                 <line
-                  x1={gPt.x}
-                  y1={gPt.y}
-                  x2={bPt.x}
-                  y2={bPt.y}
+                  x1={groomPt.x}
+                  y1={groomPt.y}
+                  x2={bridePt.x}
+                  y2={bridePt.y}
                   stroke="#64748b"
                   strokeWidth="1.5"
                   strokeDasharray="3 3"
                   strokeOpacity="0.45"
                 />
-              </g>
-            );
-          })()}
+              )}
+            </g>
+          )}
 
           {/* Render All Markers */}
           {markers.map((marker) => {

@@ -298,12 +298,49 @@ export interface ScheduledTourStop {
   touringStatus?: StopTouringStatus;
 }
 
+export type DualFamilyMeetingMode =
+  | 'meet_at_first_venue'
+  | 'carpool_pickup'
+  | 'single_family_start';
+
+export interface FamilyDepartureDetail {
+  side: 'groom' | 'bride';
+  familyLabel: string;
+  homeAddress: string;
+  homeCity: string;
+  recommendedDepartureTime: string;
+  drivingMinutesToFirstStop: number;
+  distanceMilesToFirstStop: number;
+}
+
+export interface DualFamilyStartPlan {
+  mode: DualFamilyMeetingMode;
+  firstMeetingPointName: string;
+  groomDeparture: FamilyDepartureDetail;
+  brideDeparture: FamilyDepartureDetail;
+  rendezvousArrivalTime: string;
+  travelDiscrepancyMinutes: number;
+  fairnessSummary: string;
+  pickupOrder?: {
+    driverSide: 'groom' | 'bride';
+    passengerSide: 'groom' | 'bride';
+    pickupTime: string;
+    chaiBufferMinutes: number;
+    pickupAddress: string;
+    pickupCity: string;
+    drivingMinutesToPickup: number;
+    distanceMilesToPickup: number;
+  };
+}
+
 export interface SiteTourDayPlan {
   id: string;
   weddingId: string;
   tourDate: string; // YYYY-MM-DD
   startLocation: FamilyAddressInput;
   secondFamilyLocation?: FamilyAddressInput;
+  meetingMode?: DualFamilyMeetingMode;
+  dualFamilyStartPlan?: DualFamilyStartPlan;
   dayStartTime: string; // e.g. "09:30 AM"
   durationPerTourMinutes: number; // e.g. 60
   bufferBetweenToursMinutes: number; // e.g. 15
