@@ -67,6 +67,7 @@ import {
   Bus,
   Calculator,
   AlertTriangle,
+  Lock,
 } from 'lucide-react';
 
 type CuratedSortOption = 'best' | 'service_desc' | 'price_asc' | 'price_desc' | 'capacity_desc';
@@ -196,7 +197,29 @@ export default function VenuesPage() {
     },
     meetingMode: (tourPlan?.meetingMode || 'meet_at_first_venue') as DualFamilyMeetingMode,
     selectedVenueIds: tourPlan?.selectedVenueIds || venues.slice(0, 3).map((v) => v.id),
+    lockedAppointmentTimes: (tourPlan?.lockedAppointmentTimes || {}) as Record<string, string>,
   });
+
+  const handleSetLockedTime = (venueId: string, time: string) => {
+    setTourForm((prev) => ({
+      ...prev,
+      lockedAppointmentTimes: {
+        ...prev.lockedAppointmentTimes,
+        [venueId]: time,
+      },
+    }));
+  };
+
+  const handleClearLockedTime = (venueId: string) => {
+    setTourForm((prev) => {
+      const copy = { ...prev.lockedAppointmentTimes };
+      delete copy[venueId];
+      return {
+        ...prev,
+        lockedAppointmentTimes: copy,
+      };
+    });
+  };
 
   // Quick stats
   const shortlistedCount = venues.filter((v) => v.tourStatus === 'shortlisted').length;
@@ -441,7 +464,11 @@ export default function VenuesPage() {
       const updated = exists
         ? prev.selectedVenueIds.filter((id) => id !== venueId)
         : [...prev.selectedVenueIds, venueId];
-      return { ...prev, selectedVenueIds: updated };
+      const updatedLocked = { ...prev.lockedAppointmentTimes };
+      if (exists) {
+        delete updatedLocked[venueId];
+      }
+      return { ...prev, selectedVenueIds: updated, lockedAppointmentTimes: updatedLocked };
     });
   };
 
@@ -468,6 +495,7 @@ export default function VenuesPage() {
       durationPerTourMinutes: tourForm.durationPerTourMinutes,
       bufferBetweenToursMinutes: tourForm.bufferBetweenToursMinutes,
       includesLunchBreak: tourForm.includesLunchBreak,
+      lockedAppointmentTimes: tourForm.lockedAppointmentTimes,
     });
 
     saveTourPlan(newPlan);
@@ -2030,32 +2058,100 @@ export default function VenuesPage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 {venues.map((v) => {
                   const isChecked = tourForm.selectedVenueIds.includes(v.id);
+                  const lockedTime = tourForm.lockedAppointmentTimes?.[v.id];
                   const touring = getDefaultTouringHours(v);
                   return (
-                    <label
+                    <div
                       key={v.id}
-                      className={`p-3 rounded-xl border flex items-center gap-3 cursor-pointer transition-all ${
+                      className={`p-3 rounded-2xl border transition-all ${
                         isChecked
-                          ? 'border-rose-600 bg-rose-50/40 text-stone-900 shadow-2xs'
+                          ? lockedTime
+                            ? 'border-indigo-500 bg-indigo-50/40 text-stone-900 shadow-sm ring-1 ring-indigo-500/30'
+                            : 'border-rose-600 bg-rose-50/40 text-stone-900 shadow-2xs'
                           : 'border-stone-200 hover:bg-stone-50 text-stone-600'
                       }`}
                     >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => handleToggleVenueSelectionForTour(v.id)}
-                        className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500"
-                      />
-                      <div className="truncate flex-1">
-                        <span className="font-bold text-xs truncate block">{v.name}</span>
-                        <span className="text-[10px] text-stone-500 truncate block">
-                          {v.city}, {v.state} • {formatCurr(v.pricing.estimatedTotalCost)}
-                        </span>
-                        <span className="text-[9px] text-amber-800 font-semibold truncate block mt-0.5">
-                          Sat: {touring.saturdayHours.split('(')[0].trim()}
-                        </span>
-                      </div>
-                    </label>
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => handleToggleVenueSelectionForTour(v.id)}
+                          className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 mt-0.5"
+                        />
+                        <div className="truncate flex-1">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-bold text-xs truncate block text-stone-900">{v.name}</span>
+                            {lockedTime && (
+                              <span className="px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-900 text-[10px] font-bold border border-indigo-200 shrink-0 flex items-center gap-0.5">
+                                <Lock className="w-2.5 h-2.5" />
+                                <span>Fixed</span>
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-stone-500 truncate block">
+                            {v.city}, {v.state} • {formatCurr(v.pricing.estimatedTotalCost)}
+                          </span>
+                          <span className="text-[9px] text-amber-800 font-semibold truncate block mt-0.5">
+                            Sat: {touring.saturdayHours.split('(')[0].trim()}
+                          </span>
+                        </div>
+                      </label>
+
+                      {isChecked && (
+                        <div className="mt-2.5 pt-2 border-t border-stone-200/70 flex items-center justify-between text-xs">
+                          <span className="text-[10px] font-semibold text-stone-500 flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-stone-400" />
+                            <span>Tour Slot:</span>
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            {lockedTime ? (
+                              <div className="flex items-center gap-1.5 bg-white px-2 py-0.5 rounded-lg border border-indigo-300 shadow-2xs">
+                                <span className="font-mono font-bold text-[11px] text-indigo-950 flex items-center gap-1">
+                                  <Lock className="w-2.5 h-2.5 text-indigo-600" />
+                                  <span>{lockedTime}</span>
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleClearLockedTime(v.id);
+                                  }}
+                                  className="text-stone-400 hover:text-stone-800 text-xs px-0.5 font-bold"
+                                  title="Clear hard appointment (make flexible)"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ) : (
+                              <select
+                                value=""
+                                onChange={(e) => {
+                                  if (e.target.value) {
+                                    handleSetLockedTime(v.id, e.target.value);
+                                  }
+                                }}
+                                className="text-[10px] font-semibold py-0.5 px-2 rounded-lg bg-white border border-stone-300 text-stone-700 hover:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                              >
+                                <option value="">✨ Flexible Slot</option>
+                                <option value="10:00 AM">🔒 Hard Appt: 10:00 AM</option>
+                                <option value="10:30 AM">🔒 Hard Appt: 10:30 AM</option>
+                                <option value="11:00 AM">🔒 Hard Appt: 11:00 AM</option>
+                                <option value="11:30 AM">🔒 Hard Appt: 11:30 AM</option>
+                                <option value="12:00 PM">🔒 Hard Appt: 12:00 PM</option>
+                                <option value="12:30 PM">🔒 Hard Appt: 12:30 PM</option>
+                                <option value="01:00 PM">🔒 Hard Appt: 1:00 PM</option>
+                                <option value="01:30 PM">🔒 Hard Appt: 1:30 PM</option>
+                                <option value="02:00 PM">🔒 Hard Appt: 2:00 PM</option>
+                                <option value="02:30 PM">🔒 Hard Appt: 2:30 PM</option>
+                                <option value="03:00 PM">🔒 Hard Appt: 3:00 PM</option>
+                                <option value="03:30 PM">🔒 Hard Appt: 3:30 PM</option>
+                                <option value="04:00 PM">🔒 Hard Appt: 4:00 PM</option>
+                              </select>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -2136,6 +2232,26 @@ export default function VenuesPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Hard Appointment Anchoring Banner */}
+              {tourPlan.hasLockedAppointments && (
+                <div className="p-4 rounded-2xl bg-indigo-50/90 border border-indigo-200 text-xs text-indigo-950 flex items-start gap-3 shadow-2xs">
+                  <Lock className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h5 className="font-bold text-sm text-indigo-950">
+                        Hard Appointment Anchoring Active
+                      </h5>
+                      <span className="px-2 py-0.5 rounded-full bg-indigo-200/80 text-indigo-900 text-[10px] font-bold">
+                        {Object.keys(tourPlan.lockedAppointmentTimes || {}).length} Confirmed Fixed Slot
+                      </span>
+                    </div>
+                    <p className="text-indigo-900/90 leading-relaxed text-xs">
+                      The optimizer has fixed your confirmed venue appointment times and automatically calculated the surrounding schedule. Flexible venues have been recommended with specific appointment times and driving buffers so you arrive on schedule without rushing.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Timing Warnings Advisory Banner */}
               {tourPlan.hasTimingWarnings && (
@@ -2316,10 +2432,17 @@ export default function VenuesPage() {
                           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
                             <div>
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-50 text-rose-800 border border-rose-200">
-                                  Appointment #{stop.stopOrder}
-                                </span>
-                                <span className="text-xs font-bold text-amber-800">
+                                {stop.isLockedTime ? (
+                                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-900 border border-indigo-300 flex items-center gap-1">
+                                    <Lock className="w-2.5 h-2.5 text-indigo-700" />
+                                    <span>Confirmed Appt #{stop.stopOrder}</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-50 text-rose-800 border border-rose-200">
+                                    Appointment #{stop.stopOrder}
+                                  </span>
+                                )}
+                                <span className={`text-xs font-bold ${stop.isLockedTime ? 'text-indigo-950 font-mono' : 'text-amber-800'}`}>
                                   ⏰ {stop.suggestedTourWindow}
                                 </span>
                                 {stop.touringStatus && (
@@ -2374,6 +2497,66 @@ export default function VenuesPage() {
                               </div>
                             )}
                           </div>
+
+                          {/* Booking Advice Card with Lock Slot button */}
+                          {stop.appointmentBookingAdvice && (
+                            <div className={`p-3 rounded-xl border text-xs flex items-start justify-between gap-3 ${
+                              stop.isLockedTime
+                                ? 'bg-indigo-50/70 border-indigo-200 text-indigo-950'
+                                : 'bg-amber-50/70 border-amber-200 text-amber-950'
+                            }`}>
+                              <div className="flex items-start gap-2.5">
+                                {stop.isLockedTime ? (
+                                  <Lock className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                                ) : (
+                                  <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                )}
+                                <div className="space-y-0.5">
+                                  <strong className="font-bold text-xs block text-stone-900">
+                                    {stop.isLockedTime ? 'Appointment Confirmed with Venue:' : 'Booking Recommendation for Venue Coordinator:'}
+                                  </strong>
+                                  <p className="text-[11px] text-stone-700 leading-relaxed">
+                                    {stop.appointmentBookingAdvice}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {!stop.isLockedTime && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    handleSetLockedTime(stop.venueId, stop.suggestedArrivalTime);
+                                    const updatedLocked = {
+                                      ...tourForm.lockedAppointmentTimes,
+                                      [stop.venueId]: stop.suggestedArrivalTime,
+                                    };
+                                    const startLoc = tourForm.primarySide === 'groom' ? tourForm.groomAddress : tourForm.brideAddress;
+                                    const secondLoc = tourForm.primarySide === 'groom' ? tourForm.brideAddress : tourForm.groomAddress;
+                                    const selectedVenues = venues.filter((v) => tourForm.selectedVenueIds.includes(v.id));
+                                    const plan = generateSiteTourSchedule({
+                                      weddingId: wedding?.id || 'w-user-1',
+                                      tourDate: tourForm.tourDate,
+                                      startLocation: startLoc,
+                                      secondFamilyLocation: secondLoc,
+                                      meetingMode: tourForm.meetingMode,
+                                      venues: selectedVenues,
+                                      dayStartTime: tourForm.dayStartTime,
+                                      durationPerTourMinutes: tourForm.durationPerTourMinutes,
+                                      bufferBetweenToursMinutes: tourForm.bufferBetweenToursMinutes,
+                                      includesLunchBreak: tourForm.includesLunchBreak,
+                                      lockedAppointmentTimes: updatedLocked,
+                                    });
+                                    saveTourPlan(plan);
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 font-bold text-[10px] shrink-0 shadow-2xs flex items-center gap-1 transition-colors"
+                                  title="Lock this recommended time slot once confirmed"
+                                >
+                                  <Lock className="w-3 h-3 text-amber-700" />
+                                  <span>Lock slot</span>
+                                </button>
+                              )}
+                            </div>
+                          )}
 
                           {/* Warning Alert if tour is outside venue's standard hours */}
                           {stop.touringStatus && !stop.touringStatus.isWithinHours && (

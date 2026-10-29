@@ -292,6 +292,20 @@ export function subtractMinutesFromTimeString(timeStr: string, minutesToSubtract
 }
 
 /**
+ * Converts minutes from midnight (e.g. 780) to a standard 12-hour time string ("01:00 PM")
+ */
+export function minutesToTimeString(totalMinutes: number): string {
+  const normMinutes = ((totalMinutes % 1440) + 1440) % 1440;
+  const hours24 = Math.floor(normMinutes / 60);
+  const minutes = normMinutes % 60;
+  const modifier = hours24 >= 12 ? 'PM' : 'AM';
+  const hours12 = hours24 % 12 === 0 ? 12 : hours24 % 12;
+  const padHours = hours12 < 10 ? `0${hours12}` : `${hours12}`;
+  const padMin = minutes < 10 ? `0${minutes}` : `${minutes}`;
+  return `${padHours}:${padMin} ${modifier}`;
+}
+
+/**
  * Returns official site touring hours for a venue, reflecting real-world wedding venue scheduling rules:
  * - Saturdays: Luxury estates only tour morning hours (9:30 AM – 1:30 PM) before evening Baraat/weddings start.
  * - Sundays: 10:00 AM – 2:30 PM
@@ -634,7 +648,8 @@ export function findOptimalTourOrder(
   dayStartTime: string = '09:30 AM',
   durationPerTourMinutes: number = 60,
   bufferBetweenToursMinutes: number = 15,
-  includesLunchBreak: boolean = true
+  includesLunchBreak: boolean = true,
+  lockedAppointmentTimes: Record<string, string> = {}
 ): {
   orderedVenues: VenueOption[];
   totalDistanceMiles: number;
@@ -933,36 +948,153 @@ export function findOptimalTourOrder(
       currentLegs.push(leg);
     }
 
-    // Simulate timeline to assess touring hours feasibility
+    // Simulate timeline to assess touring hours feasibility and locked appointment constraints
     let simTime = roundToQuarterHour(initialArrivalRaw);
     let timingPenalty = 0;
 
-    for (let i = 0; i < candidateOrder.length; i++) {
-      const v = candidateOrder[i];
-      let arrival = simTime;
-      if (i > 0) {
-        const leg = currentLegs[i];
-        const arrivalRaw = addMinutesToTimeString(simTime, leg.durationMinutes);
-        arrival = roundToQuarterHour(arrivalRaw);
+    const lockedIndices: number[] = [];
+    for (let idx = 0; idx < candidateOrder.length; idx++) {
+      if (lockedAppointmentTimes && lockedAppointmentTimes[candidateOrder[idx].id]) {
+        lockedIndices.push(idx);
       }
-      const departure = addMinutesToTimeString(arrival, durationPerTourMinutes);
+    }
 
-      const timingCheck = evaluateTourStopTiming(v, tourDate, arrival, departure);
-      if (!timingCheck.isWithinHours) {
-        timingPenalty += 500;
-      } else if (timingCheck.status === 'closing_soon') {
-        timingPenalty += 15;
+    if (lockedIndices.length > 0) {
+      // 1. Check chronological monotonicity of locked stops
+      for (let k = 0; k < lockedIndices.length - 1; k++) {
+        const idxA = lockedIndices[k];
+        const idxB = lockedIndices[k + 1];
+        const minsA = timeStringToMinutes(lockedAppointmentTimes[candidateOrder[idxA].id]);
+        const minsB = timeStringToMinutes(lockedAppointmentTimes[candidateOrder[idxB].id]);
+        if (minsA >= minsB) {
+          timingPenalty += 100000; // Impossible order (e.g. 1pm after 2pm)
+        } else {
+          let minNeeded = durationPerTourMinutes;
+          for (let legIdx = idxA + 1; legIdx <= idxB; legIdx++) {
+            minNeeded += currentLegs[legIdx]?.durationMinutes || 15;
+            if (legIdx < idxB) minNeeded += durationPerTourMinutes;
+          }
+          if (minsB - minsA < minNeeded) {
+            timingPenalty += 50000; // Travel + tour time exceeds gap
+          }
+        }
       }
 
-      simTime = departure;
-      if (
-        includesLunchBreak &&
-        i < candidateOrder.length - 1 &&
-        (departure.includes('12:') || departure.includes('1:'))
-      ) {
-        simTime = addMinutesToTimeString(departure, 60);
+      // 2. Working backwards for stops before first locked stop
+      const firstLockedIdx = lockedIndices[0];
+      const firstLockedTimeStr = lockedAppointmentTimes[candidateOrder[firstLockedIdx].id];
+      const firstLockedMins = timeStringToMinutes(firstLockedTimeStr);
+
+      let idealFirstArrivalMins = firstLockedMins;
+      if (firstLockedIdx > 0) {
+        let leadNeeded = 0;
+        for (let b = 0; b < firstLockedIdx; b++) {
+          leadNeeded += durationPerTourMinutes;
+          leadNeeded += currentLegs[b + 1]?.durationMinutes || 15;
+        }
+        const hasLunchBefore = includesLunchBreak && firstLockedMins >= 750;
+        leadNeeded += hasLunchBefore ? 55 : (firstLockedIdx * bufferBetweenToursMinutes);
+        idealFirstArrivalMins = firstLockedMins - leadNeeded;
+
+        if (idealFirstArrivalMins < 540) {
+          timingPenalty += 3000; // Required start before 9:00 AM
+        }
+        simTime = roundToQuarterHour(minutesToTimeString(Math.max(540, idealFirstArrivalMins)));
       } else {
-        simTime = addMinutesToTimeString(simTime, bufferBetweenToursMinutes);
+        simTime = firstLockedTimeStr;
+      }
+
+      // If dual-family start plan exists, synchronize rendezvous arrival to ideal first stop arrival
+      if (candidateDualPlan) {
+        const syncFirstArrival = simTime;
+        candidateDualPlan.rendezvousArrivalTime = syncFirstArrival;
+        candidateDualPlan.groomDeparture.recommendedDepartureTime = subtractMinutesFromTimeString(
+          syncFirstArrival,
+          candidateDualPlan.groomDeparture.drivingMinutesToFirstStop
+        );
+        candidateDualPlan.brideDeparture.recommendedDepartureTime = subtractMinutesFromTimeString(
+          syncFirstArrival,
+          candidateDualPlan.brideDeparture.drivingMinutesToFirstStop
+        );
+      }
+
+      // 3. Step-by-step forward check
+      let currentMins = timeStringToMinutes(simTime);
+      for (let i = 0; i < candidateOrder.length; i++) {
+        const v = candidateOrder[i];
+        let arrival: string;
+        if (lockedAppointmentTimes[v.id]) {
+          arrival = lockedAppointmentTimes[v.id];
+          currentMins = timeStringToMinutes(arrival);
+        } else if (i === 0) {
+          arrival = simTime;
+          currentMins = timeStringToMinutes(arrival);
+        } else {
+          arrival = roundToQuarterHour(minutesToTimeString(currentMins));
+          currentMins = timeStringToMinutes(arrival);
+        }
+
+        const departure = addMinutesToTimeString(arrival, durationPerTourMinutes);
+        const timingCheck = evaluateTourStopTiming(v, tourDate, arrival, departure);
+        if (!timingCheck.isWithinHours) {
+          timingPenalty += 500;
+        } else if (timingCheck.status === 'closing_soon') {
+          timingPenalty += 15;
+        }
+
+        const depMins = timeStringToMinutes(departure);
+        if (i < candidateOrder.length - 1) {
+          const nextLegMins = currentLegs[i + 1]?.durationMinutes || 15;
+          const nextVenue = candidateOrder[i + 1];
+          if (lockedAppointmentTimes[nextVenue.id]) {
+            const nextLockedMins = timeStringToMinutes(lockedAppointmentTimes[nextVenue.id]);
+            const availableGap = nextLockedMins - depMins;
+            if (availableGap < nextLegMins) {
+              timingPenalty += 50000; // Impossible to reach locked appointment on time
+            } else if (availableGap < nextLegMins + 10) {
+              timingPenalty += 200; // Extremely tight buffer
+            } else if (availableGap >= nextLegMins + 40 && availableGap <= nextLegMins + 80 && includesLunchBreak) {
+              timingPenalty -= 50; // Perfect lunch / chai debrief window
+            }
+            currentMins = nextLockedMins;
+          } else {
+            if (includesLunchBreak && (departure.includes('12:') || departure.includes('1:'))) {
+              currentMins = depMins + 60 + nextLegMins;
+            } else {
+              currentMins = depMins + bufferBetweenToursMinutes + nextLegMins;
+            }
+          }
+        }
+      }
+    } else {
+      // Standard forward simulation without locked appointments
+      for (let i = 0; i < candidateOrder.length; i++) {
+        const v = candidateOrder[i];
+        let arrival = simTime;
+        if (i > 0) {
+          const leg = currentLegs[i];
+          const arrivalRaw = addMinutesToTimeString(simTime, leg.durationMinutes);
+          arrival = roundToQuarterHour(arrivalRaw);
+        }
+        const departure = addMinutesToTimeString(arrival, durationPerTourMinutes);
+
+        const timingCheck = evaluateTourStopTiming(v, tourDate, arrival, departure);
+        if (!timingCheck.isWithinHours) {
+          timingPenalty += 500;
+        } else if (timingCheck.status === 'closing_soon') {
+          timingPenalty += 15;
+        }
+
+        simTime = departure;
+        if (
+          includesLunchBreak &&
+          i < candidateOrder.length - 1 &&
+          (departure.includes('12:') || departure.includes('1:'))
+        ) {
+          simTime = addMinutesToTimeString(departure, 60);
+        } else {
+          simTime = addMinutesToTimeString(simTime, bufferBetweenToursMinutes);
+        }
       }
     }
 
@@ -1046,6 +1178,7 @@ export function generateSiteTourSchedule({
   durationPerTourMinutes = 60,
   bufferBetweenToursMinutes = 15,
   includesLunchBreak = true,
+  lockedAppointmentTimes = {},
 }: {
   weddingId: string;
   tourDate: string;
@@ -1057,6 +1190,7 @@ export function generateSiteTourSchedule({
   durationPerTourMinutes?: number;
   bufferBetweenToursMinutes?: number;
   includesLunchBreak?: boolean;
+  lockedAppointmentTimes?: Record<string, string>;
 }): SiteTourDayPlan {
   const {
     orderedVenues,
@@ -1073,24 +1207,60 @@ export function generateSiteTourSchedule({
     dayStartTime,
     durationPerTourMinutes,
     bufferBetweenToursMinutes,
-    includesLunchBreak
+    includesLunchBreak,
+    lockedAppointmentTimes
   );
 
-  let currentTime = dayStartTime;
+  const lockedIndices: number[] = [];
+  for (let i = 0; i < orderedVenues.length; i++) {
+    if (lockedAppointmentTimes && lockedAppointmentTimes[orderedVenues[i].id]) {
+      lockedIndices.push(i);
+    }
+  }
+  const hasLockedAppointments = lockedIndices.length > 0;
+
+  // Determine initial arrival for Stop #1
+  let initialArrival = dayStartTime;
+  if (hasLockedAppointments) {
+    const firstLockedIdx = lockedIndices[0];
+    const firstLockedTimeStr = lockedAppointmentTimes[orderedVenues[firstLockedIdx].id];
+    const firstLockedMins = timeStringToMinutes(firstLockedTimeStr);
+
+    if (firstLockedIdx > 0) {
+      let leadNeeded = 0;
+      for (let b = 0; b < firstLockedIdx; b++) {
+        leadNeeded += durationPerTourMinutes;
+        leadNeeded += legMetrics[b + 1]?.durationMinutes || 15;
+      }
+      const hasLunchBefore = includesLunchBreak && firstLockedMins >= 750;
+      leadNeeded += hasLunchBefore ? 55 : (firstLockedIdx * bufferBetweenToursMinutes);
+      const idealStartMins = firstLockedMins - leadNeeded;
+      initialArrival = roundToQuarterHour(minutesToTimeString(Math.max(540, idealStartMins)));
+    } else {
+      initialArrival = firstLockedTimeStr;
+    }
+  } else if (dualFamilyStartPlan?.rendezvousArrivalTime) {
+    initialArrival = dualFamilyStartPlan.rendezvousArrivalTime;
+  }
+
+  let currentTime = initialArrival;
   const stops: ScheduledTourStop[] = [];
   let timingWarningsCount = 0;
 
-  // Determine if a lunch break should be scheduled around midday (~12:30 PM - 1:30 PM)
   let lunchBreakScheduled = false;
   let lunchWindow: { startTime: string; durationMinutes: number; note: string } | undefined = undefined;
 
   for (let i = 0; i < orderedVenues.length; i++) {
     const venue = orderedVenues[i];
     const leg = legMetrics[i] || { distanceMiles: 5, durationMinutes: 15 };
+    const isLockedTime = Boolean(lockedAppointmentTimes && lockedAppointmentTimes[venue.id]);
+    const lockedTime = isLockedTime ? lockedAppointmentTimes[venue.id] : undefined;
 
     let suggestedArrival: string;
-    if (i === 0 && dualFamilyStartPlan?.rendezvousArrivalTime) {
-      suggestedArrival = dualFamilyStartPlan.rendezvousArrivalTime;
+    if (isLockedTime && lockedTime) {
+      suggestedArrival = lockedTime;
+    } else if (i === 0) {
+      suggestedArrival = initialArrival;
     } else {
       const arrivalRaw = addMinutesToTimeString(currentTime, leg.durationMinutes);
       suggestedArrival = roundToQuarterHour(arrivalRaw);
@@ -1104,6 +1274,27 @@ export function generateSiteTourSchedule({
     const timingStatus = evaluateTourStopTiming(venue, tourDate, suggestedArrival, suggestedDeparture);
     if (!timingStatus.isWithinHours || timingStatus.status === 'closing_soon') {
       timingWarningsCount++;
+    }
+
+    // Generate contextual booking advice for wedding coordinators
+    let appointmentBookingAdvice: string;
+    if (isLockedTime && lockedTime) {
+      appointmentBookingAdvice = `🔒 Confirmed Hard Appointment: Walkthrough confirmed at ${lockedTime} with ${venue.name} wedding sales coordinator.`;
+    } else if (hasLockedAppointments) {
+      const firstLockedIdx = lockedIndices[0];
+      const firstLockedVenue = orderedVenues[firstLockedIdx];
+      const firstLockedTime = lockedAppointmentTimes[firstLockedVenue.id];
+
+      if (i < firstLockedIdx) {
+        appointmentBookingAdvice = `📞 Recommended Booking Slot: Call ${venue.name} sales office to schedule between ${suggestedArrival} – ${suggestedDeparture}. This provides a ${durationPerTourMinutes}-min walkthrough and travel buffer to comfortably make your locked ${firstLockedTime} appointment at ${firstLockedVenue.name}.`;
+      } else {
+        const prevLockedIdx = lockedIndices.filter((idx) => idx < i).pop() ?? firstLockedIdx;
+        const prevLockedVenue = orderedVenues[prevLockedIdx];
+        const prevLockedTime = lockedAppointmentTimes[prevLockedVenue.id];
+        appointmentBookingAdvice = `📞 Recommended Booking Slot: Call ${venue.name} sales office to schedule between ${suggestedArrival} – ${suggestedDeparture}. This smoothly follows your locked ${prevLockedTime} appointment at ${prevLockedVenue.name} with driving buffer.`;
+      }
+    } else {
+      appointmentBookingAdvice = `✨ Flexible Slot: Call ${venue.name} sales office to reserve this recommended ${suggestedArrival} walkthrough window.`;
     }
 
     stops.push({
@@ -1121,6 +1312,9 @@ export function generateSiteTourSchedule({
       notesOrQuestionsToAsk: getQuestionsForVenue(venue),
       touringHours,
       touringStatus: timingStatus,
+      isLockedTime,
+      lockedTime,
+      appointmentBookingAdvice,
     });
 
     currentTime = suggestedDeparture;
@@ -1129,22 +1323,42 @@ export function generateSiteTourSchedule({
     if (
       includesLunchBreak &&
       !lunchBreakScheduled &&
-      i < orderedVenues.length - 1 &&
-      (suggestedDeparture.includes('12:') || suggestedDeparture.includes('1:'))
+      i < orderedVenues.length - 1
     ) {
-      const lunchStart = suggestedDeparture;
-      const lunchEnd = addMinutesToTimeString(lunchStart, 60);
-      lunchWindow = {
-        startTime: lunchStart,
-        durationMinutes: 60,
-        note: 'Family Lunch & Debrief Break: Review morning venue pros/cons away from sales coordinators over chai & lunch.',
-      };
-      currentTime = lunchEnd;
-      lunchBreakScheduled = true;
-    } else {
-      // Add standard buffer before driving
-      currentTime = addMinutesToTimeString(currentTime, bufferBetweenToursMinutes);
+      const nextStopIsLocked = Boolean(lockedAppointmentTimes && lockedAppointmentTimes[orderedVenues[i + 1].id]);
+      if (nextStopIsLocked) {
+        const nextLockedTime = lockedAppointmentTimes[orderedVenues[i + 1].id];
+        const nextDrive = nextLeg?.durationMinutes || 15;
+        const gap = timeStringToMinutes(nextLockedTime) - timeStringToMinutes(suggestedDeparture);
+        if (gap >= nextDrive + 40) {
+          const lunchDuration = Math.min(60, gap - nextDrive);
+          lunchWindow = {
+            startTime: suggestedDeparture,
+            durationMinutes: lunchDuration,
+            note: `Family Lunch & Debrief Break: Debrief morning venue impressions over lunch & chai near ${orderedVenues[i + 1].name} before your confirmed ${nextLockedTime} appointment.`,
+          };
+          currentTime = addMinutesToTimeString(suggestedDeparture, lunchDuration);
+          lunchBreakScheduled = true;
+          continue;
+        }
+      }
+
+      if (suggestedDeparture.includes('12:') || suggestedDeparture.includes('1:')) {
+        const lunchStart = suggestedDeparture;
+        const lunchEnd = addMinutesToTimeString(lunchStart, 60);
+        lunchWindow = {
+          startTime: lunchStart,
+          durationMinutes: 60,
+          note: 'Family Lunch & Debrief Break: Review morning venue pros/cons away from sales coordinators over chai & lunch.',
+        };
+        currentTime = lunchEnd;
+        lunchBreakScheduled = true;
+        continue;
+      }
     }
+
+    // Add standard buffer before driving
+    currentTime = addMinutesToTimeString(currentTime, bufferBetweenToursMinutes);
   }
 
   const startAddressStr = `${startLocation.address}, ${startLocation.city}, ${startLocation.state}`;
@@ -1170,6 +1384,8 @@ export function generateSiteTourSchedule({
     googleMapsMultiStopUrl: googleMapsUrl,
     hasTimingWarnings: timingWarningsCount > 0,
     timingWarningsCount,
+    lockedAppointmentTimes,
+    hasLockedAppointments,
   };
 }
 
@@ -1189,6 +1405,12 @@ export function formatTourPlanForWhatsApp(
   if (plan.secondFamilyLocation?.address) {
     lines.push(
       `🤝 *Second Family Location:* ${plan.secondFamilyLocation.label} (${plan.secondFamilyLocation.address})`
+    );
+  }
+
+  if (plan.hasLockedAppointments) {
+    lines.push(
+      `🔒 *Hard Appointment Mode Active:* Route anchored around confirmed appointments!`
     );
   }
 
@@ -1215,12 +1437,17 @@ export function formatTourPlanForWhatsApp(
 
   plan.optimizedStops.forEach((stop) => {
     const venue = venues.find((v) => v.id === stop.venueId);
+    const lockBadge = stop.isLockedTime ? ' 🔒 [Confirmed Appointment]' : ' ✨ [Suggested Booking Slot]';
     lines.push(
       ``,
-      `*Stop #${stop.stopOrder}: ${stop.venueName}*`,
+      `*Stop #${stop.stopOrder}: ${stop.venueName}*${lockBadge}`,
       `📍 ${stop.address}, ${stop.city}`,
       `🕒 *Tour Window:* ${stop.suggestedTourWindow}`
     );
+
+    if (stop.appointmentBookingAdvice && !stop.isLockedTime) {
+      lines.push(`💡 _${stop.appointmentBookingAdvice}_`);
+    }
 
     if (stop.touringHours) {
       lines.push(`⏰ *Official Tour Hours:* ${stop.touringHours.saturdayHours}`);
@@ -1247,7 +1474,7 @@ export function formatTourPlanForWhatsApp(
     lines.push(
       ``,
       `🍱 *${plan.lunchBreakWindow.note}*`,
-      `🕒 ${plan.lunchBreakWindow.startTime} (60 min break)`
+      `🕒 ${plan.lunchBreakWindow.startTime} (${plan.lunchBreakWindow.durationMinutes} min break)`
     );
   }
 

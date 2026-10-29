@@ -302,6 +302,9 @@ export interface ScheduledTourStop {
   notesOrQuestionsToAsk: string[];
   touringHours?: VenueTouringHours;
   touringStatus?: StopTouringStatus;
+  isLockedTime?: boolean;
+  lockedTime?: string;
+  appointmentBookingAdvice?: string;
 }
 
 export type DualFamilyMeetingMode =
@@ -358,6 +361,8 @@ export interface SiteTourDayPlan {
   totalEstDistanceMiles: number;
   googleMapsMultiStopUrl: string;
   notes?: string;
+  lockedAppointmentTimes?: Record<string, string>;
+  hasLockedAppointments?: boolean;
   hasTimingWarnings?: boolean;
   timingWarningsCount?: number;
 }

@@ -52,6 +52,9 @@ interface LocationMarker {
   touringStatus?: StopTouringStatus;
   rating?: number;
   reviewCount?: number;
+  isLockedTime?: boolean;
+  lockedTime?: string;
+  appointmentBookingAdvice?: string;
 }
 
 interface TourDayRouteMapProps {
@@ -225,6 +228,9 @@ export default function TourDayRouteMap({
         touringStatus: stop.touringStatus,
         rating: 4.9,
         reviewCount: 140 + index * 37,
+        isLockedTime: stop.isLockedTime,
+        lockedTime: stop.lockedTime,
+        appointmentBookingAdvice: stop.appointmentBookingAdvice,
       });
     });
 
@@ -649,9 +655,12 @@ export default function TourDayRouteMap({
           <div style="font-size:11px; color:#78716c; margin-top:2px;">${marker.address}, ${marker.city}, ${marker.state}</div>
           ${
             marker.suggestedArrival
-              ? `<div style="margin-top:8px; padding:6px 8px; border-radius:8px; background:#f5f5f4; border:1px solid #e7e5e4; font-size:11px; display:flex; justify-content:space-between;">
-                  <span style="color:#57534e;">Scheduled:</span>
-                  <span style="font-weight:bold; color:#be123c;">${marker.suggestedArrival} – ${marker.suggestedDeparture || ''}</span>
+              ? `<div style="margin-top:8px; padding:6px 8px; border-radius:8px; background:${marker.isLockedTime ? '#eef2ff' : '#f5f5f4'}; border:1px solid ${marker.isLockedTime ? '#c7d2fe' : '#e7e5e4'}; font-size:11px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:${marker.isLockedTime ? '#3730a3' : '#57534e'}; font-weight:${marker.isLockedTime ? 'bold' : 'normal'};">${marker.isLockedTime ? '🔒 Fixed Hard Appt:' : 'Scheduled:'}</span>
+                    <span style="font-weight:bold; color:${marker.isLockedTime ? '#312e81' : '#be123c'};">${marker.suggestedArrival} – ${marker.suggestedDeparture || ''}</span>
+                  </div>
+                  ${!marker.isLockedTime ? '<div style="font-size:10px; color:#059669; font-weight:600; margin-top:2px;">✨ Recommended booking slot</div>' : ''}
                 </div>`
               : ''
           }
