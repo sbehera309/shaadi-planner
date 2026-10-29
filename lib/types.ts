@@ -197,6 +197,16 @@ export interface VenueDesiCapabilities {
   hotelRoomBlockDiscount?: string;
 }
 
+export interface NearestHotelInfo {
+  hotelName: string;
+  distanceMiles: number; // 0 if on-site
+  approxDriveMinutes: number; // 0 if on-site
+  roomBlockDiscountNote?: string;
+  address?: string;
+  phone?: string;
+  shuttleProvided: boolean;
+}
+
 export interface VenueOption {
   id: string;
   weddingId: string;
@@ -214,6 +224,10 @@ export interface VenueOption {
   websiteUrl?: string;
   pricing: VenueCostBreakdown;
   desiFeatures: VenueDesiCapabilities;
+  nearestHotel?: NearestHotelInfo;
+  curatedState?: 'NJ' | 'PA' | string;
+  popularityScore?: number; // 1 to 100
+  historicalPriceTier?: '$' | '$$' | '$$$' | '$$$$';
   availableDates: string[]; // e.g. ["2026-10-24 (Sat)", "2026-11-07 (Sat)"]
   tourStatus: VenueStatus;
   tourScheduledDate?: string;

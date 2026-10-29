@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useWedding } from '@/lib/store';
 import {
@@ -8,13 +8,18 @@ import {
   VenueStatus,
   FamilyAddressInput,
   SiteTourDayPlan,
+  NearestHotelInfo,
 } from '@/lib/types';
 import { Modal } from '@/components/Modal';
 import {
   generateSiteTourSchedule,
   formatTourPlanForWhatsApp,
-  getQuestionsForVenue,
 } from '@/lib/venueRouteOptimizer';
+import {
+  PRELOADED_CURATED_VENUES,
+  syncCuratedVenuesToFirebase,
+  getCuratedVenues,
+} from '@/lib/preloadedVenues';
 import {
   Building2,
   Plus,
@@ -33,7 +38,6 @@ import {
   Edit2,
   Heart,
   Star,
-  Share2,
   Navigation,
   DollarSign,
   Utensils,
@@ -46,7 +50,14 @@ import {
   Copy,
   ArrowRight,
   Filter,
+  ArrowUpDown,
+  Search,
+  BookmarkPlus,
+  Compass,
+  Bus,
 } from 'lucide-react';
+
+type CuratedSortOption = 'best' | 'price_asc' | 'price_desc' | 'capacity_desc';
 
 export default function VenuesPage() {
   const {
@@ -60,13 +71,30 @@ export default function VenuesPage() {
     saveTourPlan,
   } = useWedding();
 
-  const [activeTab, setActiveTab] = useState<'venues' | 'tour-planner'>('venues');
+  const [activeTab, setActiveTab] = useState<'curated' | 'my-venues' | 'tour-planner'>('curated');
   const [statusFilter, setStatusFilter] = useState<'all' | VenueStatus>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVenue, setEditingVenue] = useState<VenueOption | null>(null);
   const [copiedWhatsApp, setCopiedWhatsApp] = useState(false);
+  const [addedSuccessId, setAddedSuccessId] = useState<string | null>(null);
 
-  // Form State for Add / Edit Venue
+  // Curated Database Filters & Sorting
+  const [curatedVenues, setCuratedVenues] = useState<VenueOption[]>(PRELOADED_CURATED_VENUES);
+  const [curatedStateFilter, setCuratedStateFilter] = useState<'ALL' | 'NJ' | 'PA'>('ALL');
+  const [curatedSortBy, setCuratedSortBy] = useState<CuratedSortOption>('best');
+  const [curatedSearch, setCuratedSearch] = useState('');
+  const [filterOutsideCateringOnly, setFilterOutsideCateringOnly] = useState(false);
+  const [filterHavanOnly, setFilterHavanOnly] = useState(false);
+
+  // Sync to Firebase on client mount
+  useEffect(() => {
+    syncCuratedVenuesToFirebase().catch(() => {});
+    getCuratedVenues().then((res) => {
+      if (res && res.length > 0) setCuratedVenues(res);
+    });
+  }, []);
+
+  // Form State for Add / Edit Custom Venue
   const [formData, setFormData] = useState({
     name: '',
     type: 'hotel_ballroom' as VenueOption['type'],
@@ -97,6 +125,10 @@ export default function VenuesPage() {
     hasGroomSuite: true,
     hotelRoomsOnSite: true,
     hotelRoomBlockDiscount: '',
+    nearestHotelName: '',
+    nearestHotelDistance: 0,
+    nearestHotelNotes: '',
+    nearestHotelShuttle: true,
     availableDatesString: '',
     tourStatus: 'shortlisted' as VenueStatus,
     prosString: '',
@@ -177,6 +209,10 @@ export default function VenuesPage() {
       hasGroomSuite: true,
       hotelRoomsOnSite: true,
       hotelRoomBlockDiscount: '$199/night room block',
+      nearestHotelName: '',
+      nearestHotelDistance: 0,
+      nearestHotelNotes: '',
+      nearestHotelShuttle: true,
       availableDatesString: '2026-10-24 (Sat), 2026-11-07 (Sat)',
       tourStatus: 'shortlisted',
       prosString: 'Outside Indian catering permitted; Large ballroom for 450 guests',
@@ -219,6 +255,10 @@ export default function VenuesPage() {
       hasGroomSuite: v.desiFeatures.hasGroomSuite,
       hotelRoomsOnSite: v.desiFeatures.hotelRoomsOnSite,
       hotelRoomBlockDiscount: v.desiFeatures.hotelRoomBlockDiscount || '',
+      nearestHotelName: v.nearestHotel?.hotelName || '',
+      nearestHotelDistance: v.nearestHotel?.distanceMiles || 0,
+      nearestHotelNotes: v.nearestHotel?.roomBlockDiscountNote || '',
+      nearestHotelShuttle: v.nearestHotel?.shuttleProvided ?? true,
       availableDatesString: (v.availableDates || []).join(', '),
       tourStatus: v.tourStatus,
       prosString: (v.pros || []).join('; '),
@@ -244,12 +284,22 @@ export default function VenuesPage() {
       .map((s) => s.trim())
       .filter(Boolean);
 
-    // Calculate total if not provided
     const baseCost = formData.rentalFee + formData.foodAndBeverageMinimum;
     const estimatedTotalCost =
       formData.estimatedTotalCost > 0
         ? formData.estimatedTotalCost
         : Math.round(baseCost * (1 + formData.serviceChargePercent / 100) * (1 + formData.taxPercent / 100));
+
+    let nearestHotel: NearestHotelInfo | undefined = undefined;
+    if (formData.nearestHotelName.trim() !== '') {
+      nearestHotel = {
+        hotelName: formData.nearestHotelName,
+        distanceMiles: Number(formData.nearestHotelDistance),
+        approxDriveMinutes: Math.round(Number(formData.nearestHotelDistance) * 2 + 2),
+        roomBlockDiscountNote: formData.nearestHotelNotes,
+        shuttleProvided: formData.nearestHotelShuttle,
+      };
+    }
 
     const payload: Omit<VenueOption, 'id' | 'weddingId'> = {
       name: formData.name,
@@ -285,6 +335,7 @@ export default function VenuesPage() {
         hotelRoomsOnSite: formData.hotelRoomsOnSite,
         hotelRoomBlockDiscount: formData.hotelRoomBlockDiscount,
       },
+      nearestHotel,
       availableDates,
       tourStatus: formData.tourStatus,
       pros,
@@ -300,6 +351,48 @@ export default function VenuesPage() {
       addVenue(payload);
     }
     setIsModalOpen(false);
+  };
+
+  // Add curated venue into user's personal shortlist
+  const handleAddCuratedToMyShortlist = (curated: VenueOption) => {
+    const isAlreadyAdded = venues.some(
+      (v) => v.name.toLowerCase() === curated.name.toLowerCase()
+    );
+    if (isAlreadyAdded) {
+      alert(`"${curated.name}" is already in your shortlist!`);
+      return;
+    }
+
+    addVenue({
+      name: curated.name,
+      type: curated.type,
+      address: curated.address,
+      city: curated.city,
+      state: curated.state,
+      zipCode: curated.zipCode,
+      latitude: curated.latitude,
+      longitude: curated.longitude,
+      contactPerson: curated.contactPerson,
+      contactEmail: curated.contactEmail,
+      contactPhone: curated.contactPhone,
+      websiteUrl: curated.websiteUrl,
+      pricing: curated.pricing,
+      desiFeatures: curated.desiFeatures,
+      nearestHotel: curated.nearestHotel,
+      curatedState: curated.curatedState,
+      popularityScore: curated.popularityScore,
+      historicalPriceTier: curated.historicalPriceTier,
+      availableDates: curated.availableDates,
+      tourStatus: 'shortlisted',
+      pros: curated.pros,
+      cons: curated.cons,
+      rating: curated.rating,
+      notes: curated.notes,
+      isFavorite: true,
+    });
+
+    setAddedSuccessId(curated.id);
+    setTimeout(() => setAddedSuccessId(null), 3000);
   };
 
   const handleToggleVenueSelectionForTour = (venueId: string) => {
@@ -347,7 +440,44 @@ export default function VenuesPage() {
     setTimeout(() => setCopiedWhatsApp(false), 2500);
   };
 
-  const filteredVenues =
+  // Filter & Sort Curated Venues List
+  const processedCuratedVenues = curatedVenues
+    .filter((v) => {
+      if (curatedStateFilter !== 'ALL' && v.curatedState !== curatedStateFilter && v.state !== curatedStateFilter) {
+        return false;
+      }
+      if (filterOutsideCateringOnly && !v.desiFeatures.allowsOutsideIndianCatering) {
+        return false;
+      }
+      if (filterHavanOnly && !v.desiFeatures.allowsOpenFlameHavan) {
+        return false;
+      }
+      if (curatedSearch.trim() !== '') {
+        const q = curatedSearch.toLowerCase();
+        const matchesName = v.name.toLowerCase().includes(q);
+        const matchesCity = v.city.toLowerCase().includes(q);
+        const matchesHotel = v.nearestHotel?.hotelName.toLowerCase().includes(q);
+        if (!matchesName && !matchesCity && !matchesHotel) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (curatedSortBy === 'best') {
+        return (b.popularityScore || 90) - (a.popularityScore || 90);
+      }
+      if (curatedSortBy === 'price_asc') {
+        return a.pricing.estimatedTotalCost - b.pricing.estimatedTotalCost;
+      }
+      if (curatedSortBy === 'price_desc') {
+        return b.pricing.estimatedTotalCost - a.pricing.estimatedTotalCost;
+      }
+      if (curatedSortBy === 'capacity_desc') {
+        return b.desiFeatures.maxReceptionCapacity - a.desiFeatures.maxReceptionCapacity;
+      }
+      return 0;
+    });
+
+  const filteredMyVenues =
     statusFilter === 'all'
       ? venues
       : venues.filter((v) => v.tourStatus === statusFilter);
@@ -359,7 +489,7 @@ export default function VenuesPage() {
         <div className="relative z-10 max-w-3xl space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold border border-amber-500/30">
             <Building2 className="w-3.5 h-3.5" />
-            <span>Phase 1 • Venue Scouting & Multi-Site Tour Day</span>
+            <span>Phase 1 • Preloaded Venue Directory & Multi-Site Tour Day</span>
           </div>
 
           <h1 className="text-2xl sm:text-4xl font-bold font-serif tracking-tight text-amber-100">
@@ -367,18 +497,35 @@ export default function VenuesPage() {
           </h1>
 
           <p className="text-xs sm:text-sm text-stone-300 leading-relaxed max-w-2xl">
-            Compare prospective venues across critical Desi wedding requirements (outside Indian catering permissions, havan open flame havan permits, grand Baraat driveway access, and midnight sound curfews).
-            Plan a seamless 1-day multi-venue site tour with family, complete with turnkey Google Maps GPS route navigation.
+            Explore curated, preloaded venue intelligence for <strong>New Jersey (NJ)</strong> and <strong>Pennsylvania (PA)</strong>.
+            Compare outside Indian catering policies, havan open-flame permissions, sound curfews, and closest hotel accommodations without having to spend hours cold-calling sales offices.
           </p>
 
           <div className="pt-2 flex flex-wrap items-center gap-2.5">
             <button
               type="button"
-              onClick={handleOpenAdd}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-600 hover:to-rose-700 text-white font-bold text-xs shadow-md shadow-rose-900/30 transition-all flex items-center gap-1.5"
+              onClick={() => setActiveTab('curated')}
+              className={`px-4 py-2.5 rounded-xl font-bold text-xs border transition-all flex items-center gap-1.5 ${
+                activeTab === 'curated'
+                  ? 'bg-amber-400 text-stone-950 border-amber-400 shadow-xs'
+                  : 'bg-white/10 hover:bg-white/20 text-amber-200 border-white/20'
+              }`}
             >
-              <Plus className="w-4 h-4" />
-              <span>+ Add Venue to Compare</span>
+              <Compass className="w-4 h-4 text-amber-400" />
+              <span>Browse Preloaded Venues (NJ & PA)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('my-venues')}
+              className={`px-4 py-2.5 rounded-xl font-bold text-xs border transition-all flex items-center gap-1.5 ${
+                activeTab === 'my-venues'
+                  ? 'bg-amber-400 text-stone-950 border-amber-400 shadow-xs'
+                  : 'bg-white/10 hover:bg-white/20 text-amber-200 border-white/20'
+              }`}
+            >
+              <Building2 className="w-4 h-4 text-amber-400" />
+              <span>My Shortlist ({venues.length})</span>
             </button>
 
             <button
@@ -390,8 +537,8 @@ export default function VenuesPage() {
                   : 'bg-white/10 hover:bg-white/20 text-amber-200 border-white/20'
               }`}
             >
-              <Car className="w-4 h-4 text-amber-300" />
-              <span>⚡ Optimize Site Tour Day Route</span>
+              <Car className="w-4 h-4 text-amber-400" />
+              <span>Optimize Site Tour Route</span>
             </button>
           </div>
         </div>
@@ -404,41 +551,38 @@ export default function VenuesPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-2xs">
           <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-stone-500 block">
-            Shortlisted Venues
+            Preloaded Venues (NJ & PA)
           </span>
           <div className="mt-1.5 text-xl sm:text-2xl font-extrabold text-stone-900">
-            {venues.length} <span className="text-xs font-medium text-stone-400">locations</span>
+            {curatedVenues.length} <span className="text-xs font-medium text-stone-400">verified</span>
           </div>
           <div className="mt-1 text-[11px] text-amber-800 font-medium">
+            7 in NJ • 6 in PA
+          </div>
+        </div>
+
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-2xs">
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-stone-500 block">
+            My Shortlist
+          </span>
+          <div className="mt-1.5 text-xl sm:text-2xl font-extrabold text-stone-900">
+            {venues.length} <span className="text-xs font-medium text-stone-400">candidates</span>
+          </div>
+          <div className="mt-1 text-[11px] text-rose-800 font-medium">
             {shortlistedCount} ready for site visits
           </div>
         </div>
 
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-2xs">
           <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-stone-500 block">
-            Tours on Schedule
+            Site Tour Day Stops
           </span>
           <div className="mt-1.5 text-xl sm:text-2xl font-extrabold text-stone-900">
             {tourPlan ? tourPlan.optimizedStops.length : tourScheduledCount}{' '}
             <span className="text-xs font-medium text-stone-400">stops</span>
           </div>
-          <div className="mt-1 text-[11px] text-rose-800 font-medium">
-            {tourPlan?.tourDate ? `Set for ${tourPlan.tourDate}` : 'Select date to tour'}
-          </div>
-        </div>
-
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-2xs">
-          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-stone-500 block">
-            Est Tour Day Drive Time
-          </span>
-          <div className="mt-1.5 text-xl sm:text-2xl font-extrabold text-stone-900">
-            {tourPlan ? `~${tourPlan.totalEstDrivingMinutes}m` : '--'}{' '}
-            <span className="text-xs font-medium text-stone-400">
-              {tourPlan ? `(${tourPlan.totalEstDistanceMiles} mi)` : ''}
-            </span>
-          </div>
           <div className="mt-1 text-[11px] text-emerald-800 font-medium">
-            {tourPlan ? 'Optimized sequential route' : 'Add stops to calculate'}
+            {tourPlan ? `~${tourPlan.totalEstDrivingMinutes}m total drive` : 'Select stops to schedule'}
           </div>
         </div>
 
@@ -447,27 +591,43 @@ export default function VenuesPage() {
             Official Selected Venue
           </span>
           <div className="mt-1.5 text-base sm:text-lg font-extrabold text-stone-900 truncate">
-            {officialVenue ? officialVenue.name : wedding?.venueName || 'Not finalized'}
+            {officialVenue ? officialVenue.name : wedding?.venueName || 'Not finalized yet'}
           </div>
           <div className="mt-1 text-[11px] text-stone-500 truncate">
-            {officialVenue ? `${officialVenue.city}, ${officialVenue.state}` : 'Comparing quotes'}
+            {officialVenue ? `${officialVenue.city}, ${officialVenue.state}` : 'Scouting prospective venues'}
           </div>
         </div>
       </div>
 
-      {/* Main Tab Navigation */}
+      {/* Main Tab Switcher */}
       <div className="flex border-b border-stone-200 text-xs sm:text-sm font-semibold">
         <button
           type="button"
-          onClick={() => setActiveTab('venues')}
+          onClick={() => setActiveTab('curated')}
           className={`py-3 px-4 sm:px-6 border-b-2 transition-all flex items-center gap-2 ${
-            activeTab === 'venues'
+            activeTab === 'curated'
+              ? 'border-rose-700 text-rose-800 font-bold'
+              : 'border-transparent text-stone-500 hover:text-stone-800'
+          }`}
+        >
+          <Compass className="w-4 h-4" />
+          <span>Explore Curated Venues (NJ & PA)</span>
+          <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-bold">
+            {curatedVenues.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('my-venues')}
+          className={`py-3 px-4 sm:px-6 border-b-2 transition-all flex items-center gap-2 ${
+            activeTab === 'my-venues'
               ? 'border-rose-700 text-rose-800 font-bold'
               : 'border-transparent text-stone-500 hover:text-stone-800'
           }`}
         >
           <Building2 className="w-4 h-4" />
-          <span>Compare Venues & Quotes ({venues.length})</span>
+          <span>My Shortlist ({venues.length})</span>
         </button>
 
         <button
@@ -489,13 +649,409 @@ export default function VenuesPage() {
         </button>
       </div>
 
-      {/* ------------------------------------------------------------- */}
-      {/* TAB 1: VENUE COMPARISON MATRIX & DIRECTORY */}
-      {/* ------------------------------------------------------------- */}
-      {activeTab === 'venues' && (
+      {/* ============================================================= */}
+      {/* TAB 1: CURATED VENUES DIRECTORY (NJ & PA)                     */}
+      {/* ============================================================= */}
+      {activeTab === 'curated' && (
         <div className="space-y-6">
-          {/* Filter Pills Bar */}
-          <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-stone-200 shadow-2xs flex flex-wrap items-center justify-between gap-3 text-xs">
+          {/* Controls Bar: State Switcher + Search + Sorting */}
+          <div className="bg-white p-4 sm:p-5 rounded-3xl border border-stone-200 shadow-2xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              {/* State Pills */}
+              <div className="flex items-center gap-2 text-xs font-semibold">
+                <span className="text-stone-500">State:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setCuratedStateFilter('ALL')}
+                    className={`px-3 py-1.5 rounded-xl font-bold transition-colors ${
+                      curatedStateFilter === 'ALL'
+                        ? 'bg-rose-950 text-white shadow-2xs'
+                        : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
+                    }`}
+                  >
+                    All States ({curatedVenues.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCuratedStateFilter('NJ')}
+                    className={`px-3 py-1.5 rounded-xl font-bold transition-colors ${
+                      curatedStateFilter === 'NJ'
+                        ? 'bg-rose-950 text-white shadow-2xs'
+                        : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
+                    }`}
+                  >
+                    New Jersey (7)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCuratedStateFilter('PA')}
+                    className={`px-3 py-1.5 rounded-xl font-bold transition-colors ${
+                      curatedStateFilter === 'PA'
+                        ? 'bg-rose-950 text-white shadow-2xs'
+                        : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
+                    }`}
+                  >
+                    Pennsylvania (6)
+                  </button>
+                </div>
+              </div>
+
+              {/* Sorting Dropdown */}
+              <div className="flex items-center gap-2 text-xs font-semibold text-stone-700">
+                <ArrowUpDown className="w-3.5 h-3.5 text-stone-500" />
+                <span>Sort By:</span>
+                <select
+                  value={curatedSortBy}
+                  onChange={(e) => setCuratedSortBy(e.target.value as CuratedSortOption)}
+                  className="px-3 py-1.5 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs focus:ring-2 focus:ring-rose-500"
+                >
+                  <option value="best">⭐ Best Desi Venues (Top Popularity)</option>
+                  <option value="price_asc">💰 Historical Pricing (Low to High)</option>
+                  <option value="price_desc">💎 Historical Pricing (High to Low)</option>
+                  <option value="capacity_desc">👥 Guest Capacity (Largest First)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Search Input & Quick Filters */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-stone-100 text-xs">
+              <div className="relative flex-1 max-w-md">
+                <Search className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  value={curatedSearch}
+                  onChange={(e) => setCuratedSearch(e.target.value)}
+                  placeholder="Search by venue name, city, or nearest hotel..."
+                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="flex items-center gap-1.5 cursor-pointer font-medium text-stone-700">
+                  <input
+                    type="checkbox"
+                    checked={filterOutsideCateringOnly}
+                    onChange={(e) => setFilterOutsideCateringOnly(e.target.checked)}
+                    className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500"
+                  />
+                  <span>Outside Catering Allowed</span>
+                </label>
+
+                <label className="flex items-center gap-1.5 cursor-pointer font-medium text-stone-700">
+                  <input
+                    type="checkbox"
+                    checked={filterHavanOnly}
+                    onChange={(e) => setFilterHavanOnly(e.target.checked)}
+                    className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500"
+                  />
+                  <span>Agni Havan Permitted</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Success Notification Banner */}
+          {addedSuccessId && (
+            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs font-semibold flex items-center justify-between animate-in fade-in duration-200">
+              <span className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>Venue added to your personal Shortlist! You can now schedule it for site tours or compare quotes.</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setActiveTab('my-venues')}
+                className="underline font-bold text-emerald-800 hover:text-emerald-950"
+              >
+                View My Shortlist →
+              </button>
+            </div>
+          )}
+
+          {/* Curated Venues Grid */}
+          {processedCuratedVenues.length === 0 ? (
+            <div className="bg-white rounded-3xl p-8 sm:p-12 border border-dashed border-stone-300 text-center space-y-3">
+              <Building2 className="w-10 h-10 text-stone-400 mx-auto" />
+              <h3 className="font-bold text-stone-800 text-base">No venues matching these filters</h3>
+              <p className="text-xs text-stone-500 max-w-md mx-auto">
+                Try switching the state filter or clearing your search query.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {processedCuratedVenues.map((venue) => {
+                const isAlreadyShortlisted = venues.some(
+                  (v) => v.name.toLowerCase() === venue.name.toLowerCase()
+                );
+
+                return (
+                  <div
+                    key={venue.id}
+                    className="bg-white rounded-3xl border border-stone-200 hover:border-amber-400/90 shadow-2xs hover:shadow-md transition-all p-5 sm:p-6 flex flex-col justify-between space-y-4"
+                  >
+                    <div className="space-y-4">
+                      {/* Header row */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-50 text-rose-800 border border-rose-200">
+                              {venue.curatedState === 'NJ' ? 'New Jersey (NJ)' : 'Pennsylvania (PA)'}
+                            </span>
+
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-stone-100 text-stone-700">
+                              {venue.type.replace('_', ' ')}
+                            </span>
+
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-1">
+                              <Star className="w-3 h-3 text-amber-600 fill-amber-500" />
+                              <span>{venue.popularityScore}/100 Desi Rank</span>
+                            </span>
+
+                            {venue.historicalPriceTier && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300">
+                                {venue.historicalPriceTier}
+                              </span>
+                            )}
+                          </div>
+
+                          <h3 className="font-bold text-xl text-stone-900 font-serif leading-tight">
+                            {venue.name}
+                          </h3>
+
+                          <p className="text-xs text-stone-500 flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                            <span>
+                              {venue.address}, {venue.city}, {venue.state} {venue.zipCode}
+                            </span>
+                          </p>
+                        </div>
+
+                        {/* Direct website link */}
+                        {venue.websiteUrl && (
+                          <a
+                            href={venue.websiteUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-xl text-stone-400 hover:text-rose-700 hover:bg-stone-50 transition-colors shrink-0"
+                            title="Open Official Website"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        )}
+                      </div>
+
+                      {/* Desi Wedding Capabilities Checklist */}
+                      <div className="p-3.5 rounded-2xl bg-stone-50/80 border border-stone-200/80 space-y-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block">
+                          Verified Desi Wedding Specs:
+                        </span>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                          {/* Outside Indian Catering */}
+                          <div className="flex items-start gap-1.5">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                            <div>
+                              <span className="font-semibold text-stone-800 block text-[11px]">
+                                Indian Catering
+                              </span>
+                              <span className="text-[10px] text-stone-500">
+                                Allowed (${venue.pricing.cateringBuyoutFeePerGuest}/pp)
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Open Flame Havan */}
+                          <div className="flex items-start gap-1.5">
+                            <Flame className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                            <div>
+                              <span className="font-semibold text-stone-800 block text-[11px]">
+                                Sacred Flame Havan
+                              </span>
+                              <span className="text-[10px] text-stone-500">
+                                Permitted for Pheras
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Baraat Procession */}
+                          <div className="flex items-start gap-1.5">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                            <div>
+                              <span className="font-semibold text-stone-800 block text-[11px]">
+                                Grand Baraat
+                              </span>
+                              <span className="text-[10px] text-stone-500 capitalize">
+                                {venue.desiFeatures.baraatRouteType?.replace('_', ' ') || 'Driveway'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Sound Curfew */}
+                          <div className="flex items-start gap-1.5">
+                            <Music className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+                            <div>
+                              <span className="font-semibold text-stone-800 block text-[11px]">
+                                Sound Curfew
+                              </span>
+                              <span className="text-[10px] text-stone-500">
+                                Until {venue.desiFeatures.soundCurfewTime}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Capacity */}
+                          <div className="flex items-start gap-1.5">
+                            <Users className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                            <div>
+                              <span className="font-semibold text-stone-800 block text-[11px]">
+                                Guest Capacity
+                              </span>
+                              <span className="text-[10px] text-stone-500">
+                                {venue.desiFeatures.maxCeremonyCapacity} Mandap /{' '}
+                                {venue.desiFeatures.maxReceptionCapacity} Banquet
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Hotel lodging on site */}
+                          <div className="flex items-start gap-1.5">
+                            <Hotel className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                            <div>
+                              <span className="font-semibold text-stone-800 block text-[11px]">
+                                Hotel Lodging
+                              </span>
+                              <span className="text-[10px] text-stone-500">
+                                {venue.desiFeatures.hotelRoomsOnSite ? 'On-site rooms' : 'Partner hotel'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Nearest / Preferred Hotel Card (CRUCIAL USER REQUEST) */}
+                      {venue.nearestHotel && (
+                        <div className="p-3.5 rounded-2xl bg-blue-50/60 border border-blue-200/70 space-y-1.5 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-blue-950 flex items-center gap-1.5 text-[11px] uppercase tracking-wide">
+                              <Hotel className="w-3.5 h-3.5 text-blue-700" />
+                              <span>Nearest / Preferred Hotel Accommodations:</span>
+                            </span>
+                            <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 text-[10px] font-bold">
+                              {venue.nearestHotel.distanceMiles === 0
+                                ? 'On-Site Hotel'
+                                : `${venue.nearestHotel.distanceMiles} mi away (~${venue.nearestHotel.approxDriveMinutes}m)`}
+                            </span>
+                          </div>
+
+                          <div className="font-semibold text-stone-900 text-xs">
+                            {venue.nearestHotel.hotelName}
+                          </div>
+
+                          {venue.nearestHotel.roomBlockDiscountNote && (
+                            <p className="text-[11px] text-stone-600">
+                              🏷️ {venue.nearestHotel.roomBlockDiscountNote}
+                            </p>
+                          )}
+
+                          <div className="flex flex-wrap items-center justify-between pt-1 text-[10px] text-stone-500">
+                            {venue.nearestHotel.shuttleProvided ? (
+                              <span className="inline-flex items-center gap-1 text-emerald-800 font-semibold">
+                                <Bus className="w-3 h-3 text-emerald-600" />
+                                <span>Complimentary wedding shuttle provided</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-stone-500">
+                                <Car className="w-3 h-3" />
+                                <span>Short Uber / drive transfer</span>
+                              </span>
+                            )}
+                            {venue.nearestHotel.phone && (
+                              <a href={`tel:${venue.nearestHotel.phone}`} className="hover:underline">
+                                📞 {venue.nearestHotel.phone}
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Pricing Snapshot */}
+                      <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 flex items-center justify-between text-xs">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900 block">
+                            Historical Package Estimate
+                          </span>
+                          <strong className="text-stone-900 text-lg font-extrabold">
+                            {formatCurr(venue.pricing.estimatedTotalCost)}
+                          </strong>
+                        </div>
+                        <div className="text-right text-[11px] text-stone-600">
+                          <div>Rental: {formatCurr(venue.pricing.rentalFee)}</div>
+                          <div>F&B Min: {formatCurr(venue.pricing.foodAndBeverageMinimum)}</div>
+                        </div>
+                      </div>
+
+                      {/* Pros & Notes */}
+                      <div className="space-y-1.5 text-xs">
+                        {venue.pros?.slice(0, 3).map((pro, i) => (
+                          <div key={i} className="flex items-center gap-1.5 text-stone-700">
+                            <span className="text-emerald-600 font-bold">✓</span>
+                            <span className="text-[11px]">{pro}</span>
+                          </div>
+                        ))}
+                        {venue.notes && (
+                          <p className="text-[11px] text-stone-600 italic pt-1 border-t border-stone-100">
+                            💡 {venue.notes}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Footer Actions */}
+                    <div className="pt-3 border-t border-stone-100 flex flex-wrap items-center justify-between gap-2.5">
+                      {venue.contactPhone ? (
+                        <a
+                          href={`tel:${venue.contactPhone}`}
+                          className="text-stone-600 hover:text-stone-900 font-semibold text-xs flex items-center gap-1.5"
+                        >
+                          <Phone className="w-3.5 h-3.5 text-rose-600" />
+                          <span>{venue.contactPhone}</span>
+                        </a>
+                      ) : (
+                        <span className="text-[11px] text-stone-400">Contact office</span>
+                      )}
+
+                      <div>
+                        {isAlreadyShortlisted ? (
+                          <span className="px-3.5 py-2 rounded-xl bg-emerald-50 text-emerald-800 font-bold text-xs border border-emerald-300 inline-flex items-center gap-1.5">
+                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>In Your Shortlist</span>
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleAddCuratedToMyShortlist(venue)}
+                            className="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-700 to-amber-700 hover:from-rose-800 hover:to-amber-800 text-white font-bold text-xs shadow-md shadow-rose-900/20 transition-all flex items-center gap-1.5"
+                          >
+                            <BookmarkPlus className="w-4 h-4" />
+                            <span>+ Add to My Shortlist</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ============================================================= */}
+      {/* TAB 2: MY SHORTLIST & COMPARISON MATRIX                       */}
+      {/* ============================================================= */}
+      {activeTab === 'my-venues' && (
+        <div className="space-y-6">
+          {/* Header row with Add Custom button */}
+          <div className="bg-white p-4 sm:p-5 rounded-3xl border border-stone-200 shadow-2xs flex flex-wrap items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-2 font-semibold text-stone-600">
               <Filter className="w-3.5 h-3.5 text-stone-400" />
               <span>Status Filter:</span>
@@ -512,37 +1068,51 @@ export default function VenuesPage() {
                           : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
                       }`}
                     >
-                      {status === 'all' ? 'All Venues' : status.replace('_', ' ')}
+                      {status === 'all' ? 'All' : status.replace('_', ' ')}
                     </button>
                   )
                 )}
               </div>
             </div>
 
-            <div className="text-stone-500 text-[11px]">
-              Showing {filteredVenues.length} of {venues.length} venues
-            </div>
+            <button
+              type="button"
+              onClick={handleOpenAdd}
+              className="px-4 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs transition-colors flex items-center gap-1.5"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ Add Custom Venue</span>
+            </button>
           </div>
 
           {/* Venues Grid */}
-          {filteredVenues.length === 0 ? (
+          {filteredMyVenues.length === 0 ? (
             <div className="bg-white rounded-3xl p-8 sm:p-12 border border-dashed border-stone-300 text-center space-y-3">
               <Building2 className="w-10 h-10 text-stone-400 mx-auto" />
-              <h3 className="font-bold text-stone-800 text-base">No venues matching this filter</h3>
+              <h3 className="font-bold text-stone-800 text-base">Your shortlist is currently empty</h3>
               <p className="text-xs text-stone-500 max-w-md mx-auto">
-                Add prospective hotels, historic estates, and banquet halls you are considering for your Mandap ceremony and reception.
+                Explore our preloaded directory of New Jersey and Pennsylvania venues to add candidate locations, or manually add a custom venue.
               </p>
-              <button
-                type="button"
-                onClick={handleOpenAdd}
-                className="mt-2 px-5 py-2.5 rounded-xl bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs shadow-xs"
-              >
-                + Add First Venue
-              </button>
+              <div className="pt-2 flex justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('curated')}
+                  className="px-4 py-2 rounded-xl bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs shadow-xs"
+                >
+                  Explore NJ & PA Venues
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOpenAdd}
+                  className="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-xs"
+                >
+                  + Add Custom Venue
+                </button>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
-              {filteredVenues.map((venue) => {
+              {filteredMyVenues.map((venue) => {
                 const isSelected = venue.isSelectedOfficialVenue || venue.name === wedding?.venueName;
                 const isIncludedInTour = tourForm.selectedVenueIds.includes(venue.id);
 
@@ -748,6 +1318,19 @@ export default function VenuesPage() {
                         </div>
                       </div>
 
+                      {/* Nearest Hotel Card if available */}
+                      {venue.nearestHotel && (
+                        <div className="p-3.5 rounded-2xl bg-blue-50/60 border border-blue-200/70 space-y-1 text-xs">
+                          <span className="font-bold text-blue-950 flex items-center gap-1.5 text-[11px] uppercase tracking-wide">
+                            <Hotel className="w-3.5 h-3.5 text-blue-700" />
+                            <span>Preferred Accommodations: {venue.nearestHotel.hotelName}</span>
+                          </span>
+                          <p className="text-[11px] text-stone-600">
+                            {venue.nearestHotel.roomBlockDiscountNote || `${venue.nearestHotel.distanceMiles} miles from venue`}
+                          </p>
+                        </div>
+                      )}
+
                       {/* Pricing Snapshot */}
                       <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 flex items-center justify-between text-xs">
                         <div>
@@ -763,39 +1346,6 @@ export default function VenuesPage() {
                           <div>F&B Min: {formatCurr(venue.pricing.foodAndBeverageMinimum)}</div>
                         </div>
                       </div>
-
-                      {/* Pros & Cons */}
-                      {(venue.pros?.length > 0 || venue.cons?.length > 0) && (
-                        <div className="space-y-1.5 text-xs">
-                          {venue.pros?.map((pro, i) => (
-                            <div key={i} className="flex items-center gap-1.5 text-stone-700">
-                              <span className="text-emerald-600 font-bold">✓</span>
-                              <span className="text-[11px]">{pro}</span>
-                            </div>
-                          ))}
-                          {venue.cons?.map((con, i) => (
-                            <div key={i} className="flex items-center gap-1.5 text-rose-700">
-                              <span className="text-rose-500 font-bold">✗</span>
-                              <span className="text-[11px]">{con}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Available Dates */}
-                      {venue.availableDates?.length > 0 && (
-                        <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-                          <span className="font-bold text-stone-500">Open Dates:</span>
-                          {venue.availableDates.map((dateStr, i) => (
-                            <span
-                              key={i}
-                              className="px-2 py-0.5 rounded-lg bg-stone-100 text-stone-800 font-medium"
-                            >
-                              {dateStr}
-                            </span>
-                          ))}
-                        </div>
-                      )}
                     </div>
 
                     {/* Card Footer Actions */}
@@ -844,9 +1394,9 @@ export default function VenuesPage() {
         </div>
       )}
 
-      {/* ------------------------------------------------------------- */}
-      {/* TAB 2: DAY-OF SITE TOUR ROUTE & SCHEDULE OPTIMIZER */}
-      {/* ------------------------------------------------------------- */}
+      {/* ============================================================= */}
+      {/* TAB 3: SITE TOUR ROUTE & SCHEDULE OPTIMIZER                   */}
+      {/* ============================================================= */}
       {activeTab === 'tour-planner' && (
         <div className="space-y-8">
           {/* Settings & Route Parameters Form */}
@@ -1179,7 +1729,6 @@ export default function VenuesPage() {
                 {/* Stops in optimal order */}
                 {tourPlan.optimizedStops.map((stop, index) => {
                   const venue = venues.find((v) => v.id === stop.venueId);
-                  const isLast = index === tourPlan.optimizedStops.length - 1;
 
                   return (
                     <React.Fragment key={stop.venueId}>
@@ -1304,13 +1853,13 @@ export default function VenuesPage() {
         </div>
       )}
 
-      {/* ------------------------------------------------------------- */}
-      {/* ADD / EDIT VENUE MODAL */}
-      {/* ------------------------------------------------------------- */}
+      {/* ============================================================= */}
+      {/* ADD / EDIT CUSTOM VENUE MODAL                                 */}
+      {/* ============================================================= */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingVenue ? 'Edit Venue Details' : 'Add Prospective Wedding & Reception Venue'}
+        title={editingVenue ? 'Edit Venue Details' : 'Add Custom Venue to Compare'}
         maxWidth="2xl"
       >
         <form onSubmit={handleSubmitVenue} className="space-y-4 text-xs">
@@ -1387,7 +1936,7 @@ export default function VenuesPage() {
                   required
                   value={formData.city}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  placeholder="e.g. Pompton Plains or Jersey City"
+                  placeholder="e.g. Pompton Plains or Philadelphia"
                   className="w-full px-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
                 />
               </div>
@@ -1400,7 +1949,7 @@ export default function VenuesPage() {
                     required
                     value={formData.state}
                     onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                    placeholder="e.g. NJ"
+                    placeholder="e.g. NJ or PA"
                     className="w-full px-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
                   />
                 </div>
@@ -1418,10 +1967,74 @@ export default function VenuesPage() {
             </div>
           </div>
 
-          {/* Section 2: Desi Capabilities */}
+          {/* Section 2: Closest / Preferred Hotel Accommodations */}
+          <div className="space-y-3 pt-2">
+            <h4 className="font-bold text-stone-900 text-sm border-b border-stone-200 pb-1 flex items-center gap-2">
+              <Hotel className="w-4 h-4 text-blue-600" />
+              <span>2. Closest / Preferred Hotel & Room Block Details</span>
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="sm:col-span-2">
+                <label className="font-semibold text-stone-700 block mb-1">
+                  Nearest / Preferred Hotel Name
+                </label>
+                <input
+                  type="text"
+                  value={formData.nearestHotelName}
+                  onChange={(e) => setFormData({ ...formData, nearestHotelName: e.target.value })}
+                  placeholder="e.g. DoubleTree by Hilton Somerset or Marriott"
+                  className="w-full px-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-stone-700 block mb-1">Distance (Miles)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={formData.nearestHotelDistance}
+                  onChange={(e) =>
+                    setFormData({ ...formData, nearestHotelDistance: Number(e.target.value) })
+                  }
+                  placeholder="0 if on-site"
+                  className="w-full px-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="font-semibold text-stone-700 block mb-1">
+                  Room Block Discount & Shuttle Note
+                </label>
+                <input
+                  type="text"
+                  value={formData.nearestHotelNotes}
+                  onChange={(e) => setFormData({ ...formData, nearestHotelNotes: e.target.value })}
+                  placeholder="e.g. $159/night guaranteed block with complimentary wedding shuttle"
+                  className="w-full px-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-6">
+                <input
+                  type="checkbox"
+                  id="hotelShuttle"
+                  checked={formData.nearestHotelShuttle}
+                  onChange={(e) =>
+                    setFormData({ ...formData, nearestHotelShuttle: e.target.checked })
+                  }
+                  className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500"
+                />
+                <label htmlFor="hotelShuttle" className="font-semibold text-stone-800 cursor-pointer">
+                  Shuttle Service Provided
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Desi Capabilities */}
           <div className="space-y-3 pt-2">
             <h4 className="font-bold text-stone-900 text-sm border-b border-stone-200 pb-1">
-              2. Desi Wedding Capabilities & Policies
+              3. Desi Wedding Capabilities & Policies
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="flex items-center gap-2 p-3 rounded-xl border border-stone-200 bg-stone-50">
@@ -1525,10 +2138,10 @@ export default function VenuesPage() {
             </div>
           </div>
 
-          {/* Section 3: Pricing & Package Quote */}
+          {/* Section 4: Pricing */}
           <div className="space-y-3 pt-2">
             <h4 className="font-bold text-stone-900 text-sm border-b border-stone-200 pb-1">
-              3. Pricing & Financial Estimates ($ USD)
+              4. Pricing & Financial Estimates ($ USD)
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
@@ -1584,10 +2197,10 @@ export default function VenuesPage() {
             </div>
           </div>
 
-          {/* Section 4: Pros, Cons, and Dates */}
+          {/* Section 5: Pros, Cons, Dates and Notes */}
           <div className="space-y-3 pt-2">
             <h4 className="font-bold text-stone-900 text-sm border-b border-stone-200 pb-1">
-              4. Pros, Cons & Open Auspicious Dates
+              5. Pros, Cons & Open Auspicious Dates
             </h4>
             <div className="space-y-3">
               <div>
