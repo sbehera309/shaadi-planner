@@ -53,13 +53,13 @@ const SPECIFIC_VENUE_RATES: Record<string, VenuePricingTierRates> = {
   'curated-nj-park-savoy': { morningBase: 95, eveningBase: 168, servicePercent: 24, tipPercent: 5 },
   'curated-nj-crystal-plaza': { morningBase: 95, eveningBase: 172, servicePercent: 24, tipPercent: 5 },
   'curated-nj-florentine-gardens': { morningBase: 95, eveningBase: 170, servicePercent: 24, tipPercent: 5 },
-  'curated-nj-the-grove': { morningBase: 95, eveningBase: 170, servicePercent: 24, tipPercent: 5 },
   'curated-nj-pleasantdale-chateau': { morningBase: 95, eveningBase: 170, servicePercent: 24, tipPercent: 5 },
   'curated-nj-pleasantdale': { morningBase: 95, eveningBase: 170, servicePercent: 24, tipPercent: 5 },
   'curated-pa-ritz-carlton-philly': { morningBase: 105, eveningBase: 185, servicePercent: 24, tipPercent: 5 },
 
   // Tier 2: Premier Landmark Estates & Historic Hotels ($$$ / $$$$)
   'curated-nj-palace-somerset': { morningBase: 75, eveningBase: 135, servicePercent: 22, tipPercent: 5 },
+  'curated-nj-the-grove': { morningBase: 80, eveningBase: 145, servicePercent: 24, tipPercent: 5 },
   'curated-nj-meadow-wood': { morningBase: 90, eveningBase: 162, servicePercent: 24, tipPercent: 5 },
   'curated-nj-the-meadow-wood': { morningBase: 90, eveningBase: 162, servicePercent: 24, tipPercent: 5 },
   'curated-pa-please-touch-museum': { morningBase: 75, eveningBase: 140, servicePercent: 22, tipPercent: 5 },
