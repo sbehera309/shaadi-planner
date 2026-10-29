@@ -186,7 +186,9 @@ export default function VenuesPage() {
       city: tourPlan?.startLocation.city || 'Jersey City',
       state: tourPlan?.startLocation.state || 'NJ',
       zipCode: tourPlan?.startLocation.zipCode || '07302',
-    },
+      latitude: tourPlan?.startLocation.latitude,
+      longitude: tourPlan?.startLocation.longitude,
+    } as FamilyAddressInput,
     brideAddress: {
       side: 'bride' as const,
       label: "Bride's Family Home",
@@ -194,7 +196,9 @@ export default function VenuesPage() {
       city: tourPlan?.secondFamilyLocation?.city || 'Edison',
       state: tourPlan?.secondFamilyLocation?.state || 'NJ',
       zipCode: tourPlan?.secondFamilyLocation?.zipCode || '08820',
-    },
+      latitude: tourPlan?.secondFamilyLocation?.latitude,
+      longitude: tourPlan?.secondFamilyLocation?.longitude,
+    } as FamilyAddressInput,
     meetingMode: (tourPlan?.meetingMode || 'meet_at_first_venue') as DualFamilyMeetingMode,
     selectedVenueIds: tourPlan?.selectedVenueIds || venues.slice(0, 3).map((v) => v.id),
     lockedAppointmentTimes: (tourPlan?.lockedAppointmentTimes || {}) as Record<string, string>,
@@ -472,33 +476,68 @@ export default function VenuesPage() {
     });
   };
 
+  const recalculateTourPlan = (formToUse = tourForm) => {
+    const selectedVenues = venues.filter((v) => formToUse.selectedVenueIds.includes(v.id));
+    if (selectedVenues.length === 0) return;
+
+    const startLocation =
+      formToUse.primarySide === 'groom' ? formToUse.groomAddress : formToUse.brideAddress;
+    const secondFamilyLocation =
+      formToUse.primarySide === 'groom' ? formToUse.brideAddress : formToUse.groomAddress;
+
+    const newPlan = generateSiteTourSchedule({
+      weddingId: wedding?.id || 'w-user-1',
+      tourDate: formToUse.tourDate,
+      startLocation,
+      secondFamilyLocation,
+      meetingMode: formToUse.meetingMode,
+      venues: selectedVenues,
+      dayStartTime: formToUse.dayStartTime,
+      durationPerTourMinutes: formToUse.durationPerTourMinutes,
+      bufferBetweenToursMinutes: formToUse.bufferBetweenToursMinutes,
+      includesLunchBreak: formToUse.includesLunchBreak,
+      lockedAppointmentTimes: formToUse.lockedAppointmentTimes,
+    });
+
+    saveTourPlan(newPlan);
+  };
+
+  // Auto-sanitize stale out-of-state coordinates from previous session (e.g. Florida when state is PA)
+  useEffect(() => {
+    if (!tourPlan) return;
+    const brideState = tourForm.brideAddress.state?.toUpperCase();
+    const brideCity = tourForm.brideAddress.city?.toLowerCase() || '';
+    const isBrideMountainTop = brideCity.includes('mountain top') || brideCity.includes('mountaintop');
+    const isBridePa = brideState === 'PA' || isBrideMountainTop;
+    const brideLat = tourForm.brideAddress.latitude;
+
+    const isStaleBrideCoords =
+      isBridePa && brideLat !== undefined && (brideLat < 39.0 || brideLat > 43.0);
+    const hasOutlierDistance =
+      (tourPlan.dualFamilyStartPlan?.brideDeparture.distanceMilesToFirstStop || 0) > 300 && isBridePa;
+
+    if (isStaleBrideCoords || hasOutlierDistance) {
+      const fixedBride = {
+        ...tourForm.brideAddress,
+        city: isBrideMountainTop ? 'Mountain Top' : tourForm.brideAddress.city,
+        state: 'PA',
+        zipCode: isBrideMountainTop ? '18707' : tourForm.brideAddress.zipCode,
+        latitude: isBrideMountainTop ? 41.1514 : 40.2732,
+        longitude: isBrideMountainTop ? -75.9376 : -76.8867,
+      };
+      const updatedForm = { ...tourForm, brideAddress: fixedBride };
+      setTourForm(updatedForm);
+      recalculateTourPlan(updatedForm);
+    }
+  }, [tourPlan, tourForm.brideAddress.city, tourForm.brideAddress.state, tourForm.brideAddress.latitude]);
+
   const handleGenerateOptimalTourPlan = () => {
     const selectedVenues = venues.filter((v) => tourForm.selectedVenueIds.includes(v.id));
     if (selectedVenues.length === 0) {
       alert('Please select at least 1 or more venues to include in your site tour day.');
       return;
     }
-
-    const startLocation =
-      tourForm.primarySide === 'groom' ? tourForm.groomAddress : tourForm.brideAddress;
-    const secondFamilyLocation =
-      tourForm.primarySide === 'groom' ? tourForm.brideAddress : tourForm.groomAddress;
-
-    const newPlan = generateSiteTourSchedule({
-      weddingId: wedding?.id || 'w-user-1',
-      tourDate: tourForm.tourDate,
-      startLocation,
-      secondFamilyLocation,
-      meetingMode: tourForm.meetingMode,
-      venues: selectedVenues,
-      dayStartTime: tourForm.dayStartTime,
-      durationPerTourMinutes: tourForm.durationPerTourMinutes,
-      bufferBetweenToursMinutes: tourForm.bufferBetweenToursMinutes,
-      includesLunchBreak: tourForm.includesLunchBreak,
-      lockedAppointmentTimes: tourForm.lockedAppointmentTimes,
-    });
-
-    saveTourPlan(newPlan);
+    recalculateTourPlan(tourForm);
   };
 
   const handleCopyWhatsApp = () => {
@@ -1791,7 +1830,11 @@ export default function VenuesPage() {
                 {/* Option 1: Balanced Stop #1 */}
                 <button
                   type="button"
-                  onClick={() => setTourForm({ ...tourForm, meetingMode: 'meet_at_first_venue' })}
+                  onClick={() => {
+                    const updated = { ...tourForm, meetingMode: 'meet_at_first_venue' as const };
+                    setTourForm(updated);
+                    if (tourPlan && tourPlan.optimizedStops.length > 0) recalculateTourPlan(updated);
+                  }}
                   className={`p-3.5 rounded-2xl border text-left transition-all ${
                     tourForm.meetingMode === 'meet_at_first_venue'
                       ? 'bg-amber-50/80 border-amber-500 ring-2 ring-amber-400/20 shadow-xs'
@@ -1815,7 +1858,11 @@ export default function VenuesPage() {
                 {/* Option 2: Carpool Morning Chai */}
                 <button
                   type="button"
-                  onClick={() => setTourForm({ ...tourForm, meetingMode: 'carpool_pickup' })}
+                  onClick={() => {
+                    const updated = { ...tourForm, meetingMode: 'carpool_pickup' as const };
+                    setTourForm(updated);
+                    if (tourPlan && tourPlan.optimizedStops.length > 0) recalculateTourPlan(updated);
+                  }}
                   className={`p-3.5 rounded-2xl border text-left transition-all ${
                     tourForm.meetingMode === 'carpool_pickup'
                       ? 'bg-amber-50/80 border-amber-500 ring-2 ring-amber-400/20 shadow-xs'
@@ -1839,7 +1886,11 @@ export default function VenuesPage() {
                 {/* Option 3: Single Family Origin */}
                 <button
                   type="button"
-                  onClick={() => setTourForm({ ...tourForm, meetingMode: 'single_family_start' })}
+                  onClick={() => {
+                    const updated = { ...tourForm, meetingMode: 'single_family_start' as const };
+                    setTourForm(updated);
+                    if (tourPlan && tourPlan.optimizedStops.length > 0) recalculateTourPlan(updated);
+                  }}
                   className={`p-3.5 rounded-2xl border text-left transition-all ${
                     tourForm.meetingMode === 'single_family_start'
                       ? 'bg-amber-50/80 border-amber-500 ring-2 ring-amber-400/20 shadow-xs'
@@ -1886,15 +1937,20 @@ export default function VenuesPage() {
 
                 <AddressAutocompleteInput
                   value={tourForm.groomAddress}
-                  onChange={(updated) =>
-                    setTourForm({
+                  onChange={(updated) => {
+                    const newGroom = {
+                      ...tourForm.groomAddress,
+                      ...updated,
+                    };
+                    const updatedForm = {
                       ...tourForm,
-                      groomAddress: {
-                        ...tourForm.groomAddress,
-                        ...updated,
-                      },
-                    })
-                  }
+                      groomAddress: newGroom,
+                    };
+                    setTourForm(updatedForm);
+                    if (tourPlan && tourPlan.optimizedStops.length > 0) {
+                      recalculateTourPlan(updatedForm);
+                    }
+                  }}
                   label="Groom's Home Address"
                   placeholder="Start typing (e.g. 254 Montgomery St or Parsippany)..."
                   accentColor="blue"
@@ -1924,7 +1980,13 @@ export default function VenuesPage() {
                         type="radio"
                         name="primarySide"
                         checked={tourForm.primarySide === 'bride'}
-                        onChange={() => setTourForm({ ...tourForm, primarySide: 'bride' })}
+                        onChange={() => {
+                          const updated = { ...tourForm, primarySide: 'bride' as const };
+                          setTourForm(updated);
+                          if (tourPlan && tourPlan.optimizedStops.length > 0) {
+                            recalculateTourPlan(updated);
+                          }
+                        }}
                       />
                       <span>{tourForm.meetingMode === 'carpool_pickup' ? 'Driver (Starts Here)' : 'Start Day Here'}</span>
                     </label>
@@ -1933,19 +1995,25 @@ export default function VenuesPage() {
 
                 <AddressAutocompleteInput
                   value={tourForm.brideAddress}
-                  onChange={(updated) =>
-                    setTourForm({
+                  onChange={(updated) => {
+                    const newBride = {
+                      ...tourForm.brideAddress,
+                      ...updated,
+                    };
+                    const updatedForm = {
                       ...tourForm,
-                      brideAddress: {
-                        ...tourForm.brideAddress,
-                        ...updated,
-                      },
-                    })
-                  }
+                      brideAddress: newBride,
+                    };
+                    setTourForm(updatedForm);
+                    if (tourPlan && tourPlan.optimizedStops.length > 0) {
+                      recalculateTourPlan(updatedForm);
+                    }
+                  }}
                   label="Bride's Home Address"
-                  placeholder="Start typing (e.g. 88 Oak Tree Rd or Somerset)..."
+                  placeholder="Start typing (e.g. 88 Oak Tree Rd or Mountain Top PA)..."
                   accentColor="rose"
                   quickSuggestions={[
+                    { label: 'Mountain Top, PA', address: 'Mountain Top Area', city: 'Mountain Top', state: 'PA', zipCode: '18707', lat: 41.1514, lon: -75.9376 },
                     { label: 'Edison (Oak Tree Rd)', address: '88 Oak Tree Road', city: 'Edison', state: 'NJ', zipCode: '08820', lat: 40.5701, lon: -74.3418 },
                     { label: 'Somerset (Davidson Ave)', address: '333 Davidson Avenue', city: 'Somerset', state: 'NJ', zipCode: '08873', lat: 40.5284, lon: -74.5218 },
                     { label: 'Livingston (Northfield)', address: '315 E Northfield Road', city: 'Livingston', state: 'NJ', zipCode: '07039', lat: 40.7891, lon: -74.3418 },

@@ -55,6 +55,9 @@ const KNOWN_COORDINATES: Record<string, { lat: number; lon: number }> = {
   'king of prussia, pa': { lat: 40.0931, lon: -75.4057 },
   'mountain top, pa': { lat: 41.1514, lon: -75.9376 },
   'mountain top': { lat: 41.1514, lon: -75.9376 },
+  'mountaintop, pa': { lat: 41.1514, lon: -75.9376 },
+  'mountaintop': { lat: 41.1514, lon: -75.9376 },
+  '18707': { lat: 41.1514, lon: -75.9376 },
   'wilkes-barre, pa': { lat: 41.2459, lon: -75.8813 },
   'scranton, pa': { lat: 41.409, lon: -75.6624 },
   'poconos, pa': { lat: 41.1215, lon: -75.3402 },
@@ -108,7 +111,7 @@ export function calculateHaversineDistance(
 }
 
 /**
- * Resolves or approximates GPS coordinates from address strings
+ * Resolves or approximates GPS coordinates from address strings with strict geographic validation
  */
 export function getCoordinates(
   address: string,
@@ -117,29 +120,110 @@ export function getCoordinates(
   explicitLat?: number,
   explicitLon?: number
 ): { lat: number; lon: number } {
-  if (explicitLat !== undefined && explicitLon !== undefined && explicitLat !== 0) {
-    return { lat: explicitLat, lon: explicitLon };
+  const normCity = (city || '').trim().toLowerCase();
+  const normState = (state || '').trim().toUpperCase();
+  const fullText = `${address || ''} ${city || ''} ${state || ''}`.toLowerCase();
+
+  // 1. Direct Mountain Top, PA detection
+  const isMountainTop =
+    normCity.includes('mountain top') ||
+    normCity.includes('mountaintop') ||
+    fullText.includes('mountain top') ||
+    fullText.includes('mountaintop') ||
+    fullText.includes('18707');
+
+  if (isMountainTop) {
+    // If explicit coordinates were supplied and are near Mountain Top, PA (< 40 mi), use them.
+    // Otherwise, if stale/mismatched coordinates were passed (e.g. Florida lat 28.5), reject and return Mountain Top PA GPS!
+    if (
+      explicitLat !== undefined &&
+      explicitLon !== undefined &&
+      explicitLat !== 0 &&
+      calculateHaversineDistance(explicitLat, explicitLon, 41.1514, -75.9376) < 40
+    ) {
+      return { lat: explicitLat, lon: explicitLon };
+    }
+    return KNOWN_COORDINATES['mountain top, pa'];
   }
 
-  const normalizedCity = `${city.trim().toLowerCase()}, ${state.trim().toLowerCase()}`;
+  // 2. Geographic boundary validation for explicit coordinates
+  if (explicitLat !== undefined && explicitLon !== undefined && explicitLat !== 0) {
+    let isValidCoordinate = true;
+
+    // Check PA boundary (PA is between lat ~39.2 and 42.8, lon ~-81.5 and -74.0)
+    if (normState === 'PA') {
+      if (explicitLat < 39.2 || explicitLat > 42.8 || explicitLon < -81.5 || explicitLon > -74.0) {
+        isValidCoordinate = false; // Discard invalid coordinates like Florida (lat 28.5)
+      }
+    } else if (normState === 'NJ') {
+      // NJ is between lat ~38.5 and 41.8, lon ~-76.5 and -73.0
+      if (explicitLat < 38.5 || explicitLat > 41.8 || explicitLon < -76.5 || explicitLon > -73.0) {
+        isValidCoordinate = false;
+      }
+    } else if (normState === 'NY') {
+      if (explicitLat < 40.0 || explicitLat > 45.5) {
+        isValidCoordinate = false;
+      }
+    }
+
+    // Check if city matches a known hub and coordinates are wildly off (> 80 miles)
+    const normalizedCity = `${normCity}, ${normState.toLowerCase()}`;
+    const knownMatch = KNOWN_COORDINATES[normalizedCity] || KNOWN_COORDINATES[normCity];
+    if (knownMatch) {
+      const dist = calculateHaversineDistance(explicitLat, explicitLon, knownMatch.lat, knownMatch.lon);
+      if (dist > 80) {
+        isValidCoordinate = false;
+      }
+    }
+
+    if (isValidCoordinate) {
+      return { lat: explicitLat, lon: explicitLon };
+    }
+  }
+
+  // 3. Match against known cities dictionary
+  const normalizedCity = `${normCity}, ${(state || '').trim().toLowerCase()}`;
   if (KNOWN_COORDINATES[normalizedCity]) {
     return KNOWN_COORDINATES[normalizedCity];
   }
 
-  const justCity = city.trim().toLowerCase();
-  if (KNOWN_COORDINATES[justCity]) {
-    return KNOWN_COORDINATES[justCity];
+  if (KNOWN_COORDINATES[normCity]) {
+    return KNOWN_COORDINATES[normCity];
   }
 
   // Check if any known city key is a substring in address or city
-  const fullText = `${address} ${city} ${state}`.toLowerCase();
   for (const [key, coords] of Object.entries(KNOWN_COORDINATES)) {
     if (fullText.includes(key)) {
       return coords;
     }
   }
 
-  // Fallback: pseudo-deterministic coordinate based on string hash around NJ/NY baseline
+  // 4. State-level sensible fallbacks
+  if (normState === 'PA') {
+    if (
+      fullText.includes('wilkes') ||
+      fullText.includes('scranton') ||
+      fullText.includes('poconos') ||
+      fullText.includes('luzerne')
+    ) {
+      return { lat: 41.2459, lon: -75.8813 };
+    }
+    if (
+      fullText.includes('philly') ||
+      fullText.includes('philadelphia') ||
+      fullText.includes('bucks') ||
+      fullText.includes('montgomery')
+    ) {
+      return { lat: 39.9526, lon: -75.1652 };
+    }
+    return { lat: 40.2732, lon: -76.8867 }; // Central PA
+  }
+
+  if (normState === 'NJ') {
+    return { lat: 40.5187, lon: -74.4121 }; // Central NJ (Edison)
+  }
+
+  // 5. Fallback: pseudo-deterministic coordinate based on string hash around NJ/NY baseline
   let hash = 0;
   for (let i = 0; i < fullText.length; i++) {
     hash = (hash << 5) - hash + fullText.charCodeAt(i);

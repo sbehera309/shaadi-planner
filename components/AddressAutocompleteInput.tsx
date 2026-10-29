@@ -97,11 +97,118 @@ export default function AddressAutocompleteInput({
   }, []);
 
   // Trigger search immediately as the user types
+  // Helper to dynamically resolve or validate coordinates when address text, city, or state changes
+  const resolveCoordinatesForCityState = (
+    cityStr: string,
+    stateStr: string,
+    currentLat?: number,
+    currentLon?: number
+  ): { latitude?: number; longitude?: number; city: string; state: string } => {
+    const normCity = (cityStr || '').trim().toLowerCase();
+    const normState = (stateStr || '').trim().toUpperCase();
+
+    if (normCity.includes('mountain top') || normCity.includes('mountaintop')) {
+      return {
+        city: 'Mountain Top',
+        state: 'PA',
+        latitude: 41.1514,
+        longitude: -75.9376,
+      };
+    }
+
+    if (normCity.includes('philadelphia') || normCity.includes('philly')) {
+      return {
+        city: 'Philadelphia',
+        state: 'PA',
+        latitude: 39.9526,
+        longitude: -75.1652,
+      };
+    }
+
+    if (normCity.includes('jersey city')) {
+      return {
+        city: 'Jersey City',
+        state: 'NJ',
+        latitude: 40.7178,
+        longitude: -74.0431,
+      };
+    }
+
+    if (normCity.includes('edison')) {
+      return {
+        city: 'Edison',
+        state: 'NJ',
+        latitude: 40.5187,
+        longitude: -74.4121,
+      };
+    }
+
+    if (normCity.includes('parsippany')) {
+      return {
+        city: 'Parsippany',
+        state: 'NJ',
+        latitude: 40.8653,
+        longitude: -74.4174,
+      };
+    }
+
+    if (normCity.includes('morristown')) {
+      return {
+        city: 'Morristown',
+        state: 'NJ',
+        latitude: 40.7968,
+        longitude: -74.4815,
+      };
+    }
+
+    if (normCity.includes('somerset')) {
+      return {
+        city: 'Somerset',
+        state: 'NJ',
+        latitude: 40.4976,
+        longitude: -74.4893,
+      };
+    }
+
+    // If state is PA, ensure coordinates are actually within Pennsylvania
+    if (normState === 'PA') {
+      if (currentLat !== undefined && currentLat >= 39.2 && currentLat <= 42.8) {
+        return { city: cityStr, state: 'PA', latitude: currentLat, longitude: currentLon };
+      }
+      return { city: cityStr, state: 'PA', latitude: 41.1514, longitude: -75.9376 };
+    }
+
+    // If state is NJ, ensure coordinates are within New Jersey
+    if (normState === 'NJ') {
+      if (currentLat !== undefined && currentLat >= 38.8 && currentLat <= 41.5) {
+        return { city: cityStr, state: 'NJ', latitude: currentLat, longitude: currentLon };
+      }
+      return { city: cityStr, state: 'NJ', latitude: 40.5187, longitude: -74.4121 };
+    }
+
+    return { city: cityStr, state: normState || stateStr, latitude: undefined, longitude: undefined };
+  };
+
+  // Trigger search immediately as the user types
   const handleInputChange = (newText: string) => {
     setInputValue(newText);
+    const lowerText = newText.toLowerCase();
 
-    // If user pasted/typed a full comma-separated address (e.g. "123 Main St, Mountain Top PA")
-    if (newText.includes(',')) {
+    // 1. Instant detection for Mountain Top, PA anywhere in the text
+    if (lowerText.includes('mountain top') || lowerText.includes('mountaintop')) {
+      const parts = newText.split(',').map((p) => p.trim()).filter(Boolean);
+      const street = parts.length >= 2 ? parts[0] : newText;
+      onChange({
+        address: street,
+        city: 'Mountain Top',
+        state: 'PA',
+        zipCode: value.zipCode || '18707',
+        latitude: 41.1514,
+        longitude: -75.9376,
+      });
+    }
+    // 2. Comma-separated address parsing (e.g. "200 Ice Lake Dr, Mountain Top PA")
+    else if (newText.includes(',')) {
       const parts = newText.split(',').map((p) => p.trim()).filter(Boolean);
       if (parts.length >= 2) {
         const street = parts[0];
@@ -115,31 +222,50 @@ export default function AddressAutocompleteInput({
           if (stateMatch[2]) zipCode = stateMatch[2];
           city = secondPart.replace(new RegExp(`\\b${stateMatch[1]}\\b.*$`, 'i'), '').replace(/,/g, '').trim();
         }
-        let lat = value.latitude;
-        let lon = value.longitude;
-        if (
-          city.toLowerCase().includes('mountain top') ||
-          city.toLowerCase().includes('mountaintop')
-        ) {
-          city = 'Mountain Top';
-          state = 'PA';
-          if (!zipCode) zipCode = '18707';
-          lat = 41.1514;
-          lon = -75.9376;
-        }
+        const resolved = resolveCoordinatesForCityState(city, state, value.latitude, value.longitude);
         onChange({
           address: street,
-          city,
-          state,
+          city: resolved.city,
+          state: resolved.state,
           zipCode,
-          latitude: lat,
-          longitude: lon,
+          latitude: resolved.latitude,
+          longitude: resolved.longitude,
         });
       } else {
         onChange({ ...value, address: newText });
       }
     } else {
-      onChange({ ...value, address: newText });
+      // 3. Single phrase without comma
+      let lat = value.latitude;
+      let lon = value.longitude;
+      let city = value.city;
+      let state = value.state;
+
+      if (lowerText.includes('jersey city')) {
+        city = 'Jersey City';
+        state = 'NJ';
+        lat = 40.7178;
+        lon = -74.0431;
+      } else if (lowerText.includes('edison')) {
+        city = 'Edison';
+        state = 'NJ';
+        lat = 40.5187;
+        lon = -74.4121;
+      } else if (lowerText.includes('philadelphia')) {
+        city = 'Philadelphia';
+        state = 'PA';
+        lat = 39.9526;
+        lon = -75.1652;
+      }
+
+      onChange({
+        ...value,
+        address: newText,
+        city,
+        state,
+        latitude: lat,
+        longitude: lon,
+      });
     }
 
     if (debounceTimerRef.current) {
@@ -429,7 +555,17 @@ export default function AddressAutocompleteInput({
           <input
             type="text"
             value={value.city}
-            onChange={(e) => onChange({ ...value, city: e.target.value })}
+            onChange={(e) => {
+              const newCity = e.target.value;
+              const resolved = resolveCoordinatesForCityState(newCity, value.state, value.latitude, value.longitude);
+              onChange({
+                ...value,
+                city: newCity,
+                state: resolved.state,
+                latitude: resolved.latitude,
+                longitude: resolved.longitude,
+              });
+            }}
             placeholder="City"
             className="w-full px-2.5 py-1.5 rounded-lg border border-stone-200 text-stone-900 bg-stone-50/50 font-medium text-xs focus:bg-white focus:ring-1 focus:ring-rose-500"
           />
@@ -439,7 +575,16 @@ export default function AddressAutocompleteInput({
           <input
             type="text"
             value={value.state}
-            onChange={(e) => onChange({ ...value, state: e.target.value })}
+            onChange={(e) => {
+              const newState = e.target.value.toUpperCase();
+              const resolved = resolveCoordinatesForCityState(value.city, newState, value.latitude, value.longitude);
+              onChange({
+                ...value,
+                state: newState,
+                latitude: resolved.latitude,
+                longitude: resolved.longitude,
+              });
+            }}
             placeholder="NJ"
             maxLength={2}
             className="w-full px-2 py-1.5 rounded-lg border border-stone-200 text-stone-900 bg-stone-50/50 font-medium text-xs text-center uppercase focus:bg-white focus:ring-1 focus:ring-rose-500"
