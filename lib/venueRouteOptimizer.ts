@@ -53,6 +53,16 @@ const KNOWN_COORDINATES: Record<string, { lat: number; lon: number }> = {
   'philadelphia, pa': { lat: 39.9526, lon: -75.1652 },
   'center city, philadelphia': { lat: 39.9515, lon: -75.1645 },
   'king of prussia, pa': { lat: 40.0931, lon: -75.4057 },
+  'mountain top, pa': { lat: 41.1514, lon: -75.9376 },
+  'mountain top': { lat: 41.1514, lon: -75.9376 },
+  'ice lake, mountain top': { lat: 41.1514, lon: -75.9376 },
+  'ice lake dr': { lat: 41.1514, lon: -75.9376 },
+  'ice lake drive': { lat: 41.1514, lon: -75.9376 },
+  'wilkes-barre, pa': { lat: 41.2459, lon: -75.8813 },
+  'scranton, pa': { lat: 41.409, lon: -75.6624 },
+  'poconos, pa': { lat: 41.1215, lon: -75.3402 },
+  'allentown, pa': { lat: 40.6023, lon: -75.4714 },
+  'bethlehem, pa': { lat: 40.6259, lon: -75.3705 },
 
   // Other Major Desi Wedding Metros
   'chicago, il': { lat: 41.8781, lon: -87.6298 },

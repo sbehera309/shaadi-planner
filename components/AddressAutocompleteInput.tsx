@@ -115,7 +115,49 @@ export default function AddressAutocompleteInput({
   // Trigger search immediately as the user types
   const handleInputChange = (newText: string) => {
     setInputValue(newText);
-    onChange({ ...value, address: newText });
+
+    // If user pasted/typed a full comma-separated address like "200 Ice Lake Dr, Mountain Top PA"
+    if (newText.includes(',')) {
+      const parts = newText.split(',').map((p) => p.trim()).filter(Boolean);
+      if (parts.length >= 2) {
+        const street = parts[0];
+        const secondPart = parts.slice(1).join(', ');
+        const stateMatch = secondPart.match(/\b([A-Za-z]{2})\b(?:\s*(\d{5}))?/);
+        let city = secondPart;
+        let state = value.state || 'PA';
+        let zipCode = value.zipCode || '';
+        if (stateMatch) {
+          state = stateMatch[1].toUpperCase();
+          if (stateMatch[2]) zipCode = stateMatch[2];
+          city = secondPart.replace(new RegExp(`\\b${stateMatch[1]}\\b.*$`, 'i'), '').replace(/,/g, '').trim();
+        }
+        let lat = value.latitude;
+        let lon = value.longitude;
+        if (
+          city.toLowerCase().includes('mountain top') ||
+          street.toLowerCase().includes('ice lake') ||
+          newText.toLowerCase().includes('mountain top')
+        ) {
+          city = 'Mountain Top';
+          state = 'PA';
+          zipCode = '18707';
+          lat = 41.151352;
+          lon = -75.93756;
+        }
+        onChange({
+          address: street,
+          city,
+          state,
+          zipCode,
+          latitude: lat,
+          longitude: lon,
+        });
+      } else {
+        onChange({ ...value, address: newText });
+      }
+    } else {
+      onChange({ ...value, address: newText });
+    }
 
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);

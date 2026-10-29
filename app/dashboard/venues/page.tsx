@@ -1918,6 +1918,7 @@ export default function VenuesPage() {
                   placeholder="Start typing (e.g. 88 Oak Tree Rd or Somerset)..."
                   accentColor="rose"
                   quickSuggestions={[
+                    { label: 'Mountain Top PA (Ice Lake Dr)', address: '200 Ice Lake Dr', city: 'Mountain Top', state: 'PA', zipCode: '18707', lat: 41.151352, lon: -75.93756 },
                     { label: 'Edison (Oak Tree Rd)', address: '88 Oak Tree Road', city: 'Edison', state: 'NJ', zipCode: '08820', lat: 40.5701, lon: -74.3418 },
                     { label: 'Somerset (Davidson Ave)', address: '333 Davidson Avenue', city: 'Somerset', state: 'NJ', zipCode: '08873', lat: 40.5284, lon: -74.5218 },
                     { label: 'Livingston (Northfield)', address: '315 E Northfield Road', city: 'Livingston', state: 'NJ', zipCode: '07039', lat: 40.7891, lon: -74.3418 },

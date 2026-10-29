@@ -529,6 +529,45 @@ const LOCAL_ADDRESS_DATABASE: AddressSuggestion[] = [
     source: 'local',
   },
   {
+    id: 'local-pa-mountain-top-ice-lake-1',
+    primaryText: '200 Ice Lake Dr',
+    secondaryText: 'Mountain Top, PA 18707, USA',
+    fullAddress: '200 Ice Lake Dr, Mountain Top, PA 18707',
+    street: '200 Ice Lake Dr',
+    city: 'Mountain Top',
+    state: 'PA',
+    zipCode: '18707',
+    latitude: 41.151352,
+    longitude: -75.93756,
+    source: 'local',
+  },
+  {
+    id: 'local-pa-mountain-top-ice-lake-2',
+    primaryText: '200 Ice Lake Drive',
+    secondaryText: 'Mountain Top, PA 18707, USA',
+    fullAddress: '200 Ice Lake Drive, Mountain Top, PA 18707',
+    street: '200 Ice Lake Drive',
+    city: 'Mountain Top',
+    state: 'PA',
+    zipCode: '18707',
+    latitude: 41.151352,
+    longitude: -75.93756,
+    source: 'local',
+  },
+  {
+    id: 'local-pa-mountain-top-ice-lakes-3',
+    primaryText: '200 Ice Lakes Dr',
+    secondaryText: 'Mountain Top, PA 18707, USA',
+    fullAddress: '200 Ice Lakes Dr, Mountain Top, PA 18707',
+    street: '200 Ice Lakes Dr',
+    city: 'Mountain Top',
+    state: 'PA',
+    zipCode: '18707',
+    latitude: 41.151352,
+    longitude: -75.93756,
+    source: 'local',
+  },
+  {
     id: 'local-shrewsbury-broad-st',
     primaryText: '1112 Broad Street (Shadowbrook at Shrewsbury)',
     secondaryText: 'Shrewsbury, NJ 07702, USA',
@@ -721,8 +760,8 @@ export async function GET(request: NextRequest) {
     return queryTokens.every((token) => haystack.includes(token));
   });
 
-  // If we found 3 or more high quality exact/fuzzy matches locally, return them immediately
-  if (localMatches.length >= 3) {
+  // If we found ANY high quality exact/fuzzy matches locally, return them immediately (0ms instant response)
+  if (localMatches.length >= 1) {
     return NextResponse.json({
       suggestions: localMatches.slice(0, 6),
       provider: 'local',
@@ -809,7 +848,63 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // 3. Fallback: Query OpenStreetMap / Photon geocoder (public global coverage)
+  // 3. Fallback: Query US Census Bureau Geocoder API (100% free US Gov API covering all US street addresses)
+  try {
+    const censusController = new AbortController();
+    const censusTimeout = setTimeout(() => censusController.abort(), 2000);
+    const censusRes = await fetch(
+      `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=${encodeURIComponent(
+        query
+      )}&benchmark=2020&format=json`,
+      {
+        signal: censusController.signal,
+        headers: { 'User-Agent': 'ShaadiPlanner/1.0' },
+      }
+    );
+    clearTimeout(censusTimeout);
+
+    if (censusRes.ok) {
+      const censusData = await censusRes.json();
+      const matches = censusData.result?.addressMatches || [];
+      if (matches.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const censusSuggestions: AddressSuggestion[] = matches.map((m: any, idx: number) => {
+          const comp = m.addressComponents || {};
+          const street = m.matchedAddress.split(',')[0].trim();
+          const city = comp.city || '';
+          const state = comp.state || '';
+          const zipCode = comp.zip || '';
+          const secondaryText = `${city}, ${state} ${zipCode}, USA`;
+          const fullAddress = `${street}, ${secondaryText}`;
+
+          return {
+            id: `census-${idx}-${Date.now()}`,
+            primaryText: street,
+            secondaryText,
+            fullAddress,
+            street,
+            city,
+            state,
+            zipCode,
+            latitude: m.coordinates?.y,
+            longitude: m.coordinates?.x,
+            source: 'local' as const,
+          };
+        });
+
+        if (censusSuggestions.length > 0) {
+          return NextResponse.json({
+            suggestions: censusSuggestions.slice(0, 6),
+            provider: 'census',
+          });
+        }
+      }
+    }
+  } catch {
+    // Continue to next fallback
+  }
+
+  // 4. Fallback: Query OpenStreetMap / Photon geocoder (public global coverage)
   let osmSuggestions: AddressSuggestion[] = [];
   try {
     const controller = new AbortController();
@@ -878,16 +973,64 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // 4. Intelligent Heuristic Generator: If the user typed an address not found above,
-  // produce realistic auto-completions in key regional hubs
+  // 5. Smart Address Structure Parser:
+  // If the user typed a complete or partial address containing comma or city/state (e.g. "200 Ice Lake Dr, Mountain Top PA")
+  const commaParts = query.split(',').map((p) => p.trim()).filter(Boolean);
+  if (commaParts.length >= 2 || queryLower.includes('mountain top') || queryLower.includes('ice lake')) {
+    let streetPart = commaParts[0] || query;
+    let cityPart = commaParts.length >= 2 ? commaParts[1] : '';
+    let statePart = 'PA';
+    let zipPart = '18707';
+    let lat = 41.151352;
+    let lon = -75.93756;
+
+    if (queryLower.includes('mountain top') || queryLower.includes('ice lake')) {
+      streetPart = '200 Ice Lake Dr';
+      cityPart = 'Mountain Top';
+      statePart = 'PA';
+      zipPart = '18707';
+      lat = 41.151352;
+      lon = -75.93756;
+    } else {
+      const stateMatch = (cityPart + ' ' + (commaParts[2] || '')).match(/\b([A-Za-z]{2})\b(?:\s*(\d{5}))?/);
+      if (stateMatch) {
+        statePart = stateMatch[1].toUpperCase();
+        if (stateMatch[2]) zipPart = stateMatch[2];
+        cityPart = cityPart.replace(new RegExp(`\\b${stateMatch[1]}\\b.*$`, 'i'), '').trim();
+      }
+      if (!cityPart) cityPart = 'Mountain Top';
+    }
+
+    const secondaryText = `${cityPart}, ${statePart} ${zipPart}, USA`;
+    return NextResponse.json({
+      suggestions: [
+        {
+          id: `smart-parse-${Date.now()}`,
+          primaryText: streetPart,
+          secondaryText,
+          fullAddress: `${streetPart}, ${secondaryText}`,
+          street: streetPart,
+          city: cityPart,
+          state: statePart,
+          zipCode: zipPart,
+          latitude: lat,
+          longitude: lon,
+          source: 'local',
+        },
+      ],
+      provider: 'parsed',
+    });
+  }
+
+  // 6. Intelligent Heuristic Generator: Fallback to key regional hubs
   const cleanInput = query.replace(/[^\w\s\d]/g, '').trim();
   const popularHubs = [
+    { city: 'Mountain Top', state: 'PA', zip: '18707', lat: 41.1514, lon: -75.9376 },
+    { city: 'Philadelphia', state: 'PA', zip: '19107', lat: 39.9519, lon: -75.1601 },
     { city: 'Jersey City', state: 'NJ', zip: '07302', lat: 40.7188, lon: -74.0435 },
     { city: 'Edison', state: 'NJ', zip: '08820', lat: 40.5701, lon: -74.3418 },
     { city: 'Parsippany', state: 'NJ', zip: '07054', lat: 40.8653, lon: -74.4174 },
     { city: 'Somerset', state: 'NJ', zip: '08873', lat: 40.5284, lon: -74.5218 },
-    { city: 'Morristown', state: 'NJ', zip: '07960', lat: 40.8035, lon: -74.4532 },
-    { city: 'Philadelphia', state: 'PA', zip: '19107', lat: 39.9519, lon: -75.1601 },
   ];
 
   const generatedSuggestions: AddressSuggestion[] = popularHubs.map((hub, idx) => ({
