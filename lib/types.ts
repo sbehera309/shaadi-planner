@@ -270,6 +270,83 @@ export interface VenueOption {
   isSelectedOfficialVenue?: boolean;
 }
 
+export type VenuePricingQuoteType =
+  | 'flat_total'             // Scenario A (Rockleigh): 1 total package amount
+  | 'per_person_whole_day'   // Scenario B (The Grove): 1 price per person for whole day
+  | 'per_person_per_event';  // Scenario C (Legacy Castle): Price per person for each event (wedding & reception)
+
+export interface AvailableVenueDateEntry {
+  id: string;
+  date: string; // YYYY-MM-DD
+  dayOfWeek?: string; // e.g. "Saturday"
+  isPreferred?: boolean;
+  isHold?: boolean;
+  holdExpiresDate?: string; // YYYY-MM-DD
+  notes?: string; // e.g. "Holds until Friday 5pm" or "Grand Ballroom"
+}
+
+export interface UserVenueCustomQuote {
+  venueId: string;
+  userId?: string;
+  updatedAt: string; // ISO timestamp
+
+  // Pricing Model
+  pricingType: VenuePricingQuoteType;
+
+  // Scenario A: Flat lump sum package amount (e.g. Rockleigh)
+  flatTotalAmount?: number; // e.g. 65000
+
+  // Scenario B: Single per-person rate for the whole day (e.g. The Grove)
+  perPersonWholeDayRate?: number; // e.g. 180
+
+  // Scenario C: Separate per-person rate per event (e.g. Legacy Castle)
+  perPersonWeddingRate?: number; // e.g. 95 (wedding ceremony & lunch)
+  perPersonReceptionRate?: number; // e.g. 165 (reception dinner)
+  weddingGuestCountOverride?: number;
+  receptionGuestCountOverride?: number;
+
+  // Additional Fees & Inclusions
+  ceremonyFee?: number; // e.g. $2,500 ballroom rental / mandap fee
+  outsideCateringRoyaltyFeePerGuest?: number;
+  serviceChargePercent?: number; // e.g. 22%
+  taxPercent?: number; // e.g. 6.625%
+  isTaxAndServiceIncluded?: boolean; // Whether the quote already includes tax and service
+
+  // Available Dates Logged from Vendor Call
+  availableDates: AvailableVenueDateEntry[];
+
+  // Vendor Call & Coordinator Details
+  coordinatorName?: string;
+  coordinatorPhone?: string;
+  coordinatorEmail?: string;
+  callDate?: string; // YYYY-MM-DD
+  callNotes?: string;
+  depositRequiredAmount?: number;
+  depositDueNotes?: string;
+}
+
+export interface EffectiveVenuePricingResult {
+  isCustomUserQuote: boolean;
+  pricingType?: VenuePricingQuoteType;
+  estimatedTotalCost: number;
+  costPerGuest: number;
+  breakdownSummary: string;
+  quoteLabel?: string;
+  availableDates: AvailableVenueDateEntry[];
+  coordinatorName?: string;
+  coordinatorPhone?: string;
+  coordinatorEmail?: string;
+  callNotes?: string;
+  depositRequiredAmount?: number;
+  depositDueNotes?: string;
+  isTaxAndServiceIncluded?: boolean;
+  serviceChargePercent?: number;
+  taxPercent?: number;
+  ceremonyFee?: number;
+  morningCeremonyTotal?: number;
+  eveningReceptionTotal?: number;
+}
+
 export interface FamilyAddressInput {
   side: 'groom' | 'bride' | 'neutral_meeting';
   label: string; // e.g. "Groom's Parents (Jersey City)" or "Bride's Family (Edison)"

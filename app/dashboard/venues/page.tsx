@@ -35,6 +35,8 @@ import TourDayRouteMap from '@/components/TourDayRouteMap';
 import ProfileAddressBookModal from '@/components/ProfileAddressBookModal';
 import { AuthModal } from '@/components/AuthModal';
 import { useProfileAddresses } from '@/lib/useProfileAddresses';
+import { useUserVenueQuotes } from '@/lib/useUserVenueQuotes';
+import { VenueCustomQuoteModal } from '@/components/VenueCustomQuoteModal';
 import {
   Building2,
   Plus,
@@ -120,6 +122,23 @@ export default function VenuesPage() {
 
   const [isAddressBookModalOpen, setIsAddressBookModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  // User Venue Custom Negotiated Quotes Hook
+  const {
+    quotes: userVenueQuotes,
+    getQuote: getUserVenueQuote,
+    saveQuote: saveUserVenueQuote,
+    deleteQuote: deleteUserVenueQuote,
+    getEffectivePricing,
+  } = useUserVenueQuotes();
+
+  const [quoteModalVenue, setQuoteModalVenue] = useState<VenueOption | null>(null);
+  const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
+
+  const handleOpenQuoteModal = (venue: VenueOption) => {
+    setQuoteModalVenue(venue);
+    setIsQuoteModalOpen(true);
+  };
 
   // Curated Database Filters & Sorting
   const [curatedVenues, setCuratedVenues] = useState<VenueOption[]>(PRELOADED_CURATED_VENUES);
@@ -702,13 +721,13 @@ export default function VenuesPage() {
         return (b.serviceRating?.score || 80) - (a.serviceRating?.score || 80);
       }
       if (curatedSortBy === 'price_asc') {
-        const costA = calculateVenueEstimateForGuests(a, planningGuestCount, eventFormat).estimatedTotalCost;
-        const costB = calculateVenueEstimateForGuests(b, planningGuestCount, eventFormat).estimatedTotalCost;
+        const costA = getEffectivePricing(a, planningGuestCount, eventFormat).estimatedTotalCost;
+        const costB = getEffectivePricing(b, planningGuestCount, eventFormat).estimatedTotalCost;
         return costA - costB;
       }
       if (curatedSortBy === 'price_desc') {
-        const costA = calculateVenueEstimateForGuests(a, planningGuestCount, eventFormat).estimatedTotalCost;
-        const costB = calculateVenueEstimateForGuests(b, planningGuestCount, eventFormat).estimatedTotalCost;
+        const costA = getEffectivePricing(a, planningGuestCount, eventFormat).estimatedTotalCost;
+        const costB = getEffectivePricing(b, planningGuestCount, eventFormat).estimatedTotalCost;
         return costB - costA;
       }
       if (curatedSortBy === 'capacity_desc') {
@@ -1376,7 +1395,7 @@ export default function VenuesPage() {
                         </div>
                       )}
                       {(() => {
-                        const estimate = calculateVenueEstimateForGuests(
+                        const effective = getEffectivePricing(
                           venue,
                           planningGuestCount,
                           eventFormat
@@ -1384,13 +1403,38 @@ export default function VenuesPage() {
 
                         return (
                           <div className="space-y-2">
-                            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-50/90 to-rose-50/80 border border-amber-200/90 text-xs space-y-2">
+                            <div
+                              className={`p-3.5 rounded-2xl border text-xs space-y-2.5 transition-all ${
+                                effective.isCustomUserQuote
+                                  ? 'bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-rose-500/10 border-amber-300 shadow-2xs'
+                                  : 'bg-gradient-to-r from-amber-50/90 to-rose-50/80 border-amber-200/90'
+                              }`}
+                            >
+                              {/* Custom Quote Banner if active */}
+                              {effective.isCustomUserQuote && (
+                                <div className="flex items-center justify-between pb-1.5 border-b border-amber-200 text-[10px]">
+                                  <span className="font-extrabold text-amber-950 flex items-center gap-1">
+                                    <span>⭐</span>
+                                    <span>My Negotiated Vendor Quote (User Override)</span>
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenQuoteModal(venue)}
+                                    className="text-amber-800 font-bold underline hover:text-amber-950 cursor-pointer"
+                                  >
+                                    Edit Quote
+                                  </button>
+                                </div>
+                              )}
+
                               <div className="flex items-center justify-between">
                                 <div>
                                   <span className="text-[10px] font-bold uppercase tracking-wider text-amber-950 flex items-center gap-1">
                                     <Calculator className="w-3 h-3 text-rose-700" />
                                     <span>
-                                      {eventFormat === 'all_day'
+                                      {effective.isCustomUserQuote
+                                        ? `My Quoted Price for ${planningGuestCount} Guests (${effective.quoteLabel}):`
+                                        : eventFormat === 'all_day'
                                         ? `Est. All-Day Package for ${planningGuestCount} Guests:`
                                         : eventFormat === 'reception_only'
                                         ? `Est. Evening Reception for ${planningGuestCount} Guests:`
@@ -1398,24 +1442,86 @@ export default function VenuesPage() {
                                     </span>
                                   </span>
                                   <strong className="text-stone-900 text-xl font-extrabold block">
-                                    {formatCurr(estimate.estimatedTotalCost)}
+                                    {formatCurr(effective.estimatedTotalCost)}
                                   </strong>
                                 </div>
                                 <div className="text-right">
-                                  <span className="inline-block px-2.5 py-1 rounded-lg bg-white border border-amber-300 font-extrabold text-xs text-rose-900 shadow-2xs">
-                                    ~{formatCurr(estimate.costPerGuest)} / guest
+                                  <span
+                                    className={`inline-block px-2.5 py-1 rounded-lg border font-extrabold text-xs shadow-2xs ${
+                                      effective.isCustomUserQuote
+                                        ? 'bg-amber-100 border-amber-400 text-amber-950'
+                                        : 'bg-white border-amber-300 text-rose-900'
+                                    }`}
+                                  >
+                                    ~{formatCurr(effective.costPerGuest)} / guest
                                   </span>
-                                  <span className="block text-[10px] text-stone-500 mt-0.5">all-in verified quote</span>
+                                  <span className="block text-[10px] text-stone-500 mt-0.5">
+                                    {effective.isCustomUserQuote ? 'negotiated vendor rate' : 'all-in verified quote'}
+                                  </span>
                                 </div>
                               </div>
 
-                              {/* Capacity Warning Alert */}
-                              {estimate.isOverCapacity && (
-                                <div className="p-2 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-950 text-[11px] font-semibold flex items-center gap-1.5">
-                                  <AlertTriangle className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                                  <span>
-                                    {planningGuestCount} guests exceeds banquet capacity ({estimate.maxCapacity} max).
-                                  </span>
+                              {/* Coordinator & Call Notes if logged */}
+                              {(effective.coordinatorName || effective.callNotes) && (
+                                <div className="p-2 rounded-xl bg-white/80 border border-amber-200/80 text-[11px] text-stone-700 space-y-1">
+                                  {effective.coordinatorName && (
+                                    <div className="flex items-center justify-between text-stone-900 font-semibold text-[11px]">
+                                      <span>👤 Coordinator: {effective.coordinatorName}</span>
+                                      {effective.coordinatorPhone && (
+                                        <a href={`tel:${effective.coordinatorPhone}`} className="text-rose-700 hover:underline">
+                                          📞 {effective.coordinatorPhone}
+                                        </a>
+                                      )}
+                                    </div>
+                                  )}
+                                  {effective.callNotes && (
+                                    <p className="italic text-stone-600 text-[10px] leading-relaxed">
+                                      💬 &ldquo;{effective.callNotes}&rdquo;
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Available Dates Logged */}
+                              {effective.availableDates && effective.availableDates.length > 0 && (
+                                <div className="pt-1.5 border-t border-amber-200/60">
+                                  <div className="flex items-center justify-between text-[10px] mb-1">
+                                    <span className="font-bold text-stone-800 flex items-center gap-1">
+                                      <Calendar className="w-3 h-3 text-rose-600" />
+                                      <span>Available Dates ({effective.availableDates.length}):</span>
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenQuoteModal(venue)}
+                                      className="text-amber-800 font-semibold hover:underline cursor-pointer"
+                                    >
+                                      + Manage Dates
+                                    </button>
+                                  </div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {effective.availableDates.slice(0, 3).map((d) => (
+                                      <span
+                                        key={d.id}
+                                        className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${
+                                          d.isHold
+                                            ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                            : d.isPreferred
+                                            ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                                            : 'bg-white text-stone-800 border-stone-200'
+                                        }`}
+                                      >
+                                        <span>📅 {d.date}</span>
+                                        {d.dayOfWeek && <span className="opacity-80">({d.dayOfWeek.slice(0, 3)})</span>}
+                                        {d.isHold && <span className="text-[9px] text-amber-800">⏳ Hold</span>}
+                                        {d.isPreferred && <span className="text-[9px] text-emerald-800">⭐ Top</span>}
+                                      </span>
+                                    ))}
+                                    {effective.availableDates.length > 3 && (
+                                      <span className="text-[10px] text-stone-500 font-medium py-0.5">
+                                        +{effective.availableDates.length - 3} more
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               )}
 
@@ -1424,31 +1530,27 @@ export default function VenuesPage() {
                                 <div>
                                   <span className="text-stone-400 block">Morning Ceremony:</span>
                                   <span className="font-semibold text-stone-800">
-                                    {formatCurr(estimate.morningCeremonyTotal)} (~${estimate.morningRatePerGuest}/pp)
+                                    {effective.morningCeremonyTotal ? formatCurr(effective.morningCeremonyTotal) : 'Included in quote'}
                                   </span>
                                 </div>
                                 <div>
                                   <span className="text-stone-400 block">Evening Reception:</span>
                                   <span className="font-semibold text-stone-800">
-                                    {formatCurr(estimate.eveningReceptionTotal)} (~${estimate.eveningRatePerGuest}/pp)
+                                    {effective.eveningReceptionTotal ? formatCurr(effective.eveningReceptionTotal) : 'Included in quote'}
                                   </span>
                                 </div>
                                 <div>
                                   <span className="text-stone-400 block">Svc &amp; Admin:</span>
                                   <span className="font-semibold text-stone-800">
-                                    {estimate.serviceChargePercent}% ({formatCurr(estimate.serviceChargeAmount)})
+                                    {effective.isTaxAndServiceIncluded ? 'Included in quote' : `${effective.serviceChargePercent}%`}
                                   </span>
                                 </div>
                                 <div>
-                                  <span className="text-stone-400 block">Tax &amp; Gratuity:</span>
+                                  <span className="text-stone-400 block">Tax:</span>
                                   <span className="font-semibold text-stone-800">
-                                    {estimate.taxPercent}% + {estimate.tipPercent}% tip
+                                    {effective.isTaxAndServiceIncluded ? 'Included in quote' : `${effective.taxPercent}%`}
                                   </span>
                                 </div>
-                              </div>
-
-                              <div className="text-[10px] text-stone-500 italic pt-1 border-t border-amber-200/40">
-                                <span>* Real verified contract package: Baraat, Mandap ceremony, luncheon, 5-hr evening reception with premium open bar &amp; maître d&apos;.</span>
                               </div>
                             </div>
                           </div>
@@ -1473,17 +1575,32 @@ export default function VenuesPage() {
 
                     {/* Footer Actions */}
                     <div className="pt-3 border-t border-stone-100 flex flex-wrap items-center justify-between gap-2.5">
-                      {venue.contactPhone ? (
-                        <a
-                          href={`tel:${venue.contactPhone}`}
-                          className="text-stone-600 hover:text-stone-900 font-semibold text-xs flex items-center gap-1.5"
+                      <div className="flex flex-wrap items-center gap-2">
+                        {venue.contactPhone ? (
+                          <a
+                            href={`tel:${venue.contactPhone}`}
+                            className="text-stone-600 hover:text-stone-900 font-semibold text-xs flex items-center gap-1.5"
+                          >
+                            <Phone className="w-3.5 h-3.5 text-rose-600" />
+                            <span>{venue.contactPhone}</span>
+                          </a>
+                        ) : (
+                          <span className="text-[11px] text-stone-400">Contact office</span>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenQuoteModal(venue)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 cursor-pointer ${
+                            getUserVenueQuote(venue.id)
+                              ? 'bg-amber-100 hover:bg-amber-200 text-amber-950 border-amber-300 shadow-2xs'
+                              : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200'
+                          }`}
                         >
-                          <Phone className="w-3.5 h-3.5 text-rose-600" />
-                          <span>{venue.contactPhone}</span>
-                        </a>
-                      ) : (
-                        <span className="text-[11px] text-stone-400">Contact office</span>
-                      )}
+                          <DollarSign className="w-3.5 h-3.5 text-amber-600" />
+                          <span>{getUserVenueQuote(venue.id) ? '✏️ Edit My Quote & Dates' : '📝 Log Vendor Call / Quote'}</span>
+                        </button>
+                      </div>
 
                       <div>
                         {isAlreadyShortlisted ? (
@@ -1799,7 +1916,7 @@ export default function VenuesPage() {
 
                       {/* Live Calculated Estimate for Guest Count */}
                       {(() => {
-                        const estimate = calculateVenueEstimateForGuests(
+                        const effective = getEffectivePricing(
                           venue,
                           planningGuestCount,
                           eventFormat
@@ -1807,13 +1924,38 @@ export default function VenuesPage() {
 
                         return (
                           <div className="space-y-2">
-                            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-50/90 to-rose-50/80 border border-amber-200/90 text-xs space-y-2">
+                            <div
+                              className={`p-3.5 rounded-2xl border text-xs space-y-2.5 transition-all ${
+                                effective.isCustomUserQuote
+                                  ? 'bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-rose-500/10 border-amber-300 shadow-2xs'
+                                  : 'bg-gradient-to-r from-amber-50/90 to-rose-50/80 border-amber-200/90'
+                              }`}
+                            >
+                              {/* Custom Quote Banner if active */}
+                              {effective.isCustomUserQuote && (
+                                <div className="flex items-center justify-between pb-1.5 border-b border-amber-200 text-[10px]">
+                                  <span className="font-extrabold text-amber-950 flex items-center gap-1">
+                                    <span>⭐</span>
+                                    <span>My Negotiated Vendor Quote (User Override)</span>
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenQuoteModal(venue)}
+                                    className="text-amber-800 font-bold underline hover:text-amber-950 cursor-pointer"
+                                  >
+                                    Edit Quote
+                                  </button>
+                                </div>
+                              )}
+
                               <div className="flex items-center justify-between">
                                 <div>
                                   <span className="text-[10px] font-bold uppercase tracking-wider text-amber-950 flex items-center gap-1">
                                     <Calculator className="w-3 h-3 text-rose-700" />
                                     <span>
-                                      {eventFormat === 'all_day'
+                                      {effective.isCustomUserQuote
+                                        ? `My Quoted Price for ${planningGuestCount} Guests (${effective.quoteLabel}):`
+                                        : eventFormat === 'all_day'
                                         ? `Est. All-Day Package for ${planningGuestCount} Guests:`
                                         : eventFormat === 'reception_only'
                                         ? `Est. Evening Reception for ${planningGuestCount} Guests:`
@@ -1821,24 +1963,86 @@ export default function VenuesPage() {
                                     </span>
                                   </span>
                                   <strong className="text-stone-900 text-xl font-extrabold block">
-                                    {formatCurr(estimate.estimatedTotalCost)}
+                                    {formatCurr(effective.estimatedTotalCost)}
                                   </strong>
                                 </div>
                                 <div className="text-right">
-                                  <span className="inline-block px-2.5 py-1 rounded-lg bg-white border border-amber-300 font-extrabold text-xs text-rose-900 shadow-2xs">
-                                    ~{formatCurr(estimate.costPerGuest)} / guest
+                                  <span
+                                    className={`inline-block px-2.5 py-1 rounded-lg border font-extrabold text-xs shadow-2xs ${
+                                      effective.isCustomUserQuote
+                                        ? 'bg-amber-100 border-amber-400 text-amber-950'
+                                        : 'bg-white border-amber-300 text-rose-900'
+                                    }`}
+                                  >
+                                    ~{formatCurr(effective.costPerGuest)} / guest
                                   </span>
-                                  <span className="block text-[10px] text-stone-500 mt-0.5">all-in verified quote</span>
+                                  <span className="block text-[10px] text-stone-500 mt-0.5">
+                                    {effective.isCustomUserQuote ? 'negotiated vendor rate' : 'all-in verified quote'}
+                                  </span>
                                 </div>
                               </div>
 
-                              {/* Capacity Warning Alert */}
-                              {estimate.isOverCapacity && (
-                                <div className="p-2 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-950 text-[11px] font-semibold flex items-center gap-1.5">
-                                  <AlertTriangle className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                                  <span>
-                                    {planningGuestCount} guests exceeds banquet capacity ({estimate.maxCapacity} max).
-                                  </span>
+                              {/* Coordinator & Call Notes if logged */}
+                              {(effective.coordinatorName || effective.callNotes) && (
+                                <div className="p-2 rounded-xl bg-white/80 border border-amber-200/80 text-[11px] text-stone-700 space-y-1">
+                                  {effective.coordinatorName && (
+                                    <div className="flex items-center justify-between text-stone-900 font-semibold text-[11px]">
+                                      <span>👤 Coordinator: {effective.coordinatorName}</span>
+                                      {effective.coordinatorPhone && (
+                                        <a href={`tel:${effective.coordinatorPhone}`} className="text-rose-700 hover:underline">
+                                          📞 {effective.coordinatorPhone}
+                                        </a>
+                                      )}
+                                    </div>
+                                  )}
+                                  {effective.callNotes && (
+                                    <p className="italic text-stone-600 text-[10px] leading-relaxed">
+                                      💬 &ldquo;{effective.callNotes}&rdquo;
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Available Dates Logged */}
+                              {effective.availableDates && effective.availableDates.length > 0 && (
+                                <div className="pt-1.5 border-t border-amber-200/60">
+                                  <div className="flex items-center justify-between text-[10px] mb-1">
+                                    <span className="font-bold text-stone-800 flex items-center gap-1">
+                                      <Calendar className="w-3 h-3 text-rose-600" />
+                                      <span>Available Dates ({effective.availableDates.length}):</span>
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenQuoteModal(venue)}
+                                      className="text-amber-800 font-semibold hover:underline cursor-pointer"
+                                    >
+                                      + Manage Dates
+                                    </button>
+                                  </div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {effective.availableDates.slice(0, 3).map((d) => (
+                                      <span
+                                        key={d.id}
+                                        className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${
+                                          d.isHold
+                                            ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                            : d.isPreferred
+                                            ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                                            : 'bg-white text-stone-800 border-stone-200'
+                                        }`}
+                                      >
+                                        <span>📅 {d.date}</span>
+                                        {d.dayOfWeek && <span className="opacity-80">({d.dayOfWeek.slice(0, 3)})</span>}
+                                        {d.isHold && <span className="text-[9px] text-amber-800">⏳ Hold</span>}
+                                        {d.isPreferred && <span className="text-[9px] text-emerald-800">⭐ Top</span>}
+                                      </span>
+                                    ))}
+                                    {effective.availableDates.length > 3 && (
+                                      <span className="text-[10px] text-stone-500 font-medium py-0.5">
+                                        +{effective.availableDates.length - 3} more
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               )}
 
@@ -1847,31 +2051,27 @@ export default function VenuesPage() {
                                 <div>
                                   <span className="text-stone-400 block">Morning Ceremony:</span>
                                   <span className="font-semibold text-stone-800">
-                                    {formatCurr(estimate.morningCeremonyTotal)} (~${estimate.morningRatePerGuest}/pp)
+                                    {effective.morningCeremonyTotal ? formatCurr(effective.morningCeremonyTotal) : 'Included in quote'}
                                   </span>
                                 </div>
                                 <div>
                                   <span className="text-stone-400 block">Evening Reception:</span>
                                   <span className="font-semibold text-stone-800">
-                                    {formatCurr(estimate.eveningReceptionTotal)} (~${estimate.eveningRatePerGuest}/pp)
+                                    {effective.eveningReceptionTotal ? formatCurr(effective.eveningReceptionTotal) : 'Included in quote'}
                                   </span>
                                 </div>
                                 <div>
                                   <span className="text-stone-400 block">Svc &amp; Admin:</span>
                                   <span className="font-semibold text-stone-800">
-                                    {estimate.serviceChargePercent}% ({formatCurr(estimate.serviceChargeAmount)})
+                                    {effective.isTaxAndServiceIncluded ? 'Included in quote' : `${effective.serviceChargePercent}%`}
                                   </span>
                                 </div>
                                 <div>
-                                  <span className="text-stone-400 block">Tax &amp; Gratuity:</span>
+                                  <span className="text-stone-400 block">Tax:</span>
                                   <span className="font-semibold text-stone-800">
-                                    {estimate.taxPercent}% + {estimate.tipPercent}% tip
+                                    {effective.isTaxAndServiceIncluded ? 'Included in quote' : `${effective.taxPercent}%`}
                                   </span>
                                 </div>
-                              </div>
-
-                              <div className="text-[10px] text-stone-500 italic pt-1 border-t border-amber-200/40">
-                                <span>* Real verified contract package: Baraat route, Mandap ceremony, luncheon, 5-hr evening reception with premium open bar &amp; maître d&apos;.</span>
                               </div>
                             </div>
                           </div>
@@ -1881,15 +2081,30 @@ export default function VenuesPage() {
 
                     {/* Card Footer Actions */}
                     <div className="pt-3 border-t border-stone-100 flex flex-wrap items-center justify-between gap-2.5">
-                      <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-stone-700">
-                        <input
-                          type="checkbox"
-                          checked={isIncludedInTour}
-                          onChange={() => handleToggleVenueSelectionForTour(venue.id)}
-                          className="w-4 h-4 rounded-md text-rose-600 focus:ring-rose-500"
-                        />
-                        <span>Include in Site Tour Day</span>
-                      </label>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-stone-700">
+                          <input
+                            type="checkbox"
+                            checked={isIncludedInTour}
+                            onChange={() => handleToggleVenueSelectionForTour(venue.id)}
+                            className="w-4 h-4 rounded-md text-rose-600 focus:ring-rose-500"
+                          />
+                          <span>Include in Site Tour Day</span>
+                        </label>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenQuoteModal(venue)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 cursor-pointer ${
+                            getUserVenueQuote(venue.id)
+                              ? 'bg-amber-100 hover:bg-amber-200 text-amber-950 border-amber-300 shadow-2xs'
+                              : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200'
+                          }`}
+                        >
+                          <DollarSign className="w-3.5 h-3.5 text-amber-600" />
+                          <span>{getUserVenueQuote(venue.id) ? '✏️ Edit My Quote & Dates' : '📝 Log Vendor Call / Quote'}</span>
+                        </button>
+                      </div>
 
                       <div className="flex items-center gap-2">
                         {!isSelected ? (
@@ -2435,6 +2650,7 @@ export default function VenuesPage() {
                   const isChecked = tourForm.selectedVenueIds.includes(v.id);
                   const lockedTime = tourForm.lockedAppointmentTimes?.[v.id];
                   const touring = getDefaultTouringHours(v);
+                  const effective = getEffectivePricing(v, planningGuestCount, eventFormat);
                   return (
                     <div
                       key={v.id}
@@ -2464,7 +2680,10 @@ export default function VenuesPage() {
                             )}
                           </div>
                           <span className="text-[10px] text-stone-500 truncate block">
-                            {v.city}, {v.state} • {formatCurr(v.pricing.estimatedTotalCost)}
+                            {v.city}, {v.state} • {formatCurr(effective.estimatedTotalCost)}
+                            {effective.isCustomUserQuote && (
+                              <span className="text-amber-800 font-bold ml-1">⭐ (My Quote)</span>
+                            )}
                           </span>
                           <span className="text-[9px] text-amber-800 font-semibold truncate block mt-0.5">
                             Sat: {touring.saturdayHours.split('(')[0].trim()}
@@ -3572,6 +3791,22 @@ export default function VenuesPage() {
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
+      />
+
+      {/* User Custom Venue Quote & Available Dates Modal */}
+      <VenueCustomQuoteModal
+        isOpen={isQuoteModalOpen}
+        onClose={() => {
+          setIsQuoteModalOpen(false);
+          setQuoteModalVenue(null);
+        }}
+        venue={quoteModalVenue}
+        existingQuote={quoteModalVenue ? getUserVenueQuote(quoteModalVenue.id) : undefined}
+        planningGuestCount={planningGuestCount}
+        onSaveQuote={saveUserVenueQuote}
+        onDeleteQuote={deleteUserVenueQuote}
+        isLoggedIn={isLoggedIn}
+        onOpenAuthModal={() => setIsAuthModalOpen(true)}
       />
     </div>
   );
