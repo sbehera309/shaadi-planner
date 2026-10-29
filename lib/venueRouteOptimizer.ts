@@ -8,6 +8,7 @@ import {
   DualFamilyMeetingMode,
   DualFamilyStartPlan,
   FamilyDepartureDetail,
+  StartTimePlanningMode,
 } from './types';
 
 // Known coordinates for common wedding hub cities & metro areas
@@ -743,7 +744,8 @@ export function findOptimalTourOrder(
   durationPerTourMinutes: number = 60,
   bufferBetweenToursMinutes: number = 15,
   includesLunchBreak: boolean = true,
-  lockedAppointmentTimes: Record<string, string> = {}
+  lockedAppointmentTimes: Record<string, string> = {},
+  startTimePlanningMode: StartTimePlanningMode = 'venue_arrival'
 ): {
   orderedVenues: VenueOption[];
   totalDistanceMiles: number;
@@ -846,7 +848,12 @@ export function findOptimalTourOrder(
 
       // Score prioritizes low combined distance and balanced travel times
       startFairnessCost = avgStartDist * 0.8 + discrepancyMinutes * 0.6;
-      initialArrivalRaw = dayStartTime;
+      if (startTimePlanningMode === 'family_departure') {
+        // User wants families to depart home at dayStartTime (e.g. 10:00 AM)
+        initialArrivalRaw = addMinutesToTimeString(dayStartTime, maxStartMinutes);
+      } else {
+        initialArrivalRaw = dayStartTime;
+      }
 
       const firstArrivalRounded = roundToQuarterHour(initialArrivalRaw);
       const groomDepartureTime = subtractMinutesFromTimeString(
@@ -1079,21 +1086,24 @@ export function findOptimalTourOrder(
       const firstLockedTimeStr = lockedAppointmentTimes[candidateOrder[firstLockedIdx].id];
       const firstLockedMins = timeStringToMinutes(firstLockedTimeStr);
 
-      let idealFirstArrivalMins = firstLockedMins;
       if (firstLockedIdx > 0) {
         let leadNeeded = 0;
         for (let b = 0; b < firstLockedIdx; b++) {
           leadNeeded += durationPerTourMinutes;
           leadNeeded += currentLegs[b + 1]?.durationMinutes || 15;
+          leadNeeded += bufferBetweenToursMinutes;
         }
-        const hasLunchBefore = includesLunchBreak && firstLockedMins >= 750;
-        leadNeeded += hasLunchBefore ? 55 : (firstLockedIdx * bufferBetweenToursMinutes);
-        idealFirstArrivalMins = firstLockedMins - leadNeeded;
 
-        if (idealFirstArrivalMins < 540) {
-          timingPenalty += 3000; // Required start before 9:00 AM
+        const latestPossibleFirstArrivalMins = firstLockedMins - leadNeeded;
+        const userDesiredStartMins = timeStringToMinutes(initialArrivalRaw);
+
+        // If the user's desired start time is early enough to comfortably make the locked appointment, respect it!
+        if (userDesiredStartMins <= latestPossibleFirstArrivalMins) {
+          simTime = initialArrivalRaw;
+        } else {
+          // If the user's start time is too late to reach the appointment on time, anchor to latest safe start
+          simTime = roundToQuarterHour(minutesToTimeString(Math.max(540, latestPossibleFirstArrivalMins)));
         }
-        simTime = roundToQuarterHour(minutesToTimeString(Math.max(540, idealFirstArrivalMins)));
       } else {
         simTime = firstLockedTimeStr;
       }
@@ -1279,6 +1289,7 @@ export function generateSiteTourSchedule({
   bufferBetweenToursMinutes = 15,
   includesLunchBreak = true,
   lockedAppointmentTimes = {},
+  startTimePlanningMode = 'venue_arrival',
 }: {
   weddingId: string;
   tourDate: string;
@@ -1287,6 +1298,7 @@ export function generateSiteTourSchedule({
   meetingMode?: DualFamilyMeetingMode;
   venues: VenueOption[];
   dayStartTime?: string;
+  startTimePlanningMode?: StartTimePlanningMode;
   durationPerTourMinutes?: number;
   bufferBetweenToursMinutes?: number;
   includesLunchBreak?: boolean;
@@ -1308,7 +1320,8 @@ export function generateSiteTourSchedule({
     durationPerTourMinutes,
     bufferBetweenToursMinutes,
     includesLunchBreak,
-    lockedAppointmentTimes
+    lockedAppointmentTimes,
+    startTimePlanningMode
   );
 
   const lockedIndices: number[] = [];
@@ -1320,7 +1333,7 @@ export function generateSiteTourSchedule({
   const hasLockedAppointments = lockedIndices.length > 0;
 
   // Determine initial arrival for Stop #1
-  let initialArrival = dayStartTime;
+  let initialArrival = dualFamilyStartPlan?.rendezvousArrivalTime || dayStartTime;
   if (hasLockedAppointments) {
     const firstLockedIdx = lockedIndices[0];
     const firstLockedTimeStr = lockedAppointmentTimes[orderedVenues[firstLockedIdx].id];
@@ -1331,11 +1344,18 @@ export function generateSiteTourSchedule({
       for (let b = 0; b < firstLockedIdx; b++) {
         leadNeeded += durationPerTourMinutes;
         leadNeeded += legMetrics[b + 1]?.durationMinutes || 15;
+        leadNeeded += bufferBetweenToursMinutes;
       }
-      const hasLunchBefore = includesLunchBreak && firstLockedMins >= 750;
-      leadNeeded += hasLunchBefore ? 55 : (firstLockedIdx * bufferBetweenToursMinutes);
-      const idealStartMins = firstLockedMins - leadNeeded;
-      initialArrival = roundToQuarterHour(minutesToTimeString(Math.max(540, idealStartMins)));
+      const latestPossibleFirstArrivalMins = firstLockedMins - leadNeeded;
+      const desiredStartMins = timeStringToMinutes(initialArrival);
+
+      // If user's desired start time is early enough to comfortably make the locked slot on time, respect it!
+      if (desiredStartMins <= latestPossibleFirstArrivalMins) {
+        // Keep initialArrival as desired!
+      } else {
+        // Only push earlier if user's desired start time is too late to make the locked slot
+        initialArrival = roundToQuarterHour(minutesToTimeString(Math.max(540, latestPossibleFirstArrivalMins)));
+      }
     } else {
       initialArrival = firstLockedTimeStr;
     }
@@ -1473,6 +1493,7 @@ export function generateSiteTourSchedule({
     meetingMode,
     dualFamilyStartPlan,
     dayStartTime,
+    startTimePlanningMode,
     durationPerTourMinutes,
     bufferBetweenToursMinutes,
     includesLunchBreak,

@@ -357,6 +357,8 @@ export interface DualFamilyStartPlan {
   };
 }
 
+export type StartTimePlanningMode = 'venue_arrival' | 'family_departure';
+
 export interface SiteTourDayPlan {
   id: string;
   weddingId: string;
@@ -366,6 +368,7 @@ export interface SiteTourDayPlan {
   meetingMode?: DualFamilyMeetingMode;
   dualFamilyStartPlan?: DualFamilyStartPlan;
   dayStartTime: string; // e.g. "09:30 AM"
+  startTimePlanningMode?: StartTimePlanningMode;
   durationPerTourMinutes: number; // e.g. 60
   bufferBetweenToursMinutes: number; // e.g. 15
   includesLunchBreak: boolean;

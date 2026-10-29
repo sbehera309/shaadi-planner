@@ -12,6 +12,7 @@ import {
   DualFamilyMeetingMode,
   DualFamilyStartPlan,
   ProfileSavedAddress,
+  StartTimePlanningMode,
 } from '@/lib/types';
 import { Modal } from '@/components/Modal';
 import {
@@ -203,6 +204,7 @@ export default function VenuesPage() {
   const [tourForm, setTourForm] = useState({
     tourDate: tourPlan?.tourDate || '2026-11-14',
     dayStartTime: tourPlan?.dayStartTime || '09:30 AM',
+    startTimePlanningMode: (tourPlan?.startTimePlanningMode || 'venue_arrival') as StartTimePlanningMode,
     durationPerTourMinutes: tourPlan?.durationPerTourMinutes || 60,
     bufferBetweenToursMinutes: tourPlan?.bufferBetweenToursMinutes || 15,
     includesLunchBreak: tourPlan?.includesLunchBreak ?? true,
@@ -538,6 +540,7 @@ export default function VenuesPage() {
       meetingMode: formToUse.meetingMode,
       venues: selectedVenues,
       dayStartTime: formToUse.dayStartTime,
+      startTimePlanningMode: formToUse.startTimePlanningMode,
       durationPerTourMinutes: formToUse.durationPerTourMinutes,
       bufferBetweenToursMinutes: formToUse.bufferBetweenToursMinutes,
       includesLunchBreak: formToUse.includesLunchBreak,
@@ -2245,50 +2248,102 @@ export default function VenuesPage() {
               </div>
             </div>
 
-            {/* Tour Day Timing & Buffer Parameters */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs pt-1">
-              <div>
-                <label className="font-semibold text-stone-700 block mb-1">Tour Date *</label>
-                <input
-                  type="date"
-                  value={tourForm.tourDate}
-                  onChange={(e) => {
-                    const newDate = e.target.value;
-                    const updated = { ...tourForm, tourDate: newDate };
-                    setTourForm(updated);
-                    if (tourPlan && tourPlan.optimizedStops.length > 0) {
+            {/* Tour Day Timing & Target Mode Parameters */}
+            <div className="space-y-3 pt-1">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-2xl bg-stone-100/90 border border-stone-200 text-xs">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-amber-700 shrink-0" />
+                  <div>
+                    <span className="font-bold text-stone-900 block">
+                      Tour Schedule Target Mode
+                    </span>
+                    <span className="text-[11px] text-stone-500">
+                      Choose whether your start time specifies venue arrival or home departure
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-1.5 bg-stone-200/80 p-1 rounded-xl shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = { ...tourForm, startTimePlanningMode: 'venue_arrival' as const };
+                      setTourForm(updated);
                       recalculateTourPlan(updated);
-                    }
-                  }}
-                  className="w-full px-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
-                />
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      tourForm.startTimePlanningMode !== 'family_departure'
+                        ? 'bg-white text-stone-900 shadow-2xs'
+                        : 'text-stone-600 hover:text-stone-900'
+                    }`}
+                  >
+                    🏛️ Arrive at Stop #1 at {tourForm.dayStartTime}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = { ...tourForm, startTimePlanningMode: 'family_departure' as const };
+                      setTourForm(updated);
+                      recalculateTourPlan(updated);
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      tourForm.startTimePlanningMode === 'family_departure'
+                        ? 'bg-white text-stone-900 shadow-2xs'
+                        : 'text-stone-600 hover:text-stone-900'
+                    }`}
+                  >
+                    🚗 Leave Home at {tourForm.dayStartTime}
+                  </button>
+                </div>
               </div>
 
-              <div>
-                <label className="font-semibold text-stone-700 block mb-1">Stop #1 Tour Start Time *</label>
-                <select
-                  value={tourForm.dayStartTime}
-                  onChange={(e) => {
-                    const newTime = e.target.value;
-                    const updated = { ...tourForm, dayStartTime: newTime };
-                    setTourForm(updated);
-                    if (tourPlan && tourPlan.optimizedStops.length > 0) {
-                      recalculateTourPlan(updated);
-                    }
-                  }}
-                  className="w-full px-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
-                >
-                  <option value="08:00 AM">08:00 AM (Early Departure)</option>
-                  <option value="08:30 AM">08:30 AM</option>
-                  <option value="09:00 AM">09:00 AM</option>
-                  <option value="09:30 AM">09:30 AM (Popular)</option>
-                  <option value="10:00 AM">10:00 AM (Standard)</option>
-                  <option value="10:30 AM">10:30 AM</option>
-                  <option value="11:00 AM">11:00 AM (Late Start)</option>
-                  <option value="11:30 AM">11:30 AM</option>
-                  <option value="12:00 PM">12:00 PM (Noon)</option>
-                </select>
-              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div>
+                  <label className="font-semibold text-stone-700 block mb-1">Tour Date *</label>
+                  <input
+                    type="date"
+                    value={tourForm.tourDate}
+                    onChange={(e) => {
+                      const newDate = e.target.value;
+                      const updated = { ...tourForm, tourDate: newDate };
+                      setTourForm(updated);
+                      if (tourPlan && tourPlan.optimizedStops.length > 0) {
+                        recalculateTourPlan(updated);
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-semibold text-stone-700 block mb-1">
+                    {tourForm.startTimePlanningMode === 'family_departure'
+                      ? 'Morning Departure Time *'
+                      : 'Stop #1 Tour Start Time *'}
+                  </label>
+                  <select
+                    value={tourForm.dayStartTime}
+                    onChange={(e) => {
+                      const newTime = e.target.value;
+                      const updated = { ...tourForm, dayStartTime: newTime };
+                      setTourForm(updated);
+                      if (tourPlan && tourPlan.optimizedStops.length > 0) {
+                        recalculateTourPlan(updated);
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
+                  >
+                    <option value="08:00 AM">08:00 AM (Early Start)</option>
+                    <option value="08:30 AM">08:30 AM</option>
+                    <option value="09:00 AM">09:00 AM</option>
+                    <option value="09:30 AM">09:30 AM (Popular)</option>
+                    <option value="10:00 AM">10:00 AM (Standard)</option>
+                    <option value="10:30 AM">10:30 AM</option>
+                    <option value="11:00 AM">11:00 AM (Late Start)</option>
+                    <option value="11:30 AM">11:30 AM</option>
+                    <option value="12:00 PM">12:00 PM (Noon)</option>
+                  </select>
+                </div>
 
               <div>
                 <label className="font-semibold text-stone-700 block mb-1">Tour Length per Venue</label>
@@ -2330,6 +2385,7 @@ export default function VenuesPage() {
                 </select>
               </div>
             </div>
+          </div>
 
             {/* Real-world Venue Touring Hours Guidance Alert */}
             {(() => {
@@ -2492,8 +2548,14 @@ export default function VenuesPage() {
               <input
                 type="checkbox"
                 checked={tourForm.includesLunchBreak}
-                onChange={(e) => setTourForm({ ...tourForm, includesLunchBreak: e.target.checked })}
-                className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 ml-4 shrink-0"
+                onChange={(e) => {
+                  const updated = { ...tourForm, includesLunchBreak: e.target.checked };
+                  setTourForm(updated);
+                  if (tourPlan && tourPlan.optimizedStops.length > 0) {
+                    recalculateTourPlan(updated);
+                  }
+                }}
+                className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 ml-4 shrink-0 cursor-pointer"
               />
             </div>
 
@@ -2669,52 +2731,90 @@ export default function VenuesPage() {
                   </div>
 
                   {tourPlan.meetingMode === 'meet_at_first_venue' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                      {/* Groom side departure card */}
-                      <div className="p-4 rounded-2xl bg-stone-800/60 border border-blue-900/40 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-xs text-blue-300 flex items-center gap-1.5">
-                            <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                            <span>🤵 Groom's Family Departure</span>
-                          </span>
-                          <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-md bg-blue-950 text-blue-200 border border-blue-800/60">
-                            ~{tourPlan.dualFamilyStartPlan.groomDeparture.drivingMinutesToFirstStop} min drive
-                          </span>
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                        {/* Groom side departure card */}
+                        <div className="p-4 rounded-2xl bg-stone-800/60 border border-blue-900/40 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-xs text-blue-300 flex items-center gap-1.5">
+                              <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                              <span>🤵 Groom's Family Departure</span>
+                            </span>
+                            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-md bg-blue-950 text-blue-200 border border-blue-800/60">
+                              ~{tourPlan.dualFamilyStartPlan.groomDeparture.drivingMinutesToFirstStop} min drive
+                            </span>
+                          </div>
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-2xl font-extrabold font-mono text-white">
+                              {tourPlan.dualFamilyStartPlan.groomDeparture.recommendedDepartureTime}
+                            </span>
+                            <span className="text-xs text-stone-400">
+                              from {tourPlan.dualFamilyStartPlan.groomDeparture.homeCity}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-stone-400">
+                            📍 {tourPlan.dualFamilyStartPlan.groomDeparture.homeAddress} ({tourPlan.dualFamilyStartPlan.groomDeparture.distanceMilesToFirstStop} mi to {tourPlan.dualFamilyStartPlan.firstMeetingPointName})
+                          </div>
                         </div>
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-2xl font-extrabold font-mono text-white">
-                            {tourPlan.dualFamilyStartPlan.groomDeparture.recommendedDepartureTime}
-                          </span>
-                          <span className="text-xs text-stone-400">
-                            from {tourPlan.dualFamilyStartPlan.groomDeparture.homeCity}
-                          </span>
-                        </div>
-                        <div className="text-[11px] text-stone-400">
-                          📍 {tourPlan.dualFamilyStartPlan.groomDeparture.homeAddress} ({tourPlan.dualFamilyStartPlan.groomDeparture.distanceMilesToFirstStop} mi to {tourPlan.dualFamilyStartPlan.firstMeetingPointName})
+
+                        {/* Bride side departure card */}
+                        <div className="p-4 rounded-2xl bg-stone-800/60 border border-rose-900/40 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-xs text-rose-300 flex items-center gap-1.5">
+                              <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                              <span>👰 Bride's Family Departure</span>
+                            </span>
+                            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-md bg-rose-950 text-rose-200 border border-rose-800/60">
+                              ~{tourPlan.dualFamilyStartPlan.brideDeparture.drivingMinutesToFirstStop} min drive
+                            </span>
+                          </div>
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-2xl font-extrabold font-mono text-white">
+                              {tourPlan.dualFamilyStartPlan.brideDeparture.recommendedDepartureTime}
+                            </span>
+                            <span className="text-xs text-stone-400">
+                              from {tourPlan.dualFamilyStartPlan.brideDeparture.homeCity}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-stone-400">
+                            📍 {tourPlan.dualFamilyStartPlan.brideDeparture.homeAddress} ({tourPlan.dualFamilyStartPlan.brideDeparture.distanceMilesToFirstStop} mi to {tourPlan.dualFamilyStartPlan.firstMeetingPointName})
+                          </div>
                         </div>
                       </div>
 
-                      {/* Bride side departure card */}
-                      <div className="p-4 rounded-2xl bg-stone-800/60 border border-rose-900/40 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-xs text-rose-300 flex items-center gap-1.5">
-                            <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                            <span>👰 Bride's Family Departure</span>
-                          </span>
-                          <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-md bg-rose-950 text-rose-200 border border-rose-800/60">
-                            ~{tourPlan.dualFamilyStartPlan.brideDeparture.drivingMinutesToFirstStop} min drive
-                          </span>
-                        </div>
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-2xl font-extrabold font-mono text-white">
-                            {tourPlan.dualFamilyStartPlan.brideDeparture.recommendedDepartureTime}
-                          </span>
-                          <span className="text-xs text-stone-400">
-                            from {tourPlan.dualFamilyStartPlan.brideDeparture.homeCity}
-                          </span>
-                        </div>
-                        <div className="text-[11px] text-stone-400">
-                          📍 {tourPlan.dualFamilyStartPlan.brideDeparture.homeAddress} ({tourPlan.dualFamilyStartPlan.brideDeparture.distanceMilesToFirstStop} mi to {tourPlan.dualFamilyStartPlan.firstMeetingPointName})
+                      {/* Long distance travel advisory explanation */}
+                      <div className="p-3.5 rounded-2xl bg-stone-800/80 border border-stone-700/80 text-xs text-stone-300 flex items-start gap-2.5">
+                        <span className="text-amber-400 text-sm mt-0.5 shrink-0">💡</span>
+                        <div className="space-y-1 leading-relaxed">
+                          <p>
+                            <span className="font-bold text-amber-200">Why departure times differ: </span>
+                            <span>
+                              {tourPlan.dualFamilyStartPlan.brideDeparture.distanceMilesToFirstStop > tourPlan.dualFamilyStartPlan.groomDeparture.distanceMilesToFirstStop
+                                ? `Bride's family in ${tourPlan.dualFamilyStartPlan.brideDeparture.homeCity} has a ${tourPlan.dualFamilyStartPlan.brideDeparture.distanceMilesToFirstStop}-mile drive (~${tourPlan.dualFamilyStartPlan.brideDeparture.drivingMinutesToFirstStop} mins) to ${tourPlan.dualFamilyStartPlan.firstMeetingPointName}, while Groom's family in ${tourPlan.dualFamilyStartPlan.groomDeparture.homeCity} has a ${tourPlan.dualFamilyStartPlan.groomDeparture.distanceMilesToFirstStop}-mile drive (~${tourPlan.dualFamilyStartPlan.groomDeparture.drivingMinutesToFirstStop} mins).`
+                                : `Both departure times are calculated backwards to ensure synchronous arrival at your first appointment.`}
+                            </span>
+                          </p>
+                          {tourForm.startTimePlanningMode !== 'family_departure' ? (
+                            <p className="text-stone-400 text-[11px]">
+                              Prefer families not to leave before 10:00 AM? Switch above to{' '}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = { ...tourForm, startTimePlanningMode: 'family_departure' as const };
+                                  setTourForm(updated);
+                                  recalculateTourPlan(updated);
+                                }}
+                                className="text-amber-300 font-bold underline hover:text-amber-200 cursor-pointer"
+                              >
+                                "Leave Home at {tourForm.dayStartTime}"
+                              </button>
+                              , and Stop #1 will be scheduled around ~11:45 AM.
+                            </p>
+                          ) : (
+                            <p className="text-stone-400 text-[11px]">
+                              Currently set to <span className="text-emerald-300 font-bold">Leave Home at {tourForm.dayStartTime}</span>. Stop #1 walkthrough starts when everyone arrives.
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
