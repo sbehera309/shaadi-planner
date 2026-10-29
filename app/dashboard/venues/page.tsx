@@ -25,6 +25,8 @@ import {
   EventPackageFormat,
   getVenueTierInfo,
 } from '@/lib/venuePricingCalculator';
+import AddressAutocompleteInput from '@/components/AddressAutocompleteInput';
+import TourDayRouteMap from '@/components/TourDayRouteMap';
 import {
   Building2,
   Plus,
@@ -1758,46 +1760,27 @@ export default function VenuesPage() {
                   </label>
                 </div>
 
-                <div className="space-y-2 text-xs">
-                  <input
-                    type="text"
-                    value={tourForm.groomAddress.address}
-                    onChange={(e) =>
-                      setTourForm({
-                        ...tourForm,
-                        groomAddress: { ...tourForm.groomAddress, address: e.target.value },
-                      })
-                    }
-                    placeholder="Street Address (e.g. 254 Montgomery St)"
-                    className="w-full px-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
-                  />
-                  <div className="grid grid-cols-3 gap-2">
-                    <input
-                      type="text"
-                      value={tourForm.groomAddress.city}
-                      onChange={(e) =>
-                        setTourForm({
-                          ...tourForm,
-                          groomAddress: { ...tourForm.groomAddress, city: e.target.value },
-                        })
-                      }
-                      placeholder="City"
-                      className="col-span-2 px-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
-                    />
-                    <input
-                      type="text"
-                      value={tourForm.groomAddress.state}
-                      onChange={(e) =>
-                        setTourForm({
-                          ...tourForm,
-                          groomAddress: { ...tourForm.groomAddress, state: e.target.value },
-                        })
-                      }
-                      placeholder="State (NJ)"
-                      className="px-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
-                    />
-                  </div>
-                </div>
+                <AddressAutocompleteInput
+                  value={tourForm.groomAddress}
+                  onChange={(updated) =>
+                    setTourForm({
+                      ...tourForm,
+                      groomAddress: {
+                        ...tourForm.groomAddress,
+                        ...updated,
+                      },
+                    })
+                  }
+                  label="Groom's Home Address"
+                  placeholder="Start typing (e.g. 254 Montgomery St or Parsippany)..."
+                  accentColor="blue"
+                  quickSuggestions={[
+                    { label: 'Jersey City (Montgomery)', address: '254 Montgomery Street', city: 'Jersey City', state: 'NJ', zipCode: '07302', lat: 40.7188, lon: -74.0435 },
+                    { label: 'Parsippany (Smith Rd)', address: '199 Smith Road', city: 'Parsippany', state: 'NJ', zipCode: '07054', lat: 40.8653, lon: -74.4174 },
+                    { label: 'Morristown (Whippany)', address: '2 Whippany Road', city: 'Morristown', state: 'NJ', zipCode: '07960', lat: 40.8035, lon: -74.4532 },
+                    { label: 'Princeton (Nassau)', address: '100 Nassau Street', city: 'Princeton', state: 'NJ', zipCode: '08542', lat: 40.3499, lon: -74.6598 },
+                  ]}
+                />
               </div>
 
               {/* Family Address 2: Bride's Side */}
@@ -1818,46 +1801,27 @@ export default function VenuesPage() {
                   </label>
                 </div>
 
-                <div className="space-y-2 text-xs">
-                  <input
-                    type="text"
-                    value={tourForm.brideAddress.address}
-                    onChange={(e) =>
-                      setTourForm({
-                        ...tourForm,
-                        brideAddress: { ...tourForm.brideAddress, address: e.target.value },
-                      })
-                    }
-                    placeholder="Street Address (e.g. 88 Oak Tree Rd)"
-                    className="w-full px-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
-                  />
-                  <div className="grid grid-cols-3 gap-2">
-                    <input
-                      type="text"
-                      value={tourForm.brideAddress.city}
-                      onChange={(e) =>
-                        setTourForm({
-                          ...tourForm,
-                          brideAddress: { ...tourForm.brideAddress, city: e.target.value },
-                        })
-                      }
-                      placeholder="City"
-                      className="col-span-2 px-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
-                    />
-                    <input
-                      type="text"
-                      value={tourForm.brideAddress.state}
-                      onChange={(e) =>
-                        setTourForm({
-                          ...tourForm,
-                          brideAddress: { ...tourForm.brideAddress, state: e.target.value },
-                        })
-                      }
-                      placeholder="State (NJ)"
-                      className="px-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
-                    />
-                  </div>
-                </div>
+                <AddressAutocompleteInput
+                  value={tourForm.brideAddress}
+                  onChange={(updated) =>
+                    setTourForm({
+                      ...tourForm,
+                      brideAddress: {
+                        ...tourForm.brideAddress,
+                        ...updated,
+                      },
+                    })
+                  }
+                  label="Bride's Home Address"
+                  placeholder="Start typing (e.g. 88 Oak Tree Rd or Somerset)..."
+                  accentColor="rose"
+                  quickSuggestions={[
+                    { label: 'Edison (Oak Tree Rd)', address: '88 Oak Tree Road', city: 'Edison', state: 'NJ', zipCode: '08820', lat: 40.5701, lon: -74.3418 },
+                    { label: 'Somerset (Davidson Ave)', address: '333 Davidson Avenue', city: 'Somerset', state: 'NJ', zipCode: '08873', lat: 40.5284, lon: -74.5218 },
+                    { label: 'Livingston (Northfield)', address: '315 E Northfield Road', city: 'Livingston', state: 'NJ', zipCode: '07039', lat: 40.7891, lon: -74.3418 },
+                    { label: 'Philadelphia (Broad St)', address: '1400 S Broad Street', city: 'Philadelphia', state: 'PA', zipCode: '19146', lat: 39.9365, lon: -75.1672 },
+                  ]}
+                />
               </div>
             </div>
 
@@ -2028,6 +1992,20 @@ export default function VenuesPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Interactive All-in-One Route & Stop Map */}
+              <TourDayRouteMap
+                groomAddress={tourForm.groomAddress}
+                brideAddress={tourForm.brideAddress}
+                primarySide={tourForm.primarySide}
+                tourDate={tourPlan.tourDate}
+                stops={tourPlan.optimizedStops}
+                lunchBreakWindow={tourPlan.lunchBreakWindow}
+                totalDistanceMiles={tourPlan.totalEstDistanceMiles}
+                totalDrivingMinutes={tourPlan.totalEstDrivingMinutes}
+                googleMapsMultiStopUrl={tourPlan.googleMapsMultiStopUrl}
+                allShortlistedVenues={venues}
+              />
 
               {/* Sequential Stops Timeline */}
               <div className="space-y-4">
