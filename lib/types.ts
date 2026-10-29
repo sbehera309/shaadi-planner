@@ -187,7 +187,7 @@ export interface VenueDesiCapabilities {
   allowsOpenFlameHavan: boolean; // Agni kund for Vedic Pheras
   firePermitRequired: boolean;
   allowsBaraatProcession: boolean; // Horse, vintage car, elephant, mobile dhol
-  baraatRouteType?: 'outdoor_driveway' | 'parking_lot' | 'indoor_hallway' | 'prohibited';
+  baraatRouteType?: 'outdoor_driveway' | 'parking_lot' | 'indoor_hallway' | 'courtyard' | 'prohibited';
   soundCurfewTime: string; // e.g. "01:00 AM", "12:00 AM", "11:00 PM"
   maxCeremonyCapacity: number; // Mandap seating
   maxReceptionCapacity: number; // Banquet round tables with dance floor
@@ -357,6 +357,7 @@ export interface WeddingProfile {
   venueName: string;
   currency: 'INR' | 'USD' | 'GBP' | 'CAD' | 'AED';
   targetBudget: number;
+  guestCount?: number;
   story: string;
   hashtag: string;
   coverImage?: string;

@@ -20,6 +20,7 @@ import {
   syncCuratedVenuesToFirebase,
   getCuratedVenues,
 } from '@/lib/preloadedVenues';
+import { calculateVenueEstimateForGuests } from '@/lib/venuePricingCalculator';
 import {
   Building2,
   Plus,
@@ -55,6 +56,9 @@ import {
   BookmarkPlus,
   Compass,
   Bus,
+  Calculator,
+  AlertTriangle,
+  UtensilsCrossed,
 } from 'lucide-react';
 
 type CuratedSortOption = 'best' | 'price_asc' | 'price_desc' | 'capacity_desc';
@@ -63,6 +67,7 @@ export default function VenuesPage() {
   const {
     wedding,
     venues,
+    guests,
     tourPlan,
     addVenue,
     updateVenue,
@@ -85,6 +90,24 @@ export default function VenuesPage() {
   const [curatedSearch, setCuratedSearch] = useState('');
   const [filterOutsideCateringOnly, setFilterOutsideCateringOnly] = useState(false);
   const [filterHavanOnly, setFilterHavanOnly] = useState(false);
+
+  // Guest Count Pricing Estimator State (uses guest list headcount if available, else 350 default)
+  const totalGuestHeadcount =
+    guests && guests.length > 0
+      ? guests.reduce((acc, g) => acc + (g.adultsCount || 1) + (g.kidsCount || 0), 0)
+      : wedding?.guestCount || 350;
+
+  const [planningGuestCount, setPlanningGuestCount] = useState<number>(totalGuestHeadcount);
+  const [cateringPerPlate, setCateringPerPlate] = useState<number>(65);
+
+  useEffect(() => {
+    if (guests && guests.length > 0) {
+      const count = guests.reduce((acc, g) => acc + (g.adultsCount || 1) + (g.kidsCount || 0), 0);
+      if (count > 0) setPlanningGuestCount(count);
+    } else if (wedding?.guestCount && wedding.guestCount > 0) {
+      setPlanningGuestCount(wedding.guestCount);
+    }
+  }, [guests, wedding?.guestCount]);
 
   // Sync to Firebase on client mount
   useEffect(() => {
@@ -117,7 +140,7 @@ export default function VenuesPage() {
     allowsOpenFlameHavan: true,
     firePermitRequired: true,
     allowsBaraatProcession: true,
-    baraatRouteType: 'outdoor_driveway' as 'outdoor_driveway' | 'parking_lot' | 'indoor_hallway' | 'prohibited',
+    baraatRouteType: 'outdoor_driveway' as 'outdoor_driveway' | 'parking_lot' | 'indoor_hallway' | 'courtyard' | 'prohibited',
     soundCurfewTime: '12:00 AM',
     maxCeremonyCapacity: 450,
     maxReceptionCapacity: 600,
@@ -466,10 +489,14 @@ export default function VenuesPage() {
         return (b.popularityScore || 90) - (a.popularityScore || 90);
       }
       if (curatedSortBy === 'price_asc') {
-        return a.pricing.estimatedTotalCost - b.pricing.estimatedTotalCost;
+        const costA = calculateVenueEstimateForGuests(a, planningGuestCount, cateringPerPlate).estimatedTotalCost;
+        const costB = calculateVenueEstimateForGuests(b, planningGuestCount, cateringPerPlate).estimatedTotalCost;
+        return costA - costB;
       }
       if (curatedSortBy === 'price_desc') {
-        return b.pricing.estimatedTotalCost - a.pricing.estimatedTotalCost;
+        const costA = calculateVenueEstimateForGuests(a, planningGuestCount, cateringPerPlate).estimatedTotalCost;
+        const costB = calculateVenueEstimateForGuests(b, planningGuestCount, cateringPerPlate).estimatedTotalCost;
+        return costB - costA;
       }
       if (curatedSortBy === 'capacity_desc') {
         return b.desiFeatures.maxReceptionCapacity - a.desiFeatures.maxReceptionCapacity;
@@ -557,7 +584,8 @@ export default function VenuesPage() {
             {curatedVenues.length} <span className="text-xs font-medium text-stone-400">verified</span>
           </div>
           <div className="mt-1 text-[11px] text-amber-800 font-medium">
-            7 in NJ • 6 in PA
+            {curatedVenues.filter((v) => v.curatedState === 'NJ' || v.state === 'NJ').length} in NJ •{' '}
+            {curatedVenues.filter((v) => v.curatedState === 'PA' || v.state === 'PA').length} in PA
           </div>
         </div>
 
@@ -649,6 +677,79 @@ export default function VenuesPage() {
         </button>
       </div>
 
+      {/* Interactive Guest Count & Pricing Estimator Bar */}
+      {(activeTab === 'curated' || activeTab === 'my-venues') && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-amber-500/10 border border-amber-200/90 rounded-3xl p-4 sm:p-5 shadow-2xs space-y-3">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-rose-700 text-white shadow-2xs">
+                  <Calculator className="w-4 h-4" />
+                </div>
+                <h3 className="font-bold text-stone-900 text-sm">
+                  Live Venue Pricing & Capacity Estimator
+                </h3>
+                <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold">
+                  Dynamic Quotes
+                </span>
+              </div>
+              <p className="text-xs text-stone-600 max-w-xl">
+                Enter your expected wedding guest count. Every venue card automatically calculates a customized all-in quote factoring rental fees, catering buyout rates, food &amp; beverage commitments, 22% service charges, and state taxes.
+              </p>
+            </div>
+
+            {/* Inputs & Presets */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="flex items-center gap-2 bg-white px-3.5 py-2 rounded-2xl border border-stone-300 shadow-2xs">
+                <Users className="w-4 h-4 text-rose-700 shrink-0" />
+                <label className="text-xs font-bold text-stone-700">Guests:</label>
+                <input
+                  type="number"
+                  min={50}
+                  max={1500}
+                  step={25}
+                  value={planningGuestCount}
+                  onChange={(e) => setPlanningGuestCount(Math.max(1, Number(e.target.value)))}
+                  className="w-20 px-1 py-0.5 text-center font-extrabold text-stone-900 text-base sm:text-sm bg-transparent border-b-2 border-rose-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Quick Presets */}
+              <div className="flex items-center gap-1 bg-white/80 p-1 rounded-2xl border border-stone-200">
+                {[200, 300, 350, 450, 600].map((count) => (
+                  <button
+                    key={count}
+                    type="button"
+                    onClick={() => setPlanningGuestCount(count)}
+                    className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                      planningGuestCount === count
+                        ? 'bg-rose-950 text-white shadow-2xs scale-105'
+                        : 'hover:bg-stone-100 text-stone-700'
+                    }`}
+                  >
+                    {count}
+                  </button>
+                ))}
+              </div>
+
+              {/* Catering Menu Quality Level */}
+              <div className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-2xl border border-stone-300 shadow-2xs">
+                <UtensilsCrossed className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                <select
+                  value={cateringPerPlate}
+                  onChange={(e) => setCateringPerPlate(Number(e.target.value))}
+                  className="text-xs font-semibold text-stone-800 bg-transparent focus:outline-none cursor-pointer"
+                >
+                  <option value={50}>Indian Buffet (~$50/pp)</option>
+                  <option value={65}>Standard Multi-Course (~$65/pp)</option>
+                  <option value={85}>Grand Live Stations (~$85/pp)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ============================================================= */}
       {/* TAB 1: CURATED VENUES DIRECTORY (NJ & PA)                     */}
       {/* ============================================================= */}
@@ -681,7 +782,7 @@ export default function VenuesPage() {
                         : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
                     }`}
                   >
-                    New Jersey (7)
+                    New Jersey ({curatedVenues.filter((v) => v.curatedState === 'NJ' || v.state === 'NJ').length})
                   </button>
                   <button
                     type="button"
@@ -692,7 +793,7 @@ export default function VenuesPage() {
                         : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
                     }`}
                   >
-                    Pennsylvania (6)
+                    Pennsylvania ({curatedVenues.filter((v) => v.curatedState === 'PA' || v.state === 'PA').length})
                   </button>
                 </div>
               </div>
@@ -973,21 +1074,68 @@ export default function VenuesPage() {
                         </div>
                       )}
 
-                      {/* Pricing Snapshot */}
-                      <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 flex items-center justify-between text-xs">
-                        <div>
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900 block">
-                            Historical Package Estimate
-                          </span>
-                          <strong className="text-stone-900 text-lg font-extrabold">
-                            {formatCurr(venue.pricing.estimatedTotalCost)}
-                          </strong>
-                        </div>
-                        <div className="text-right text-[11px] text-stone-600">
-                          <div>Rental: {formatCurr(venue.pricing.rentalFee)}</div>
-                          <div>F&B Min: {formatCurr(venue.pricing.foodAndBeverageMinimum)}</div>
-                        </div>
-                      </div>
+                      {/* Live Calculated Estimate for Guest Count */}
+                      {(() => {
+                        const estimate = calculateVenueEstimateForGuests(
+                          venue,
+                          planningGuestCount,
+                          cateringPerPlate
+                        );
+
+                        return (
+                          <div className="space-y-2">
+                            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-50/90 to-rose-50/80 border border-amber-200/90 text-xs space-y-2">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-950 flex items-center gap-1">
+                                    <Calculator className="w-3 h-3 text-rose-700" />
+                                    <span>Est. All-In for {planningGuestCount} Guests:</span>
+                                  </span>
+                                  <strong className="text-stone-900 text-xl font-extrabold block">
+                                    {formatCurr(estimate.estimatedTotalCost)}
+                                  </strong>
+                                </div>
+                                <div className="text-right">
+                                  <span className="inline-block px-2.5 py-1 rounded-lg bg-white border border-amber-300 font-extrabold text-xs text-rose-900 shadow-2xs">
+                                    ~{formatCurr(estimate.costPerGuest)} / guest
+                                  </span>
+                                  <span className="block text-[10px] text-stone-500 mt-0.5">all-in quote</span>
+                                </div>
+                              </div>
+
+                              {/* Capacity Warning Alert */}
+                              {estimate.isOverCapacity && (
+                                <div className="p-2 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-950 text-[11px] font-semibold flex items-center gap-1.5">
+                                  <AlertTriangle className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                                  <span>
+                                    {planningGuestCount} guests exceeds banquet capacity ({estimate.maxCapacity} max).
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Breakdown Pills */}
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1.5 text-[10px] text-stone-600 border-t border-amber-200/60">
+                                <div>
+                                  <span className="text-stone-400 block">Rental:</span>
+                                  <span className="font-semibold text-stone-800">{formatCurr(estimate.rentalFee)}</span>
+                                </div>
+                                <div>
+                                  <span className="text-stone-400 block">F&B + Buyout:</span>
+                                  <span className="font-semibold text-stone-800">{formatCurr(estimate.estimatedFoodAndBeverage)}</span>
+                                </div>
+                                <div>
+                                  <span className="text-stone-400 block">{venue.pricing.serviceChargePercent}% Svc:</span>
+                                  <span className="font-semibold text-stone-800">{formatCurr(estimate.serviceChargeAmount)}</span>
+                                </div>
+                                <div>
+                                  <span className="text-stone-400 block">{venue.pricing.taxPercent}% Tax:</span>
+                                  <span className="font-semibold text-stone-800">{formatCurr(estimate.taxAmount)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
 
                       {/* Pros & Notes */}
                       <div className="space-y-1.5 text-xs">
@@ -1331,21 +1479,68 @@ export default function VenuesPage() {
                         </div>
                       )}
 
-                      {/* Pricing Snapshot */}
-                      <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 flex items-center justify-between text-xs">
-                        <div>
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900 block">
-                            Estimated All-In Package Cost
-                          </span>
-                          <strong className="text-stone-900 text-lg font-extrabold">
-                            {formatCurr(venue.pricing.estimatedTotalCost)}
-                          </strong>
-                        </div>
-                        <div className="text-right text-[11px] text-stone-600">
-                          <div>Rental: {formatCurr(venue.pricing.rentalFee)}</div>
-                          <div>F&B Min: {formatCurr(venue.pricing.foodAndBeverageMinimum)}</div>
-                        </div>
-                      </div>
+                      {/* Live Calculated Estimate for Guest Count */}
+                      {(() => {
+                        const estimate = calculateVenueEstimateForGuests(
+                          venue,
+                          planningGuestCount,
+                          cateringPerPlate
+                        );
+
+                        return (
+                          <div className="space-y-2">
+                            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-50/90 to-rose-50/80 border border-amber-200/90 text-xs space-y-2">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-950 flex items-center gap-1">
+                                    <Calculator className="w-3 h-3 text-rose-700" />
+                                    <span>Est. All-In for {planningGuestCount} Guests:</span>
+                                  </span>
+                                  <strong className="text-stone-900 text-xl font-extrabold block">
+                                    {formatCurr(estimate.estimatedTotalCost)}
+                                  </strong>
+                                </div>
+                                <div className="text-right">
+                                  <span className="inline-block px-2.5 py-1 rounded-lg bg-white border border-amber-300 font-extrabold text-xs text-rose-900 shadow-2xs">
+                                    ~{formatCurr(estimate.costPerGuest)} / guest
+                                  </span>
+                                  <span className="block text-[10px] text-stone-500 mt-0.5">all-in quote</span>
+                                </div>
+                              </div>
+
+                              {/* Capacity Warning Alert */}
+                              {estimate.isOverCapacity && (
+                                <div className="p-2 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-950 text-[11px] font-semibold flex items-center gap-1.5">
+                                  <AlertTriangle className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                                  <span>
+                                    {planningGuestCount} guests exceeds banquet capacity ({estimate.maxCapacity} max).
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Breakdown Pills */}
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1.5 text-[10px] text-stone-600 border-t border-amber-200/60">
+                                <div>
+                                  <span className="text-stone-400 block">Rental:</span>
+                                  <span className="font-semibold text-stone-800">{formatCurr(estimate.rentalFee)}</span>
+                                </div>
+                                <div>
+                                  <span className="text-stone-400 block">F&B + Buyout:</span>
+                                  <span className="font-semibold text-stone-800">{formatCurr(estimate.estimatedFoodAndBeverage)}</span>
+                                </div>
+                                <div>
+                                  <span className="text-stone-400 block">{venue.pricing.serviceChargePercent}% Svc:</span>
+                                  <span className="font-semibold text-stone-800">{formatCurr(estimate.serviceChargeAmount)}</span>
+                                </div>
+                                <div>
+                                  <span className="text-stone-400 block">{venue.pricing.taxPercent}% Tax:</span>
+                                  <span className="font-semibold text-stone-800">{formatCurr(estimate.taxAmount)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Card Footer Actions */}
@@ -2181,9 +2376,44 @@ export default function VenuesPage() {
               </div>
 
               <div className="sm:col-span-3">
-                <label className="font-semibold text-stone-700 block mb-1">
-                  Estimated All-In Package Total ($)
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-semibold text-stone-700 block">
+                    Estimated All-In Package Total ($)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const calculated = calculateVenueEstimateForGuests(
+                        {
+                          ...formData,
+                          id: 'temp',
+                          weddingId: 'temp',
+                          pricing: {
+                            rentalFee: formData.rentalFee,
+                            foodAndBeverageMinimum: formData.foodAndBeverageMinimum,
+                            cateringBuyoutFeePerGuest: formData.cateringBuyoutFeePerGuest,
+                            serviceChargePercent: formData.serviceChargePercent,
+                            taxPercent: formData.taxPercent,
+                            estimatedTotalCost: 0,
+                          },
+                          desiFeatures: {
+                            ...formData,
+                            maxReceptionCapacity: formData.maxReceptionCapacity,
+                          } as any,
+                          availableDates: [],
+                          tourStatus: 'shortlisted',
+                        } as any,
+                        planningGuestCount,
+                        cateringPerPlate
+                      );
+                      setFormData({ ...formData, estimatedTotalCost: calculated.estimatedTotalCost });
+                    }}
+                    className="text-[11px] font-bold text-rose-700 hover:text-rose-900 underline flex items-center gap-1"
+                  >
+                    <Calculator className="w-3 h-3" />
+                    <span>Auto-calculate for {planningGuestCount} guests</span>
+                  </button>
+                </div>
                 <input
                   type="number"
                   value={formData.estimatedTotalCost}
