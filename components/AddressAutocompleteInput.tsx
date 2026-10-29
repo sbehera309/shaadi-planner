@@ -1,6 +1,19 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { MapPin, Search, Check, X, Loader2, Navigation, Compass, Sparkles } from 'lucide-react';
+import {
+  MapPin,
+  Search,
+  Check,
+  X,
+  Loader2,
+  Navigation,
+  Compass,
+  Sparkles,
+  Bookmark,
+  BookmarkCheck,
+  LogIn,
+} from 'lucide-react';
 import { AddressSuggestion } from '@/app/api/address-autocomplete/route';
+import { ProfileSavedAddress } from '@/lib/types';
 
 interface AddressValue {
   address: string;
@@ -26,6 +39,13 @@ interface AddressAutocompleteInputProps {
     lat: number;
     lon: number;
   }>;
+  // Profile saved addresses integration
+  savedAddresses?: ProfileSavedAddress[];
+  onSelectSavedAddress?: (saved: ProfileSavedAddress) => void;
+  onSaveToProfile?: (label?: string) => Promise<void> | void;
+  isSavedInProfile?: boolean;
+  isLoggedIn?: boolean;
+  onOpenAuthModal?: () => void;
 }
 
 export default function AddressAutocompleteInput({
@@ -35,11 +55,19 @@ export default function AddressAutocompleteInput({
   placeholder = 'Start typing address (e.g. 254 Montgomery St or 88 Oak Tree Rd)...',
   accentColor = 'blue',
   quickSuggestions,
+  savedAddresses,
+  onSelectSavedAddress,
+  onSaveToProfile,
+  isSavedInProfile,
+  isLoggedIn,
+  onOpenAuthModal,
 }: AddressAutocompleteInputProps) {
   const [inputValue, setInputValue] = useState(value.address || '');
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
   const [isLocating, setIsLocating] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -303,10 +331,26 @@ export default function AddressAutocompleteInput({
     }
   };
 
-  // Focus event: instantly show matching suggestions or quick hubs
+  const handleSaveToProfile = async () => {
+    if (!onSaveToProfile) return;
+    setIsSaving(true);
+    try {
+      await onSaveToProfile();
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 2500);
+    } catch (err) {
+      console.error('Failed to save to profile:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Focus event: instantly show matching suggestions, saved profile addresses, or quick hubs
   const handleInputFocus = () => {
     if (inputValue.trim().length >= 1) {
       fetchSuggestions(inputValue.trim());
+      setIsOpen(true);
+    } else if (savedAddresses && savedAddresses.length > 0) {
       setIsOpen(true);
     } else if (quickSuggestions && quickSuggestions.length > 0) {
       const defaultMapped: AddressSuggestion[] = quickSuggestions.map((qs) => ({
@@ -430,6 +474,41 @@ export default function AddressAutocompleteInput({
         </label>
 
         <div className="flex items-center gap-2">
+          {/* Saved in Profile Badge or Save Button */}
+          {isSavedInProfile || justSaved ? (
+            <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 flex items-center gap-1 shadow-2xs">
+              <BookmarkCheck className="w-3 h-3 text-emerald-600" />
+              <span>Saved in Profile</span>
+            </span>
+          ) : onSaveToProfile && value.address && value.city ? (
+            isLoggedIn ? (
+              <button
+                type="button"
+                onClick={handleSaveToProfile}
+                disabled={isSaving}
+                className="text-[10px] font-semibold text-amber-900 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded-md border border-amber-200 flex items-center gap-1 transition-colors shadow-2xs cursor-pointer"
+                title="Save this address under your user profile for 1-click historical access"
+              >
+                {isSaving ? (
+                  <Loader2 className="w-3 h-3 animate-spin text-amber-600" />
+                ) : (
+                  <Bookmark className="w-3 h-3 text-amber-600" />
+                )}
+                <span>Save to Profile</span>
+              </button>
+            ) : onOpenAuthModal ? (
+              <button
+                type="button"
+                onClick={onOpenAuthModal}
+                className="text-[10px] font-semibold text-stone-500 hover:text-stone-800 flex items-center gap-1 transition-colors cursor-pointer"
+                title="Sign in to save this address to your profile"
+              >
+                <LogIn className="w-3 h-3 text-stone-400" />
+                <span>Sign in to save</span>
+              </button>
+            ) : null
+          ) : null}
+
           {hasCoordinates && (
             <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 flex items-center gap-1">
               <Check className="w-3 h-3 text-emerald-600" />
@@ -501,50 +580,105 @@ export default function AddressAutocompleteInput({
         )}
       </div>
 
-      {/* Dropdown Suggestions List (Google Maps Style) */}
-      {isOpen && suggestions.length > 0 && (
+      {/* Dropdown Suggestions List (Google Maps Style + Saved Profile Addresses) */}
+      {isOpen && (suggestions.length > 0 || (savedAddresses && savedAddresses.length > 0)) && (
         <div className="absolute z-50 left-0 right-0 mt-1 bg-white rounded-2xl border border-stone-200 shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
-          <div className="px-3.5 py-2 bg-stone-50 border-b border-stone-100 flex items-center justify-between text-[11px] text-stone-600 font-semibold">
-            <span className="flex items-center gap-1.5 text-stone-800">
-              <Compass className="w-3.5 h-3.5 text-rose-600" />
-              <span>Live Address Suggestions</span>
-            </span>
-            <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>100% Free &amp; Unlimited</span>
-            </span>
-          </div>
+          {/* Saved in Profile Header & Items */}
+          {savedAddresses && savedAddresses.length > 0 && (
+            <div className="bg-amber-50/70 border-b border-amber-200/70 p-2 space-y-1">
+              <div className="px-2 py-0.5 text-[10px] font-bold text-amber-900 uppercase tracking-wider flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <Bookmark className="w-3 h-3 text-amber-600" />
+                  <span>Saved in Your Profile</span>
+                </span>
+                <span className="text-[10px] text-amber-700 font-semibold">{savedAddresses.length} saved</span>
+              </div>
+              <div className="space-y-1">
+                {savedAddresses.slice(0, 3).map((saved) => (
+                  <button
+                    key={saved.id}
+                    type="button"
+                    onClick={() => {
+                      setInputValue(saved.address);
+                      onChange({
+                        address: saved.address,
+                        city: saved.city,
+                        state: saved.state,
+                        zipCode: saved.zipCode,
+                        latitude: saved.latitude,
+                        longitude: saved.longitude,
+                      });
+                      onSelectSavedAddress?.(saved);
+                      setIsOpen(false);
+                      setSuggestions([]);
+                    }}
+                    className="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-amber-100/80 bg-white/90 border border-amber-200/80 transition-all flex items-center justify-between text-xs group cursor-pointer"
+                  >
+                    <div className="min-w-0 pr-2">
+                      <div className="font-bold text-stone-900 text-xs flex items-center gap-1.5 truncate">
+                        <span>{saved.label}</span>
+                        <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800">
+                          {saved.side === 'groom' ? "Groom" : saved.side === 'bride' ? "Bride" : "Family"}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-stone-500 truncate mt-0.5">
+                        {saved.address}, {saved.city}, {saved.state} {saved.zipCode}
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold text-amber-800 group-hover:text-amber-950 shrink-0">
+                      Select →
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
-          <ul className="max-h-64 overflow-y-auto divide-y divide-stone-100">
-            {suggestions.map((item, idx) => {
-              const isSelected = idx === selectedIndex;
-              return (
-                <li
-                  key={item.id}
-                  onClick={() => handleSelectSuggestion(item)}
-                  onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`px-3.5 py-2.5 cursor-pointer flex items-start gap-3 transition-colors ${
-                    isSelected ? 'bg-rose-50/80 text-rose-950 font-semibold' : 'hover:bg-stone-50 text-stone-900'
-                  }`}
-                >
-                  <div className="p-1.5 rounded-xl bg-rose-100/80 text-rose-700 mt-0.5 shrink-0">
-                    <MapPin className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold text-xs text-stone-900 truncate flex items-center gap-1.5">
-                      <span>{item.primaryText}</span>
-                    </div>
-                    <div className="text-[11px] text-stone-500 truncate mt-0.5">
-                      {item.secondaryText}
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-mono font-bold text-stone-500 uppercase tracking-wider shrink-0 mt-1 px-1.5 py-0.5 bg-stone-100 rounded-md">
-                    {item.state}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
+          {suggestions.length > 0 && (
+            <>
+              <div className="px-3.5 py-2 bg-stone-50 border-b border-stone-100 flex items-center justify-between text-[11px] text-stone-600 font-semibold">
+                <span className="flex items-center gap-1.5 text-stone-800">
+                  <Compass className="w-3.5 h-3.5 text-rose-600" />
+                  <span>Live Address Suggestions</span>
+                </span>
+                <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>100% Free &amp; Unlimited</span>
+                </span>
+              </div>
+
+              <ul className="max-h-64 overflow-y-auto divide-y divide-stone-100">
+                {suggestions.map((item, idx) => {
+                  const isSelected = idx === selectedIndex;
+                  return (
+                    <li
+                      key={item.id}
+                      onClick={() => handleSelectSuggestion(item)}
+                      onMouseEnter={() => setSelectedIndex(idx)}
+                      className={`px-3.5 py-2.5 cursor-pointer flex items-start gap-3 transition-colors ${
+                        isSelected ? 'bg-rose-50/80 text-rose-950 font-semibold' : 'hover:bg-stone-50 text-stone-900'
+                      }`}
+                    >
+                      <div className="p-1.5 rounded-xl bg-rose-100/80 text-rose-700 mt-0.5 shrink-0">
+                        <MapPin className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-xs text-stone-900 truncate flex items-center gap-1.5">
+                          <span>{item.primaryText}</span>
+                        </div>
+                        <div className="text-[11px] text-stone-500 truncate mt-0.5">
+                          {item.secondaryText}
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-mono font-bold text-stone-500 uppercase tracking-wider shrink-0 mt-1 px-1.5 py-0.5 bg-stone-100 rounded-md">
+                        {item.state}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
         </div>
       )}
 

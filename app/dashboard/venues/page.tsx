@@ -11,6 +11,7 @@ import {
   NearestHotelInfo,
   DualFamilyMeetingMode,
   DualFamilyStartPlan,
+  ProfileSavedAddress,
 } from '@/lib/types';
 import { Modal } from '@/components/Modal';
 import {
@@ -30,6 +31,9 @@ import {
 } from '@/lib/venuePricingCalculator';
 import AddressAutocompleteInput from '@/components/AddressAutocompleteInput';
 import TourDayRouteMap from '@/components/TourDayRouteMap';
+import ProfileAddressBookModal from '@/components/ProfileAddressBookModal';
+import { AuthModal } from '@/components/AuthModal';
+import { useProfileAddresses } from '@/lib/useProfileAddresses';
 import {
   Building2,
   Plus,
@@ -69,6 +73,11 @@ import {
   AlertTriangle,
   Lock,
   Loader2,
+  Bookmark,
+  BookOpen,
+  History,
+  LogIn,
+  BookmarkCheck,
 } from 'lucide-react';
 
 type CuratedSortOption = 'best' | 'service_desc' | 'price_asc' | 'price_desc' | 'capacity_desc';
@@ -94,6 +103,22 @@ export default function VenuesPage() {
   const [addedSuccessId, setAddedSuccessId] = useState<string | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [justCalculated, setJustCalculated] = useState(false);
+
+  // User Profile Saved Addresses Hook & Modals
+  const {
+    savedAddresses,
+    loading: isProfileAddressesLoading,
+    isLoggedIn,
+    user,
+    saveAddress,
+    deleteAddress,
+    updateAddressDetails,
+    markAddressUsed,
+    isAddressSaved,
+  } = useProfileAddresses();
+
+  const [isAddressBookModalOpen, setIsAddressBookModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Curated Database Filters & Sorting
   const [curatedVenues, setCuratedVenues] = useState<VenueOption[]>(PRELOADED_CURATED_VENUES);
@@ -572,6 +597,77 @@ export default function VenuesPage() {
     navigator.clipboard.writeText(text);
     setCopiedWhatsApp(true);
     setTimeout(() => setCopiedWhatsApp(false), 2500);
+  };
+
+  const handleSelectAddressForSide = (saved: ProfileSavedAddress, targetSide: 'groom' | 'bride' = (saved.side === 'bride' ? 'bride' : 'groom')) => {
+    markAddressUsed(saved.id);
+    if (targetSide === 'groom') {
+      const updatedGroom: FamilyAddressInput = {
+        side: 'groom',
+        label: saved.label,
+        address: saved.address,
+        city: saved.city,
+        state: saved.state,
+        zipCode: saved.zipCode,
+        latitude: saved.latitude,
+        longitude: saved.longitude,
+      };
+      const updatedForm = { ...tourForm, groomAddress: updatedGroom };
+      setTourForm(updatedForm);
+      if (tourPlan && tourPlan.optimizedStops.length > 0) {
+        recalculateTourPlan(updatedForm);
+      }
+    } else {
+      const updatedBride: FamilyAddressInput = {
+        side: 'bride',
+        label: saved.label,
+        address: saved.address,
+        city: saved.city,
+        state: saved.state,
+        zipCode: saved.zipCode,
+        latitude: saved.latitude,
+        longitude: saved.longitude,
+      };
+      const updatedForm = { ...tourForm, brideAddress: updatedBride };
+      setTourForm(updatedForm);
+      if (tourPlan && tourPlan.optimizedStops.length > 0) {
+        recalculateTourPlan(updatedForm);
+      }
+    }
+  };
+
+  const handleSaveGroomAddressToProfile = async (customLabel?: string) => {
+    if (!isLoggedIn) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+    await saveAddress({
+      label: customLabel || tourForm.groomAddress.label || "Groom's Family Home",
+      side: 'groom',
+      address: tourForm.groomAddress.address,
+      city: tourForm.groomAddress.city,
+      state: tourForm.groomAddress.state,
+      zipCode: tourForm.groomAddress.zipCode,
+      latitude: tourForm.groomAddress.latitude,
+      longitude: tourForm.groomAddress.longitude,
+    });
+  };
+
+  const handleSaveBrideAddressToProfile = async (customLabel?: string) => {
+    if (!isLoggedIn) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+    await saveAddress({
+      label: customLabel || tourForm.brideAddress.label || "Bride's Family Home",
+      side: 'bride',
+      address: tourForm.brideAddress.address,
+      city: tourForm.brideAddress.city,
+      state: tourForm.brideAddress.state,
+      zipCode: tourForm.brideAddress.zipCode,
+      latitude: tourForm.brideAddress.latitude,
+      longitude: tourForm.brideAddress.longitude,
+    });
   };
 
   // Filter & Sort Curated Venues List
@@ -1936,6 +2032,94 @@ export default function VenuesPage() {
               </div>
             </div>
 
+            {/* Profile Address Book & Quick Historical Selector Toolbar */}
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50/90 via-stone-50 to-rose-50/90 border border-amber-200/80 shadow-2xs space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-900 border border-amber-400/30 flex items-center justify-center shrink-0">
+                    <Bookmark className="w-4 h-4 text-amber-700" />
+                  </span>
+                  <div>
+                    <div className="font-bold text-stone-900 text-xs flex items-center gap-2">
+                      <span>Profile Address Memory</span>
+                      {isLoggedIn ? (
+                        <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-100/80 px-2 py-0.2 rounded-full border border-emerald-300">
+                          {savedAddresses.length} Saved in Profile
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-semibold text-stone-600 bg-stone-200/80 px-2 py-0.2 rounded-full">
+                          Sign in to save addresses
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-stone-600 leading-snug mt-0.5">
+                      {isLoggedIn
+                        ? `Private to your account (${user?.email || 'Active User'}). Select past family addresses without retyping.`
+                        : 'Addresses entered can be saved directly under your user profile for 1-click historical auto-fill.'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {isLoggedIn ? (
+                    <button
+                      type="button"
+                      onClick={() => setIsAddressBookModalOpen(true)}
+                      className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-stone-50 text-stone-800 border border-stone-300 hover:border-amber-400 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
+                    >
+                      <BookOpen className="w-3.5 h-3.5 text-amber-700" />
+                      <span>Manage Address Book ({savedAddresses.length})</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsAuthModalOpen(true)}
+                      className="px-3.5 py-1.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                    >
+                      <LogIn className="w-3.5 h-3.5" />
+                      <span>Sign In to Save</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Quick Select Chips from Saved Addresses */}
+              {isLoggedIn && savedAddresses.length > 0 && (
+                <div className="pt-2 border-t border-amber-200/50 flex flex-wrap items-center gap-2 text-xs">
+                  <span className="text-[11px] font-bold text-stone-600 flex items-center gap-1">
+                    <History className="w-3 h-3 text-amber-700" />
+                    <span>Quick Autofill:</span>
+                  </span>
+                  {savedAddresses.map((sa) => (
+                    <div
+                      key={sa.id}
+                      className="inline-flex items-center rounded-xl border border-stone-200/90 bg-white shadow-2xs overflow-hidden text-[11px]"
+                    >
+                      <span className="px-2.5 py-1 font-semibold text-stone-800 bg-stone-50/80 border-r border-stone-200 truncate max-w-[170px]">
+                        {sa.label}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectAddressForSide(sa, 'groom')}
+                        className="px-2 py-1 text-blue-700 hover:bg-blue-50 font-bold border-r border-stone-100 transition-colors cursor-pointer"
+                        title={`Autofill Groom's side with ${sa.address}`}
+                      >
+                        Fill Groom
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectAddressForSide(sa, 'bride')}
+                        className="px-2 py-1 text-rose-700 hover:bg-rose-50 font-bold transition-colors cursor-pointer"
+                        title={`Autofill Bride's side with ${sa.address}`}
+                      >
+                        Fill Bride
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
               {/* Family Address 1: Groom's Side */}
               <div className="p-4 sm:p-5 rounded-2xl bg-stone-50/70 border border-stone-200 space-y-3">
@@ -1978,8 +2162,14 @@ export default function VenuesPage() {
                     }
                   }}
                   label="Groom's Home Address"
-                  placeholder="Start typing (e.g. 254 Montgomery St or Parsippany)..."
+                  placeholder="Start typing (e.g. 254 Montgomery St or Lawrence Township)..."
                   accentColor="blue"
+                  savedAddresses={savedAddresses}
+                  onSelectSavedAddress={(saved) => markAddressUsed(saved.id)}
+                  onSaveToProfile={handleSaveGroomAddressToProfile}
+                  isSavedInProfile={isAddressSaved(tourForm.groomAddress.address, tourForm.groomAddress.city)}
+                  isLoggedIn={isLoggedIn}
+                  onOpenAuthModal={() => setIsAuthModalOpen(true)}
                   quickSuggestions={[
                     { label: 'Jersey City (Montgomery)', address: '254 Montgomery Street', city: 'Jersey City', state: 'NJ', zipCode: '07302', lat: 40.7188, lon: -74.0435 },
                     { label: 'Parsippany (Smith Rd)', address: '199 Smith Road', city: 'Parsippany', state: 'NJ', zipCode: '07054', lat: 40.8653, lon: -74.4174 },
@@ -2038,6 +2228,12 @@ export default function VenuesPage() {
                   label="Bride's Home Address"
                   placeholder="Start typing (e.g. 88 Oak Tree Rd or Mountain Top PA)..."
                   accentColor="rose"
+                  savedAddresses={savedAddresses}
+                  onSelectSavedAddress={(saved) => markAddressUsed(saved.id)}
+                  onSaveToProfile={handleSaveBrideAddressToProfile}
+                  isSavedInProfile={isAddressSaved(tourForm.brideAddress.address, tourForm.brideAddress.city)}
+                  isLoggedIn={isLoggedIn}
+                  onOpenAuthModal={() => setIsAuthModalOpen(true)}
                   quickSuggestions={[
                     { label: 'Mountain Top, PA', address: 'Mountain Top Area', city: 'Mountain Top', state: 'PA', zipCode: '18707', lat: 41.1514, lon: -75.9376 },
                     { label: 'Edison (Oak Tree Rd)', address: '88 Oak Tree Road', city: 'Edison', state: 'NJ', zipCode: '08820', lat: 40.5701, lon: -74.3418 },
@@ -3260,6 +3456,23 @@ export default function VenuesPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Profile Address Book Modal */}
+      <ProfileAddressBookModal
+        isOpen={isAddressBookModalOpen}
+        onClose={() => setIsAddressBookModalOpen(false)}
+        savedAddresses={savedAddresses}
+        userEmail={user?.email}
+        onSelectAddress={handleSelectAddressForSide}
+        onDeleteAddress={deleteAddress}
+        onUpdateDetails={updateAddressDetails}
+      />
+
+      {/* Authentication Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
     </div>
   );
 }

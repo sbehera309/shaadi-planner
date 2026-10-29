@@ -281,6 +281,21 @@ export interface FamilyAddressInput {
   longitude?: number;
 }
 
+export interface ProfileSavedAddress {
+  id: string;
+  userId: string;
+  label: string; // e.g. "Groom's Parents (Lawrence Twp)", "Bride's Family (Mountain Top)"
+  side?: 'groom' | 'bride' | 'mutual' | 'other';
+  address: string;
+  city: string;
+  state: string;
+  zipCode?: string;
+  latitude?: number;
+  longitude?: number;
+  createdAt: string;
+  lastUsedAt?: string;
+}
+
 export interface ScheduledTourStop {
   stopOrder: number;
   venueId: string;
