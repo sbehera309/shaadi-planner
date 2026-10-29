@@ -17,6 +17,7 @@ import {
   X,
   Compass,
   FileSpreadsheet,
+  Building2,
 } from 'lucide-react';
 import { useWedding } from '@/lib/store';
 import { EditWeddingModal } from './EditWeddingModal';
@@ -36,6 +37,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose })
 
   const navItems = [
     { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+    { label: 'Venues & Site Tours', href: '/dashboard/venues', icon: Building2 },
     { label: 'Itinerary & Timings', href: '/dashboard/itinerary', icon: CalendarDays },
     { label: 'Horoscope & Kundali', href: '/dashboard/horoscope', icon: Compass },
     { label: 'Guests & RSVPs', href: '/dashboard/guests', icon: Users },

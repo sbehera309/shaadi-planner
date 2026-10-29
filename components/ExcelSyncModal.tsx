@@ -37,6 +37,7 @@ export const ExcelSyncModal: React.FC<ExcelSyncModalProps> = ({
     vendors,
     shagunRecords,
     rooms,
+    venues,
     importFullWeddingData,
   } = useWedding();
 
@@ -58,6 +59,7 @@ export const ExcelSyncModal: React.FC<ExcelSyncModalProps> = ({
       vendors,
       shagunRecords,
       rooms,
+      venues,
     });
   };
 
@@ -93,6 +95,7 @@ export const ExcelSyncModal: React.FC<ExcelSyncModalProps> = ({
       vendors: parsedData.vendors,
       shagunRecords: parsedData.shagunRecords,
       rooms: parsedData.rooms,
+      venues: parsedData.venues,
     });
 
     setImportSuccess(true);
@@ -148,7 +151,7 @@ export const ExcelSyncModal: React.FC<ExcelSyncModalProps> = ({
               <FileSpreadsheet className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
               <div>
                 <h4 className="font-bold text-emerald-950 text-sm">
-                  Complete 7-Sheet Master Wedding Workbook
+                  Complete 8-Sheet Master Wedding Workbook
                 </h4>
                 <p className="text-[11px] text-emerald-900 leading-relaxed mt-0.5">
                   Downloads a fully formatted Microsoft Excel (.xlsx) file. Compatible with Google Sheets, Apple Numbers, and Excel. You can freely edit offline or share with parents and your wedding coordinator!
@@ -184,9 +187,13 @@ export const ExcelSyncModal: React.FC<ExcelSyncModalProps> = ({
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
                   <span><strong>6. Wedding Gifts:</strong> {shagunRecords.length} Shagun Records</span>
                 </div>
-                <div className="p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 flex items-center gap-2 sm:col-span-2">
+                <div className="p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
                   <span><strong>7. Rooms & Logistics:</strong> Hotel allocations & airport transits</span>
+                </div>
+                <div className="p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span><strong>8. Venues & Site Tours:</strong> {venues.length} Venues & Scouting</span>
                 </div>
               </div>
             </div>

@@ -26,6 +26,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenMore }) 
   ];
 
   const isMoreActive =
+    pathname === '/dashboard/venues' ||
     pathname === '/dashboard/vendors' ||
     pathname === '/dashboard/shagun' ||
     pathname === '/dashboard/horoscope' ||

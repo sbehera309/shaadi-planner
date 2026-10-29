@@ -46,6 +46,7 @@ import {
   Star,
   Download,
   Upload,
+  Building2,
 } from 'lucide-react';
 
 export default function DashboardOverviewPage() {
@@ -57,6 +58,8 @@ export default function DashboardOverviewPage() {
     vendors,
     shagunRecords,
     rooms,
+    venues,
+    tourPlan,
     loadSampleTemplate,
   } = useWedding();
 
@@ -200,6 +203,15 @@ export default function DashboardOverviewPage() {
                   🏷️ <strong className="text-amber-200">{wedding.hashtag}</strong>
                 </span>
               )}
+              <Link
+                href="/dashboard/venues"
+                className="px-3 py-1.5 rounded-xl bg-amber-900/50 hover:bg-amber-800/60 border border-amber-600/50 font-medium text-amber-200 transition-colors flex items-center gap-1.5"
+              >
+                <Building2 className="w-3.5 h-3.5 text-amber-400" />
+                <span>
+                  {venues.length > 0 ? `🏰 ${venues.length} Venues Scouting` : '🏰 Venue Scouting'}
+                </span>
+              </Link>
               <span className="px-3 py-1.5 rounded-xl bg-stone-800/80 border border-stone-700/80 font-medium text-stone-200">
                 📅 {events.length} Festive Celebrations
               </span>
@@ -728,7 +740,18 @@ export default function DashboardOverviewPage() {
         </div>
 
         {/* Quick Links Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 pt-2">
+          <Link
+            href="/dashboard/venues"
+            className="p-3 rounded-2xl bg-white border border-stone-200 hover:border-amber-400 hover:bg-amber-50/30 transition-all flex items-center justify-between text-xs font-semibold text-stone-800 group"
+          >
+            <div className="flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-amber-600" />
+              <span>Venues</span>
+            </div>
+            <ArrowUpRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-amber-600" />
+          </Link>
+
           <Link
             href="/dashboard/guests"
             className="p-3 rounded-2xl bg-white border border-stone-200 hover:border-rose-300 hover:bg-rose-50/30 transition-all flex items-center justify-between text-xs font-semibold text-stone-800 group"

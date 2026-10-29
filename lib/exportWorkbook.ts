@@ -7,6 +7,7 @@ import {
   Vendor,
   ShagunRecord,
   RoomAllocation,
+  VenueOption,
 } from './types';
 
 interface ExportWeddingData {
@@ -17,6 +18,7 @@ interface ExportWeddingData {
   vendors: Vendor[];
   shagunRecords: ShagunRecord[];
   rooms: RoomAllocation[];
+  venues?: VenueOption[];
 }
 
 export function exportWeddingToExcel({
@@ -27,6 +29,7 @@ export function exportWeddingToExcel({
   vendors,
   shagunRecords,
   rooms,
+  venues = [],
 }: ExportWeddingData) {
   const wb = XLSX.utils.book_new();
 
@@ -357,6 +360,70 @@ export function exportWeddingToExcel({
 
   const wsRooms = XLSX.utils.aoa_to_sheet([roomHeaders, ...roomRows]);
   XLSX.utils.book_append_sheet(wb, wsRooms, 'Rooms & Hotel Logistics');
+
+  // 8. SHEET 8: VENUES & SITE TOUR SCOUTING
+  const venueHeaders = [
+    'Venue Name',
+    'Venue Type',
+    'Address',
+    'City',
+    'State',
+    'Zip Code',
+    'Status',
+    'Rating (1-5)',
+    'Selected Official Venue?',
+    'Contact Person',
+    'Contact Phone',
+    'Contact Email',
+    'Website URL',
+    'Rental Fee ($)',
+    'F&B Minimum ($)',
+    'Outside Catering Buyout/Guest ($)',
+    'Est Total Cost ($)',
+    'Outside Indian Catering Allowed?',
+    'Open Flame Havan Allowed?',
+    'Baraat Allowed?',
+    'Sound Curfew Time',
+    'Ceremony Capacity',
+    'Reception Capacity',
+    'Hotel Rooms On Site?',
+    'Pros',
+    'Cons',
+    'Tour Notes & Observations',
+  ];
+
+  const venueRows = venues.map((v) => [
+    v.name,
+    v.type,
+    v.address,
+    v.city,
+    v.state,
+    v.zipCode || '',
+    v.tourStatus.toUpperCase(),
+    v.rating || 5,
+    v.isSelectedOfficialVenue ? 'YES' : 'NO',
+    v.contactPerson || '',
+    v.contactPhone || '',
+    v.contactEmail || '',
+    v.websiteUrl || '',
+    v.pricing.rentalFee,
+    v.pricing.foodAndBeverageMinimum,
+    v.pricing.cateringBuyoutFeePerGuest || 0,
+    v.pricing.estimatedTotalCost,
+    v.desiFeatures.allowsOutsideIndianCatering ? 'YES' : 'NO',
+    v.desiFeatures.allowsOpenFlameHavan ? 'YES' : 'NO',
+    v.desiFeatures.allowsBaraatProcession ? 'YES' : 'NO',
+    v.desiFeatures.soundCurfewTime,
+    v.desiFeatures.maxCeremonyCapacity,
+    v.desiFeatures.maxReceptionCapacity,
+    v.desiFeatures.hotelRoomsOnSite ? 'YES' : 'NO',
+    (v.pros || []).join('; '),
+    (v.cons || []).join('; '),
+    v.notes || '',
+  ]);
+
+  const wsVenues = XLSX.utils.aoa_to_sheet([venueHeaders, ...venueRows]);
+  XLSX.utils.book_append_sheet(wb, wsVenues, 'Venues & Site Tours');
 
   // Trigger browser download of .xlsx file
   const filename = `${coupleTitle.replace(/[^a-zA-Z0-9]+/g, '_')}_Wedding_Planning_Master.xlsx`;

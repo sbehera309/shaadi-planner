@@ -11,6 +11,7 @@ import {
   RequirementCategory,
   RsvpStatus,
   WeddingTradition,
+  VenueOption,
 } from './types';
 
 export interface ImportedWeddingData {
@@ -21,6 +22,7 @@ export interface ImportedWeddingData {
   vendors?: Vendor[];
   shagunRecords?: ShagunRecord[];
   rooms?: RoomAllocation[];
+  venues?: VenueOption[];
   summary: {
     eventsCount: number;
     budgetCount: number;
@@ -28,6 +30,7 @@ export interface ImportedWeddingData {
     vendorsCount: number;
     shagunCount: number;
     roomsCount: number;
+    venuesCount: number;
     profileUpdated: boolean;
   };
 }
@@ -44,6 +47,7 @@ export async function parseWeddingExcelFile(file: File): Promise<ImportedWedding
       vendorsCount: 0,
       shagunCount: 0,
       roomsCount: 0,
+      venuesCount: 0,
       profileUpdated: false,
     },
   };
@@ -415,6 +419,98 @@ export async function parseWeddingExcelFile(file: File): Promise<ImportedWedding
     if (parsedRooms.length > 0) {
       result.rooms = parsedRooms;
       result.summary.roomsCount = parsedRooms.length;
+    }
+  }
+
+  // 8. PARSE VENUES & SITE TOURS SHEET
+  const venueSheetName = sheetNames.find(
+    (n) => n.toLowerCase().includes('venue') || n.toLowerCase().includes('tour')
+  );
+  if (venueSheetName) {
+    const sheet = workbook.Sheets[venueSheetName];
+    const rawRows: any[] = XLSX.utils.sheet_to_json(sheet);
+    const parsedVenues: VenueOption[] = rawRows
+      .filter((r) => r['Venue Name'] || r['name'])
+      .map((r, idx) => {
+        const name = String(r['Venue Name'] || r['name']);
+        const rawType = String(r['Venue Type'] || r['type'] || 'hotel_ballroom').toLowerCase();
+        let type: VenueOption['type'] = 'hotel_ballroom';
+        if (rawType.includes('estate') || rawType.includes('castle')) type = 'historic_estate';
+        else if (rawType.includes('banquet')) type = 'banquet_hall';
+        else if (rawType.includes('resort')) type = 'resort';
+        else if (rawType.includes('golf')) type = 'golf_club';
+        else if (rawType.includes('convention')) type = 'convention_center';
+
+        const rawStatus = String(r['Status'] || r['tourStatus'] || 'researching').toLowerCase();
+        let tourStatus: VenueOption['tourStatus'] = 'researching';
+        if (rawStatus.includes('shortlist')) tourStatus = 'shortlisted';
+        else if (rawStatus.includes('sched')) tourStatus = 'tour_scheduled';
+        else if (rawStatus.includes('tour')) tourStatus = 'toured';
+        else if (rawStatus.includes('select')) tourStatus = 'selected';
+        else if (rawStatus.includes('declin')) tourStatus = 'declined';
+
+        const rentalFee = Number(String(r['Rental Fee ($)'] || r['rentalFee'] || 0).replace(/[^0-9.]+/g, '')) || 0;
+        const foodAndBeverageMinimum = Number(String(r['F&B Minimum ($)'] || r['foodAndBeverageMinimum'] || 0).replace(/[^0-9.]+/g, '')) || 0;
+        const cateringBuyoutFeePerGuest = Number(String(r['Outside Catering Buyout/Guest ($)'] || r['cateringBuyoutFeePerGuest'] || 0).replace(/[^0-9.]+/g, '')) || 0;
+        const estimatedTotalCost = Number(String(r['Est Total Cost ($)'] || r['estimatedTotalCost'] || 0).replace(/[^0-9.]+/g, '')) || rentalFee + foodAndBeverageMinimum;
+
+        const allowsOutsideIndianCatering = String(r['Outside Indian Catering Allowed?'] || '').toLowerCase().includes('yes');
+        const allowsOpenFlameHavan = String(r['Open Flame Havan Allowed?'] || '').toLowerCase().includes('yes');
+        const allowsBaraatProcession = String(r['Baraat Allowed?'] || '').toLowerCase().includes('yes');
+        const soundCurfewTime = String(r['Sound Curfew Time'] || '12:00 AM');
+        const maxCeremonyCapacity = Number(r['Ceremony Capacity'] || 400);
+        const maxReceptionCapacity = Number(r['Reception Capacity'] || 500);
+        const hotelRoomsOnSite = String(r['Hotel Rooms On Site?'] || '').toLowerCase().includes('yes');
+
+        const pros = r['Pros'] ? String(r['Pros']).split(';').map((s) => s.trim()).filter(Boolean) : [];
+        const cons = r['Cons'] ? String(r['Cons']).split(';').map((s) => s.trim()).filter(Boolean) : [];
+
+        return {
+          id: `imp-v-${idx}-${Date.now()}`,
+          weddingId: 'wedding-1',
+          name,
+          type,
+          address: String(r['Address'] || r['address'] || ''),
+          city: String(r['City'] || r['city'] || ''),
+          state: String(r['State'] || r['state'] || 'NJ'),
+          zipCode: r['Zip Code'] ? String(r['Zip Code']) : undefined,
+          contactPerson: r['Contact Person'] ? String(r['Contact Person']) : undefined,
+          contactPhone: r['Contact Phone'] ? String(r['Contact Phone']) : undefined,
+          contactEmail: r['Contact Email'] ? String(r['Contact Email']) : undefined,
+          websiteUrl: r['Website URL'] ? String(r['Website URL']) : undefined,
+          pricing: {
+            rentalFee,
+            foodAndBeverageMinimum,
+            cateringBuyoutFeePerGuest,
+            serviceChargePercent: 22,
+            taxPercent: 6.625,
+            estimatedTotalCost,
+          },
+          desiFeatures: {
+            allowsOutsideIndianCatering,
+            allowsOpenFlameHavan,
+            firePermitRequired: true,
+            allowsBaraatProcession,
+            soundCurfewTime,
+            maxCeremonyCapacity,
+            maxReceptionCapacity,
+            hasBridalSuite: true,
+            hasGroomSuite: true,
+            hotelRoomsOnSite,
+          },
+          availableDates: [],
+          tourStatus,
+          pros,
+          cons,
+          rating: Number(r['Rating (1-5)'] || 5),
+          notes: r['Tour Notes & Observations'] || r['Notes'] || '',
+          isSelectedOfficialVenue: String(r['Selected Official Venue?'] || '').toLowerCase().includes('yes'),
+        };
+      });
+
+    if (parsedVenues.length > 0) {
+      result.venues = parsedVenues;
+      result.summary.venuesCount = parsedVenues.length;
     }
   }
 

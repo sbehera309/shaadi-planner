@@ -11,6 +11,8 @@ import {
   RoomAllocation,
   RsvpStatus,
   EventChecklistItem,
+  VenueOption,
+  SiteTourDayPlan,
 } from './types';
 import {
   initialWeddingProfile,
@@ -20,6 +22,8 @@ import {
   initialVendors,
   initialShagunRecords,
   initialRooms,
+  initialVenues,
+  initialTourPlan,
   sampleUsaWeddingTemplate,
 } from './mockData';
 import { isFirebaseConfigured, db } from './firebase';
@@ -33,6 +37,8 @@ interface WeddingContextType {
   vendors: Vendor[];
   shagunRecords: ShagunRecord[];
   rooms: RoomAllocation[];
+  venues: VenueOption[];
+  tourPlan: SiteTourDayPlan | null;
   isDemoMode: boolean;
 
   // Wedding Profile
@@ -81,6 +87,14 @@ interface WeddingContextType {
   assignGuestToRoom: (roomId: string, guestId: string) => void;
   removeGuestFromRoom: (roomId: string, guestId: string) => void;
 
+  // Venues & Site Tour Route Optimizer
+  addVenue: (venue: Omit<VenueOption, 'id' | 'weddingId'>) => void;
+  updateVenue: (id: string, venue: Partial<VenueOption>) => void;
+  deleteVenue: (id: string) => void;
+  setOfficialVenue: (venueId: string) => void;
+  saveTourPlan: (plan: SiteTourDayPlan) => void;
+  clearTourPlan: () => void;
+
   // Template & Reset
   resetToDefaultData: () => void;
   loadSampleTemplate: () => void;
@@ -92,6 +106,8 @@ interface WeddingContextType {
     vendors?: Vendor[];
     shagunRecords?: ShagunRecord[];
     rooms?: RoomAllocation[];
+    venues?: VenueOption[];
+    tourPlan?: SiteTourDayPlan;
   }) => void;
 }
 
@@ -105,6 +121,8 @@ const STORAGE_KEYS = {
   VENDORS: 'shaadi_v5_noprofile_vendors',
   SHAGUN: 'shaadi_v5_noprofile_shagun',
   ROOMS: 'shaadi_v5_noprofile_rooms',
+  VENUES: 'shaadi_v5_venues',
+  TOUR_PLAN: 'shaadi_v5_tour_plan',
 };
 
 export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -115,6 +133,8 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [vendors, setVendors] = useState<Vendor[]>(initialVendors);
   const [shagunRecords, setShagunRecords] = useState<ShagunRecord[]>(initialShagunRecords);
   const [rooms, setRooms] = useState<RoomAllocation[]>(initialRooms);
+  const [venues, setVenues] = useState<VenueOption[]>(initialVenues);
+  const [tourPlan, setTourPlan] = useState<SiteTourDayPlan | null>(initialTourPlan);
   const [mounted, setMounted] = useState(false);
 
   // Load from localStorage on client mount
@@ -127,6 +147,8 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const savedVendors = localStorage.getItem(STORAGE_KEYS.VENDORS);
       const savedShagun = localStorage.getItem(STORAGE_KEYS.SHAGUN);
       const savedRooms = localStorage.getItem(STORAGE_KEYS.ROOMS);
+      const savedVenues = localStorage.getItem(STORAGE_KEYS.VENUES);
+      const savedTourPlan = localStorage.getItem(STORAGE_KEYS.TOUR_PLAN);
 
       if (savedProfile) {
         try {
@@ -148,6 +170,8 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (savedVendors) setVendors(JSON.parse(savedVendors));
       if (savedShagun) setShagunRecords(JSON.parse(savedShagun));
       if (savedRooms) setRooms(JSON.parse(savedRooms));
+      if (savedVenues) setVenues(JSON.parse(savedVenues));
+      if (savedTourPlan) setTourPlan(JSON.parse(savedTourPlan));
     } catch (e) {
       console.warn('Using default wedding mock data:', e);
     }
@@ -169,6 +193,12 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       localStorage.setItem(STORAGE_KEYS.VENDORS, JSON.stringify(vendors));
       localStorage.setItem(STORAGE_KEYS.SHAGUN, JSON.stringify(shagunRecords));
       localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(rooms));
+      localStorage.setItem(STORAGE_KEYS.VENUES, JSON.stringify(venues));
+      if (tourPlan) {
+        localStorage.setItem(STORAGE_KEYS.TOUR_PLAN, JSON.stringify(tourPlan));
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.TOUR_PLAN);
+      }
 
       // Real-time Cloud Firestore sync when configured
       if (isFirebaseConfigured && db && wedding) {
@@ -180,6 +210,8 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           vendors,
           shagunRecords,
           rooms,
+          venues,
+          tourPlan,
           updatedAt: new Date().toISOString(),
         };
         setDoc(doc(db, 'weddings', wedding.id), cloudData, { merge: true }).catch(() => {});
@@ -187,7 +219,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch (e) {
       console.error('Failed to sync changes:', e);
     }
-  }, [mounted, wedding, events, guests, budgetItems, vendors, shagunRecords, rooms]);
+  }, [mounted, wedding, events, guests, budgetItems, vendors, shagunRecords, rooms, venues, tourPlan]);
 
   const createWeddingProfile = (profileData: Omit<WeddingProfile, 'id' | 'ownerId'>) => {
     const bride = profileData.brideName.trim();
@@ -479,6 +511,84 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
   };
 
+  // -------------------------------------------------------------
+  // VENUES & SITE TOUR ROUTE OPTIMIZER METHODS
+  // -------------------------------------------------------------
+  const addVenue = (venueData: Omit<VenueOption, 'id' | 'weddingId'>) => {
+    const newVenue: VenueOption = {
+      ...venueData,
+      id: `v-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      weddingId: wedding?.id || 'w-user-1',
+    };
+    setVenues((prev) => [...prev, newVenue]);
+  };
+
+  const updateVenue = (id: string, updated: Partial<VenueOption>) => {
+    setVenues((prev) => prev.map((v) => (v.id === id ? { ...v, ...updated } : v)));
+  };
+
+  const deleteVenue = (id: string) => {
+    setVenues((prev) => prev.filter((v) => v.id !== id));
+    if (tourPlan && tourPlan.selectedVenueIds.includes(id)) {
+      setTourPlan({
+        ...tourPlan,
+        selectedVenueIds: tourPlan.selectedVenueIds.filter((vid) => vid !== id),
+        optimizedStops: tourPlan.optimizedStops.filter((s) => s.venueId !== id),
+      });
+    }
+  };
+
+  const setOfficialVenue = (venueId: string) => {
+    const targetVenue = venues.find((v) => v.id === venueId);
+    if (!targetVenue) return;
+
+    // 1. Mark only this venue as selected official
+    setVenues((prev) =>
+      prev.map((v) =>
+        v.id === venueId
+          ? { ...v, isSelectedOfficialVenue: true, tourStatus: 'selected' }
+          : { ...v, isSelectedOfficialVenue: false }
+      )
+    );
+
+    // 2. Update Wedding Profile
+    updateWeddingProfile({
+      venueName: targetVenue.name,
+      city: `${targetVenue.city}, ${targetVenue.state}`,
+    });
+
+    // 3. Sync or create Budget item for Venue & Catering
+    if (targetVenue.pricing.estimatedTotalCost > 0) {
+      const existingVenueBudgetItem = budgetItems.find((b) => b.category === 'Venue & Catering');
+      if (existingVenueBudgetItem) {
+        updateBudgetItem(existingVenueBudgetItem.id, {
+          title: `${targetVenue.name} — Hall Rental, F&B Minimum & Catering`,
+          estimatedCost: targetVenue.pricing.estimatedTotalCost,
+          actualCost: targetVenue.pricing.estimatedTotalCost,
+        });
+      } else {
+        addBudgetItem({
+          title: `${targetVenue.name} — Hall Rental, F&B Minimum & Catering`,
+          category: 'Venue & Catering',
+          estimatedCost: targetVenue.pricing.estimatedTotalCost,
+          actualCost: targetVenue.pricing.estimatedTotalCost,
+          paidAmount: 0,
+          dueDate: '2026-10-15',
+          paidBy: 'split_50_50',
+          status: 'pending',
+        });
+      }
+    }
+  };
+
+  const saveTourPlan = (plan: SiteTourDayPlan) => {
+    setTourPlan(plan);
+  };
+
+  const clearTourPlan = () => {
+    setTourPlan(null);
+  };
+
   const resetToDefaultData = () => {
     setWedding(initialWeddingProfile);
     setEvents(initialEvents);
@@ -487,6 +597,8 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setVendors(initialVendors);
     setShagunRecords(initialShagunRecords);
     setRooms(initialRooms);
+    setVenues(initialVenues);
+    setTourPlan(initialTourPlan);
     localStorage.clear();
   };
 
@@ -498,6 +610,8 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setVendors(sampleUsaWeddingTemplate.vendors);
     setShagunRecords(sampleUsaWeddingTemplate.shagunRecords);
     setRooms(sampleUsaWeddingTemplate.rooms);
+    setVenues(sampleUsaWeddingTemplate.venues);
+    setTourPlan(sampleUsaWeddingTemplate.tourPlan || null);
   };
 
   const importFullWeddingData = (data: {
@@ -508,6 +622,8 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     vendors?: Vendor[];
     shagunRecords?: ShagunRecord[];
     rooms?: RoomAllocation[];
+    venues?: VenueOption[];
+    tourPlan?: SiteTourDayPlan;
   }) => {
     if (data.wedding) {
       setWedding((prev) => {
@@ -551,6 +667,12 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (data.rooms && data.rooms.length > 0) {
       setRooms(data.rooms);
     }
+    if (data.venues && data.venues.length > 0) {
+      setVenues(data.venues);
+    }
+    if (data.tourPlan) {
+      setTourPlan(data.tourPlan);
+    }
   };
 
   return (
@@ -563,6 +685,8 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         vendors,
         shagunRecords,
         rooms,
+        venues,
+        tourPlan,
         isDemoMode: !isFirebaseConfigured,
         createWeddingProfile,
         updateWeddingProfile,
@@ -593,6 +717,12 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         deleteRoom,
         assignGuestToRoom,
         removeGuestFromRoom,
+        addVenue,
+        updateVenue,
+        deleteVenue,
+        setOfficialVenue,
+        saveTourPlan,
+        clearTourPlan,
         resetToDefaultData,
         loadSampleTemplate,
         importFullWeddingData,
