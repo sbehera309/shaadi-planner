@@ -529,45 +529,6 @@ const LOCAL_ADDRESS_DATABASE: AddressSuggestion[] = [
     source: 'local',
   },
   {
-    id: 'local-pa-mountain-top-ice-lake-1',
-    primaryText: '200 Ice Lake Dr',
-    secondaryText: 'Mountain Top, PA 18707, USA',
-    fullAddress: '200 Ice Lake Dr, Mountain Top, PA 18707',
-    street: '200 Ice Lake Dr',
-    city: 'Mountain Top',
-    state: 'PA',
-    zipCode: '18707',
-    latitude: 41.151352,
-    longitude: -75.93756,
-    source: 'local',
-  },
-  {
-    id: 'local-pa-mountain-top-ice-lake-2',
-    primaryText: '200 Ice Lake Drive',
-    secondaryText: 'Mountain Top, PA 18707, USA',
-    fullAddress: '200 Ice Lake Drive, Mountain Top, PA 18707',
-    street: '200 Ice Lake Drive',
-    city: 'Mountain Top',
-    state: 'PA',
-    zipCode: '18707',
-    latitude: 41.151352,
-    longitude: -75.93756,
-    source: 'local',
-  },
-  {
-    id: 'local-pa-mountain-top-ice-lakes-3',
-    primaryText: '200 Ice Lakes Dr',
-    secondaryText: 'Mountain Top, PA 18707, USA',
-    fullAddress: '200 Ice Lakes Dr, Mountain Top, PA 18707',
-    street: '200 Ice Lakes Dr',
-    city: 'Mountain Top',
-    state: 'PA',
-    zipCode: '18707',
-    latitude: 41.151352,
-    longitude: -75.93756,
-    source: 'local',
-  },
-  {
     id: 'local-shrewsbury-broad-st',
     primaryText: '1112 Broad Street (Shadowbrook at Shrewsbury)',
     secondaryText: 'Shrewsbury, NJ 07702, USA',
@@ -974,38 +935,55 @@ export async function GET(request: NextRequest) {
   }
 
   // 5. Smart Address Structure Parser:
-  // If the user typed a complete or partial address containing comma or city/state (e.g. "200 Ice Lake Dr, Mountain Top PA")
+  // Dynamically parses ANY user-entered address containing a comma (e.g. "<Street>, <City> <State> <Zip>")
+  // at runtime in-memory without saving or hardcoding any private residential data.
   const commaParts = query.split(',').map((p) => p.trim()).filter(Boolean);
-  if (commaParts.length >= 2 || queryLower.includes('mountain top') || queryLower.includes('ice lake')) {
-    let streetPart = commaParts[0] || query;
-    let cityPart = commaParts.length >= 2 ? commaParts[1] : '';
-    let statePart = 'PA';
-    let zipPart = '18707';
-    let lat = 41.151352;
-    let lon = -75.93756;
+  if (commaParts.length >= 2) {
+    const streetPart = commaParts[0];
+    const secondPart = commaParts[1];
+    const thirdPart = commaParts[2] || '';
 
-    if (queryLower.includes('mountain top') || queryLower.includes('ice lake')) {
-      streetPart = '200 Ice Lake Dr';
-      cityPart = 'Mountain Top';
-      statePart = 'PA';
-      zipPart = '18707';
-      lat = 41.151352;
-      lon = -75.93756;
-    } else {
-      const stateMatch = (cityPart + ' ' + (commaParts[2] || '')).match(/\b([A-Za-z]{2})\b(?:\s*(\d{5}))?/);
-      if (stateMatch) {
-        statePart = stateMatch[1].toUpperCase();
-        if (stateMatch[2]) zipPart = stateMatch[2];
-        cityPart = cityPart.replace(new RegExp(`\\b${stateMatch[1]}\\b.*$`, 'i'), '').trim();
-      }
-      if (!cityPart) cityPart = 'Mountain Top';
+    // Extract 2-letter state code & optional 5-digit zip code
+    const stateZipMatch = (secondPart + ' ' + thirdPart).match(/\b([A-Za-z]{2})\b(?:\s*(\d{5}))?/);
+    let statePart = 'NJ';
+    let zipPart = '';
+    let cityPart = secondPart;
+
+    if (stateZipMatch) {
+      statePart = stateZipMatch[1].toUpperCase();
+      if (stateZipMatch[2]) zipPart = stateZipMatch[2];
+      cityPart = secondPart.replace(new RegExp(`\\b${stateZipMatch[1]}\\b.*$`, 'i'), '').replace(/,/g, '').trim();
     }
 
-    const secondaryText = `${cityPart}, ${statePart} ${zipPart}, USA`;
+    if (!cityPart) cityPart = secondPart;
+
+    // Approximate regional coordinates based on recognized city or state
+    let lat = 40.7188;
+    let lon = -74.0435;
+    const lowerCity = cityPart.toLowerCase();
+    if (lowerCity.includes('mountain top') || lowerCity.includes('mountaintop')) {
+      lat = 41.1514;
+      lon = -75.9376;
+      if (!zipPart) zipPart = '18707';
+    } else if (lowerCity.includes('philadelphia')) {
+      lat = 39.9526;
+      lon = -75.1652;
+    } else if (lowerCity.includes('edison')) {
+      lat = 40.5187;
+      lon = -74.4121;
+    } else if (statePart === 'PA') {
+      lat = 40.2732;
+      lon = -76.8867;
+    } else if (statePart === 'NY') {
+      lat = 40.7128;
+      lon = -74.006;
+    }
+
+    const secondaryText = [cityPart, statePart, zipPart].filter(Boolean).join(' ') + ', USA';
     return NextResponse.json({
       suggestions: [
         {
-          id: `smart-parse-${Date.now()}`,
+          id: `dynamic-parse-${Date.now()}`,
           primaryText: streetPart,
           secondaryText,
           fullAddress: `${streetPart}, ${secondaryText}`,

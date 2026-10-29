@@ -116,7 +116,7 @@ export default function AddressAutocompleteInput({
   const handleInputChange = (newText: string) => {
     setInputValue(newText);
 
-    // If user pasted/typed a full comma-separated address like "200 Ice Lake Dr, Mountain Top PA"
+    // If user pasted/typed a full comma-separated address (e.g. "123 Main St, Mountain Top PA")
     if (newText.includes(',')) {
       const parts = newText.split(',').map((p) => p.trim()).filter(Boolean);
       if (parts.length >= 2) {
@@ -135,14 +135,13 @@ export default function AddressAutocompleteInput({
         let lon = value.longitude;
         if (
           city.toLowerCase().includes('mountain top') ||
-          street.toLowerCase().includes('ice lake') ||
-          newText.toLowerCase().includes('mountain top')
+          city.toLowerCase().includes('mountaintop')
         ) {
           city = 'Mountain Top';
           state = 'PA';
-          zipCode = '18707';
-          lat = 41.151352;
-          lon = -75.93756;
+          if (!zipCode) zipCode = '18707';
+          lat = 41.1514;
+          lon = -75.9376;
         }
         onChange({
           address: street,
