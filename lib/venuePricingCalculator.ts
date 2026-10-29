@@ -45,34 +45,107 @@ interface VenuePricingTierRates {
  * Legacy Castle: Morning $100 base ($138 all-in), Evening $175 base ($242 all-in) => $380 all-day (~$114k for 300 guests).
  */
 const SPECIFIC_VENUE_RATES: Record<string, VenuePricingTierRates> = {
+  // Tier 1: Ultra-Luxury Trophy Estates & Flagships ($$$$)
   'curated-nj-legacy-castle': { morningBase: 100, eveningBase: 175, servicePercent: 24, tipPercent: 5 },
   'curated-nj-the-rockleigh': { morningBase: 95, eveningBase: 175, servicePercent: 24, tipPercent: 5 },
   'curated-nj-shadowbrook': { morningBase: 100, eveningBase: 180, servicePercent: 24, tipPercent: 5 },
   'curated-nj-park-chateau': { morningBase: 100, eveningBase: 178, servicePercent: 24, tipPercent: 5 },
   'curated-nj-park-savoy': { morningBase: 95, eveningBase: 168, servicePercent: 24, tipPercent: 5 },
+  'curated-nj-crystal-plaza': { morningBase: 95, eveningBase: 172, servicePercent: 24, tipPercent: 5 },
+  'curated-nj-florentine-gardens': { morningBase: 95, eveningBase: 170, servicePercent: 24, tipPercent: 5 },
   'curated-nj-the-grove': { morningBase: 95, eveningBase: 170, servicePercent: 24, tipPercent: 5 },
-  'curated-nj-florentine-gardens': { morningBase: 90, eveningBase: 165, servicePercent: 24, tipPercent: 5 },
-  'curated-nj-crystal-plaza': { morningBase: 90, eveningBase: 168, servicePercent: 24, tipPercent: 5 },
-  'curated-nj-the-meadow-wood': { morningBase: 90, eveningBase: 162, servicePercent: 24, tipPercent: 5 },
+  'curated-nj-pleasantdale-chateau': { morningBase: 95, eveningBase: 170, servicePercent: 24, tipPercent: 5 },
+  'curated-nj-pleasantdale': { morningBase: 95, eveningBase: 170, servicePercent: 24, tipPercent: 5 },
   'curated-pa-ritz-carlton-philly': { morningBase: 105, eveningBase: 185, servicePercent: 24, tipPercent: 5 },
+
+  // Tier 2: Premier Landmark Estates & Historic Hotels ($$$ / $$$$)
   'curated-nj-palace-somerset': { morningBase: 75, eveningBase: 135, servicePercent: 22, tipPercent: 5 },
+  'curated-nj-meadow-wood': { morningBase: 90, eveningBase: 162, servicePercent: 24, tipPercent: 5 },
+  'curated-nj-the-meadow-wood': { morningBase: 90, eveningBase: 162, servicePercent: 24, tipPercent: 5 },
+  'curated-pa-please-touch-museum': { morningBase: 75, eveningBase: 140, servicePercent: 22, tipPercent: 5 },
+  'curated-pa-please-touch': { morningBase: 75, eveningBase: 140, servicePercent: 22, tipPercent: 5 },
   'curated-nj-the-merion': { morningBase: 75, eveningBase: 130, servicePercent: 22, tipPercent: 5 },
-  'curated-nj-addison-park': { morningBase: 70, eveningBase: 130, servicePercent: 22, tipPercent: 5 },
-  'curated-nj-mansion-main-st': { morningBase: 70, eveningBase: 125, servicePercent: 22, tipPercent: 5 },
-  'curated-nj-luciens-manor': { morningBase: 70, eveningBase: 125, servicePercent: 22, tipPercent: 5 },
+  'curated-nj-naninas-in-the-park': { morningBase: 80, eveningBase: 140, servicePercent: 22, tipPercent: 5 },
   'curated-nj-naninas-in-park': { morningBase: 80, eveningBase: 140, servicePercent: 22, tipPercent: 5 },
-  'curated-nj-pleasantdale': { morningBase: 85, eveningBase: 155, servicePercent: 24, tipPercent: 5 },
-  'curated-nj-sheraton-parsippany': { morningBase: 60, eveningBase: 105, servicePercent: 22, tipPercent: 4 },
-  'curated-nj-hyatt-regency-jc': { morningBase: 70, eveningBase: 120, servicePercent: 24, tipPercent: 4 },
-  'curated-nj-hyatt-regency-nb': { morningBase: 60, eveningBase: 105, servicePercent: 22, tipPercent: 4 },
-  'curated-nj-westin-governor-morris': { morningBase: 65, eveningBase: 115, servicePercent: 22, tipPercent: 4 },
-  'curated-pa-valley-forge': { morningBase: 60, eveningBase: 105, servicePercent: 22, tipPercent: 4 },
   'curated-pa-vie-cescaphe': { morningBase: 80, eveningBase: 145, servicePercent: 24, tipPercent: 5 },
-  'curated-pa-please-touch': { morningBase: 70, eveningBase: 135, servicePercent: 22, tipPercent: 5 },
+  'curated-pa-the-bellevue': { morningBase: 80, eveningBase: 140, servicePercent: 24, tipPercent: 5 },
   'curated-pa-bellevue': { morningBase: 80, eveningBase: 140, servicePercent: 24, tipPercent: 5 },
+  'curated-nj-hyatt-jersey-city': { morningBase: 75, eveningBase: 135, servicePercent: 24, tipPercent: 4 },
+  'curated-nj-hyatt-regency-jc': { morningBase: 75, eveningBase: 135, servicePercent: 24, tipPercent: 4 },
+  'curated-nj-addison-park': { morningBase: 70, eveningBase: 130, servicePercent: 22, tipPercent: 5 },
+
+  // Tier 3: Full-Service Event Hotels & Banquet Halls ($$$ / $$$$)
+  'curated-nj-the-venetian': { morningBase: 70, eveningBase: 125, servicePercent: 22, tipPercent: 4 },
+  'curated-nj-mansion-main-st': { morningBase: 70, eveningBase: 125, servicePercent: 22, tipPercent: 5 },
+  'curated-nj-the-marigold': { morningBase: 70, eveningBase: 125, servicePercent: 22, tipPercent: 4 },
+  'curated-pa-loews-philadelphia': { morningBase: 70, eveningBase: 130, servicePercent: 24, tipPercent: 4 },
   'curated-pa-loews-philly': { morningBase: 70, eveningBase: 130, servicePercent: 24, tipPercent: 4 },
+  'curated-nj-sheraton-parsippany': { morningBase: 60, eveningBase: 105, servicePercent: 22, tipPercent: 4 },
+  'curated-pa-the-logan-philly': { morningBase: 70, eveningBase: 125, servicePercent: 24, tipPercent: 4 },
+  'curated-pa-the-logan': { morningBase: 70, eveningBase: 125, servicePercent: 24, tipPercent: 4 },
+  'curated-nj-westin-gov-morris': { morningBase: 65, eveningBase: 115, servicePercent: 22, tipPercent: 4 },
+  'curated-nj-westin-governor-morris': { morningBase: 65, eveningBase: 115, servicePercent: 22, tipPercent: 4 },
+  'curated-pa-arts-ballroom': { morningBase: 65, eveningBase: 115, servicePercent: 22, tipPercent: 4 },
+
+  // Tier 4: Value & Functional Venues ($$ / $$$)
+  'curated-nj-luciens-manor': { morningBase: 70, eveningBase: 125, servicePercent: 22, tipPercent: 5 },
+  'curated-nj-hyatt-new-brunswick': { morningBase: 60, eveningBase: 105, servicePercent: 22, tipPercent: 4 },
+  'curated-nj-hyatt-regency-nb': { morningBase: 60, eveningBase: 105, servicePercent: 22, tipPercent: 4 },
+  'curated-pa-valley-forge-casino': { morningBase: 60, eveningBase: 105, servicePercent: 22, tipPercent: 4 },
+  'curated-pa-valley-forge': { morningBase: 60, eveningBase: 105, servicePercent: 22, tipPercent: 4 },
   'curated-pa-sheraton-downtown': { morningBase: 60, eveningBase: 105, servicePercent: 22, tipPercent: 4 },
+  'curated-nj-birchwood-manor': { morningBase: 55, eveningBase: 95, servicePercent: 20, tipPercent: 4 },
 };
+
+export interface VenueTierInfo {
+  tierNumber: 1 | 2 | 3 | 4;
+  label: string;
+  badgeLabel: string;
+  pillBg: string;
+  pillText: string;
+  pillBorder: string;
+}
+
+export function getVenueTierInfo(score: number): VenueTierInfo {
+  if (score >= 95) {
+    return {
+      tierNumber: 1,
+      label: 'Ultra-Luxury Trophy Estate / Flagship',
+      badgeLabel: '👑 Tier 1: Ultra-Luxury',
+      pillBg: 'bg-amber-50',
+      pillText: 'text-amber-900',
+      pillBorder: 'border-amber-300',
+    };
+  }
+  if (score >= 87) {
+    return {
+      tierNumber: 2,
+      label: 'Premier Landmark Estate / Historic Hotel',
+      badgeLabel: '🏛️ Tier 2: Premier Landmark',
+      pillBg: 'bg-rose-50',
+      pillText: 'text-rose-900',
+      pillBorder: 'border-rose-200',
+    };
+  }
+  if (score >= 78) {
+    return {
+      tierNumber: 3,
+      label: 'Full-Service Event Hotel & Ballroom',
+      badgeLabel: '🏨 Tier 3: Full-Service Hotel & Ballroom',
+      pillBg: 'bg-indigo-50',
+      pillText: 'text-indigo-900',
+      pillBorder: 'border-indigo-200',
+    };
+  }
+  return {
+    tierNumber: 4,
+    label: 'Value / Functional Facility',
+    badgeLabel: '🏷️ Tier 4: Value / Functional',
+    pillBg: 'bg-stone-100',
+    pillText: 'text-stone-800',
+    pillBorder: 'border-stone-300',
+  };
+}
 
 /**
  * Calculates a realistic Desi wedding quote reflecting full all-day event packages.

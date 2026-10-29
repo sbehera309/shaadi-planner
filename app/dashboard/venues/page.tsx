@@ -23,6 +23,7 @@ import {
 import {
   calculateVenueEstimateForGuests,
   EventPackageFormat,
+  getVenueTierInfo,
 } from '@/lib/venuePricingCalculator';
 import {
   Building2,
@@ -913,6 +914,7 @@ export default function VenuesPage() {
                 const isAlreadyShortlisted = venues.some(
                   (v) => v.name.toLowerCase() === venue.name.toLowerCase()
                 );
+                const tierInfo = venue.popularityScore ? getVenueTierInfo(venue.popularityScore) : null;
 
                 return (
                   <div
@@ -936,6 +938,15 @@ export default function VenuesPage() {
                               <Star className="w-3 h-3 text-amber-600 fill-amber-500" />
                               <span>{venue.popularityScore}/100 Desi Rank</span>
                             </span>
+
+                            {tierInfo && (
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border inline-flex items-center gap-1 ${tierInfo.pillBg} ${tierInfo.pillText} ${tierInfo.pillBorder}`}
+                                title={tierInfo.label}
+                              >
+                                <span>{tierInfo.badgeLabel}</span>
+                              </span>
+                            )}
 
                             {venue.historicalPriceTier && (
                               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300">
