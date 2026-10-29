@@ -304,6 +304,23 @@ export default function TourDayRouteMap({
     [markers]
   );
 
+  // Base tile layer URL resolver (zero watermarks by default; optional CARTO key support)
+  const getTileUrl = (layer: 'voyager' | 'satellite' | 'osm'): string => {
+    if (layer === 'satellite') {
+      return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{x}/{y}';
+    }
+    if (layer === 'osm') {
+      return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    }
+    // Street Map layer:
+    const cartoKey = process.env.NEXT_PUBLIC_CARTO_API_KEY;
+    if (cartoKey && cartoKey.trim().length > 0) {
+      return `https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?api_key=${encodeURIComponent(cartoKey.trim())}`;
+    }
+    // Default: Esri World Street Map (100% free, crisp, high-res, zero watermark, no API key needed)
+    return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{x}/{y}';
+  };
+
   // Initialize Leaflet Map
   useEffect(() => {
     let isMounted = true;
@@ -330,14 +347,7 @@ export default function TourDayRouteMap({
       });
       mapInstanceRef.current = map;
 
-      // Base tile layer URLs
-      const tileUrls = {
-        voyager: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-        satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        osm: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      };
-
-      const tileLayer = L.tileLayer(tileUrls[mapLayer], {
+      const tileLayer = L.tileLayer(getTileUrl(mapLayer), {
         maxZoom: 19,
         subdomains: 'abcd',
       }).addTo(map);
@@ -366,14 +376,7 @@ export default function TourDayRouteMap({
   // Update Tile Layer when layer switch changes
   useEffect(() => {
     if (!mapInstanceRef.current || !tileLayerRef.current) return;
-
-    const tileUrls = {
-      voyager: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-      satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      osm: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    };
-
-    tileLayerRef.current.setUrl(tileUrls[mapLayer]);
+    tileLayerRef.current.setUrl(getTileUrl(mapLayer));
   }, [mapLayer]);
 
   // Update Markers & Polylines whenever marker data changes
@@ -724,7 +727,7 @@ export default function TourDayRouteMap({
             </span>
           </h3>
           <p className="text-xs text-stone-600 max-w-xl">
-            Powered by open-source Leaflet and CartoDB Voyager tiles. Visualizes Groom and Bride home origins, rendezvous times, and turn-by-turn driving routes across all selected venues.
+            Powered by open-source Leaflet with high-resolution Esri &amp; OpenStreetMap tiles. Visualizes Groom and Bride home origins, rendezvous times, and turn-by-turn driving routes across all selected venues.
           </p>
         </div>
 
@@ -881,7 +884,7 @@ export default function TourDayRouteMap({
         {/* BOTTOM-LEFT ATTRIBUTION BADGE */}
         <div className="absolute bottom-2 left-2 z-[1000] flex items-center gap-1.5 pointer-events-none">
           <div className="px-2 py-0.5 rounded bg-white/90 backdrop-blur-xs shadow-2xs text-[10px] font-medium text-stone-600 border border-stone-200/60">
-            Map © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="underline pointer-events-auto">OpenStreetMap</a> • <a href="https://carto.com/" target="_blank" rel="noreferrer" className="underline pointer-events-auto">CARTO</a>
+            Map © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="underline pointer-events-auto">OpenStreetMap</a> • <a href="https://www.esri.com/" target="_blank" rel="noreferrer" className="underline pointer-events-auto">Esri</a>
           </div>
         </div>
 
