@@ -41,6 +41,8 @@ const KNOWN_COORDINATES: Record<string, { lat: number; lon: number }> = {
   'new brunswick, nj': { lat: 40.4862, lon: -74.4518 },
   'river vale, nj': { lat: 41.0116, lon: -74.0093 },
   'woodcliff lake, nj': { lat: 41.0268, lon: -74.0538 },
+  'cedar grove, nj': { lat: 40.8548, lon: -74.2285 },
+  'montclair, nj': { lat: 40.8259, lon: -74.209 },
   'stamford, ct': { lat: 41.0534, lon: -73.5387 },
   'long island, ny': { lat: 40.7891, lon: -73.135 },
   'philadelphia, pa': { lat: 39.9526, lon: -75.1652 },
