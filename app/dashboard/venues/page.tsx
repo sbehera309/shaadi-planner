@@ -133,6 +133,8 @@ export default function VenuesPage() {
     city: '',
     state: 'NJ',
     zipCode: '',
+    latitude: undefined as number | undefined,
+    longitude: undefined as number | undefined,
     contactPerson: '',
     contactEmail: '',
     contactPhone: '',
@@ -218,6 +220,8 @@ export default function VenuesPage() {
       city: wedding?.city ? wedding.city.split(',')[0].trim() : 'Jersey City',
       state: 'NJ',
       zipCode: '',
+      latitude: undefined as number | undefined,
+      longitude: undefined as number | undefined,
       contactPerson: '',
       contactEmail: '',
       contactPhone: '',
@@ -264,6 +268,8 @@ export default function VenuesPage() {
       city: v.city,
       state: v.state,
       zipCode: v.zipCode || '',
+      latitude: v.latitude,
+      longitude: v.longitude,
       contactPerson: v.contactPerson || '',
       contactEmail: v.contactEmail || '',
       contactPhone: v.contactPhone || '',
@@ -340,6 +346,8 @@ export default function VenuesPage() {
       city: formData.city,
       state: formData.state,
       zipCode: formData.zipCode,
+      latitude: formData.latitude,
+      longitude: formData.longitude,
       contactPerson: formData.contactPerson,
       contactEmail: formData.contactEmail,
       contactPhone: formData.contactPhone,
@@ -2533,51 +2541,37 @@ export default function VenuesPage() {
               </div>
 
               <div className="sm:col-span-2">
-                <label className="font-semibold text-stone-700 block mb-1">Street Address *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="e.g. 141 Route 23 South"
-                  className="w-full px-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
+                <AddressAutocompleteInput
+                  value={{
+                    address: formData.address,
+                    city: formData.city,
+                    state: formData.state,
+                    zipCode: formData.zipCode,
+                    latitude: formData.latitude,
+                    longitude: formData.longitude,
+                  }}
+                  onChange={(updated) =>
+                    setFormData({
+                      ...formData,
+                      address: updated.address,
+                      city: updated.city,
+                      state: updated.state,
+                      zipCode: updated.zipCode || '',
+                      latitude: updated.latitude,
+                      longitude: updated.longitude,
+                    })
+                  }
+                  label="Venue Street Address *"
+                  placeholder="Start typing venue address or name (e.g. 141 Route 23 or Pompton Plains)..."
+                  accentColor="amber"
+                  quickSuggestions={[
+                    { label: 'Pompton Plains (Legacy)', address: '141 Route 23 South', city: 'Pompton Plains', state: 'NJ', zipCode: '07444', lat: 40.9701, lon: -74.2982 },
+                    { label: 'Somerset (Palace)', address: '333 Davidson Avenue', city: 'Somerset', state: 'NJ', zipCode: '08873', lat: 40.5284, lon: -74.5218 },
+                    { label: 'River Vale (Florentine)', address: '97 Rivervale Road', city: 'River Vale', state: 'NJ', zipCode: '07675', lat: 41.0116, lon: -74.0093 },
+                    { label: 'Livingston (Crystal Plaza)', address: '305 W Northfield Road', city: 'Livingston', state: 'NJ', zipCode: '07039', lat: 40.7891, lon: -74.3418 },
+                    { label: 'Morristown (Westin)', address: '2 Whippany Road', city: 'Morristown', state: 'NJ', zipCode: '07960', lat: 40.8035, lon: -74.4532 },
+                  ]}
                 />
-              </div>
-
-              <div>
-                <label className="font-semibold text-stone-700 block mb-1">City *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  placeholder="e.g. Pompton Plains or Philadelphia"
-                  className="w-full px-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="font-semibold text-stone-700 block mb-1">State *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.state}
-                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                    placeholder="e.g. NJ or PA"
-                    className="w-full px-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="font-semibold text-stone-700 block mb-1">Zip Code</label>
-                  <input
-                    type="text"
-                    value={formData.zipCode}
-                    onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
-                    placeholder="07444"
-                    className="w-full px-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs"
-                  />
-                </div>
               </div>
             </div>
           </div>

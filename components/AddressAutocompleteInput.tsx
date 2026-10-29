@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { MapPin, Search, Check, X, Loader2, Navigation, Compass } from 'lucide-react';
+import { MapPin, Search, Check, X, Loader2, Navigation, Compass, Sparkles } from 'lucide-react';
 import { AddressSuggestion } from '@/app/api/address-autocomplete/route';
 
 interface AddressValue {
@@ -19,7 +19,15 @@ interface AddressAutocompleteInputProps {
   label?: string;
   placeholder?: string;
   accentColor?: 'blue' | 'rose' | 'amber';
-  quickSuggestions?: Array<{ label: string; address: string; city: string; state: string; zipCode: string; lat: number; lon: number }>;
+  quickSuggestions?: Array<{
+    label: string;
+    address: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    lat: number;
+    lon: number;
+  }>;
 }
 
 export default function AddressAutocompleteInput({
@@ -38,8 +46,9 @@ export default function AddressAutocompleteInput({
   const [isLocating, setIsLocating] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Sync internal input if external address value changes
+  // Sync internal input only when external address value changes from outside (e.g. form reset)
   useEffect(() => {
     setInputValue(value.address || '');
   }, [value.address]);
@@ -55,9 +64,18 @@ export default function AddressAutocompleteInput({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Fetch suggestions with debounce
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Fetch suggestions from API
   const fetchSuggestions = useCallback(async (query: string) => {
-    if (!query || query.trim().length < 2) {
+    if (!query || query.trim().length === 0) {
       setSuggestions([]);
       setIsOpen(false);
       return;
@@ -68,8 +86,9 @@ export default function AddressAutocompleteInput({
       const res = await fetch(`/api/address-autocomplete?q=${encodeURIComponent(query)}`);
       if (res.ok) {
         const data = await res.json();
-        setSuggestions(data.suggestions || []);
-        setIsOpen((data.suggestions || []).length > 0);
+        const results: AddressSuggestion[] = data.suggestions || [];
+        setSuggestions(results);
+        setIsOpen(results.length > 0);
         setSelectedIndex(-1);
       }
     } catch {
@@ -79,21 +98,76 @@ export default function AddressAutocompleteInput({
     }
   }, []);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (inputValue && inputValue !== value.address) {
-        fetchSuggestions(inputValue);
-      }
-    }, 200);
+  // Trigger search immediately as the user types
+  const handleInputChange = (newText: string) => {
+    setInputValue(newText);
+    onChange({ ...value, address: newText });
 
-    return () => clearTimeout(timer);
-  }, [inputValue, value.address, fetchSuggestions]);
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    if (newText.trim().length >= 1) {
+      setIsLoading(true);
+      debounceTimerRef.current = setTimeout(() => {
+        fetchSuggestions(newText.trim());
+      }, 120);
+    } else {
+      setIsLoading(false);
+      // If user clears, show default quick suggestions on focus
+      if (quickSuggestions && quickSuggestions.length > 0) {
+        const defaultMapped: AddressSuggestion[] = quickSuggestions.map((qs) => ({
+          id: `quick-${qs.label}`,
+          primaryText: qs.address,
+          secondaryText: `${qs.city}, ${qs.state} ${qs.zipCode}, USA (${qs.label})`,
+          fullAddress: `${qs.address}, ${qs.city}, ${qs.state} ${qs.zipCode}`,
+          street: qs.address,
+          city: qs.city,
+          state: qs.state,
+          zipCode: qs.zipCode,
+          latitude: qs.lat,
+          longitude: qs.lon,
+          source: 'local',
+        }));
+        setSuggestions(defaultMapped);
+        setIsOpen(true);
+      } else {
+        setSuggestions([]);
+        setIsOpen(false);
+      }
+    }
+  };
+
+  // Focus event: instantly show matching suggestions or quick hubs
+  const handleInputFocus = () => {
+    if (inputValue.trim().length >= 1) {
+      fetchSuggestions(inputValue.trim());
+      setIsOpen(true);
+    } else if (quickSuggestions && quickSuggestions.length > 0) {
+      const defaultMapped: AddressSuggestion[] = quickSuggestions.map((qs) => ({
+        id: `quick-${qs.label}`,
+        primaryText: qs.address,
+        secondaryText: `${qs.city}, ${qs.state} ${qs.zipCode}, USA (${qs.label})`,
+        fullAddress: `${qs.address}, ${qs.city}, ${qs.state} ${qs.zipCode}`,
+        street: qs.address,
+        city: qs.city,
+        state: qs.state,
+        zipCode: qs.zipCode,
+        latitude: qs.lat,
+        longitude: qs.lon,
+        source: 'local',
+      }));
+      setSuggestions(defaultMapped);
+      setIsOpen(true);
+    }
+  };
 
   // Handle selection of a suggestion
   const handleSelectSuggestion = (suggestion: AddressSuggestion) => {
-    setInputValue(suggestion.street || suggestion.primaryText);
+    const streetAddress = suggestion.street || suggestion.primaryText;
+    setInputValue(streetAddress);
     onChange({
-      address: suggestion.street || suggestion.primaryText,
+      address: streetAddress,
       city: suggestion.city,
       state: suggestion.state || 'NJ',
       zipCode: suggestion.zipCode,
@@ -106,7 +180,13 @@ export default function AddressAutocompleteInput({
 
   // Keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!isOpen || suggestions.length === 0) return;
+    if (!isOpen || suggestions.length === 0) {
+      if (e.key === 'ArrowDown' && inputValue.trim().length >= 1) {
+        e.preventDefault();
+        fetchSuggestions(inputValue.trim());
+      }
+      return;
+    }
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -159,7 +239,7 @@ export default function AddressAutocompleteInput({
       },
       () => {
         setIsLocating(false);
-        alert('Could not determine current location. Please type your street address.');
+        alert('Could not determine current location. Please start typing your address.');
       },
       { timeout: 7000 }
     );
@@ -223,17 +303,12 @@ export default function AddressAutocompleteInput({
           ref={inputRef}
           type="text"
           value={inputValue}
-          onChange={(e) => {
-            setInputValue(e.target.value);
-            onChange({ ...value, address: e.target.value });
-          }}
-          onFocus={() => {
-            if (suggestions.length > 0) setIsOpen(true);
-          }}
+          onChange={(e) => handleInputChange(e.target.value)}
+          onFocus={handleInputFocus}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           autoComplete="off"
-          className="w-full pl-9 pr-8 py-2.5 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-sm sm:text-xs shadow-2xs focus:ring-2 focus:ring-rose-500 focus:border-rose-500 transition-all"
+          className="w-full pl-9 pr-8 py-2.5 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-sm sm:text-xs shadow-2xs focus:ring-2 focus:ring-rose-500 focus:border-rose-500 transition-all placeholder:text-stone-400"
         />
 
         {inputValue && (
@@ -264,15 +339,15 @@ export default function AddressAutocompleteInput({
       {/* Dropdown Suggestions List (Google Maps Style) */}
       {isOpen && suggestions.length > 0 && (
         <div className="absolute z-50 left-0 right-0 mt-1 bg-white rounded-2xl border border-stone-200 shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
-          <div className="px-3 py-1.5 bg-stone-50/80 border-b border-stone-100 flex items-center justify-between text-[10px] text-stone-500 font-semibold uppercase tracking-wider">
-            <span className="flex items-center gap-1">
-              <Compass className="w-3 h-3 text-rose-600" />
-              <span>Google Maps &amp; Geocoding Suggestions</span>
+          <div className="px-3.5 py-2 bg-stone-50 border-b border-stone-100 flex items-center justify-between text-[11px] text-stone-600 font-semibold">
+            <span className="flex items-center gap-1.5 text-rose-700">
+              <Compass className="w-3.5 h-3.5" />
+              <span>Google Maps &amp; Address Suggestions</span>
             </span>
-            <span>Use ↑↓ keys + Enter</span>
+            <span className="text-[10px] text-stone-400 font-normal">Click or press ↑↓ Enter</span>
           </div>
 
-          <ul className="max-h-60 overflow-y-auto divide-y divide-stone-100">
+          <ul className="max-h-64 overflow-y-auto divide-y divide-stone-100">
             {suggestions.map((item, idx) => {
               const isSelected = idx === selectedIndex;
               return (
@@ -280,22 +355,27 @@ export default function AddressAutocompleteInput({
                   key={item.id}
                   onClick={() => handleSelectSuggestion(item)}
                   onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`px-3.5 py-2.5 cursor-pointer flex items-start gap-2.5 transition-colors ${
-                    isSelected ? 'bg-rose-50/70 text-rose-950' : 'hover:bg-stone-50 text-stone-900'
+                  className={`px-3.5 py-2.5 cursor-pointer flex items-start gap-3 transition-colors ${
+                    isSelected ? 'bg-rose-50/80 text-rose-950 font-semibold' : 'hover:bg-stone-50 text-stone-900'
                   }`}
                 >
-                  <div className="p-1 rounded-lg bg-rose-100/70 text-rose-700 mt-0.5 shrink-0">
-                    <MapPin className="w-3.5 h-3.5" />
+                  <div className="p-1.5 rounded-xl bg-rose-100/80 text-rose-700 mt-0.5 shrink-0">
+                    <MapPin className="w-4 h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-xs text-stone-900 truncate">
-                      {item.primaryText}
+                    <div className="font-bold text-xs text-stone-900 truncate flex items-center gap-1.5">
+                      <span>{item.primaryText}</span>
+                      {item.source === 'google' && (
+                        <span className="text-[9px] px-1 py-0.2 rounded bg-blue-100 text-blue-800 font-bold">
+                          Google Maps
+                        </span>
+                      )}
                     </div>
-                    <div className="text-[11px] text-stone-500 truncate">
+                    <div className="text-[11px] text-stone-500 truncate mt-0.5">
                       {item.secondaryText}
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider shrink-0 mt-1">
+                  <span className="text-[10px] font-mono font-bold text-stone-500 uppercase tracking-wider shrink-0 mt-1 px-1.5 py-0.5 bg-stone-100 rounded-md">
                     {item.state}
                   </span>
                 </li>
@@ -343,7 +423,10 @@ export default function AddressAutocompleteInput({
       {/* Quick Suggestions Pills (Popular Hubs) */}
       {quickSuggestions && quickSuggestions.length > 0 && (
         <div className="pt-1 flex flex-wrap items-center gap-1 text-[10px]">
-          <span className="text-stone-400 font-medium">Quick Pick:</span>
+          <span className="text-stone-400 font-medium flex items-center gap-0.5">
+            <Sparkles className="w-2.5 h-2.5 text-amber-500" />
+            <span>Quick Pick:</span>
+          </span>
           {quickSuggestions.map((qs) => (
             <button
               key={qs.label}
