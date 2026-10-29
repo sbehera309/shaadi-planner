@@ -287,9 +287,15 @@ export interface ScheduledTourStop {
   venueName: string;
   address: string;
   city: string;
+  state?: string;
+  zipCode?: string;
+  latitude?: number;
+  longitude?: number;
   suggestedArrivalTime: string; // e.g. "10:00 AM"
   suggestedTourWindow: string; // e.g. "10:00 AM - 11:00 AM (60 min tour & Q&A)"
   suggestedDepartureTime: string; // e.g. "11:00 AM"
+  drivingMinutesFromPrev?: number;
+  distanceMilesFromPrev?: number;
   drivingTimeToNextMinutes?: number;
   distanceToNextMiles?: number;
   nextStopName?: string;

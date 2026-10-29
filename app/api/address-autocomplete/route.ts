@@ -729,8 +729,11 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // 2. Check if Google Places API Key is configured in environment
-  const googleApiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  // 2. Check if Google Places API Key is configured in environment or provided via query
+  const googleApiKey =
+    searchParams.get('key') ||
+    process.env.GOOGLE_MAPS_API_KEY ||
+    process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   if (googleApiKey) {
     try {
@@ -770,8 +773,32 @@ export async function GET(request: NextRequest) {
           );
 
           if (googleSuggestions.length > 0) {
+            // Enhance top 3 predictions with latitude & longitude via Place Details
+            const enriched = await Promise.all(
+              googleSuggestions.slice(0, 3).map(async (s) => {
+                try {
+                  const detailRes = await fetch(
+                    `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(
+                      s.id
+                    )}&fields=geometry&key=${googleApiKey}`,
+                    { next: { revalidate: 86400 } }
+                  );
+                  if (detailRes.ok) {
+                    const detailData = await detailRes.json();
+                    const loc = detailData.result?.geometry?.location;
+                    if (loc && typeof loc.lat === 'number' && typeof loc.lng === 'number') {
+                      return { ...s, latitude: loc.lat, longitude: loc.lng };
+                    }
+                  }
+                } catch {
+                  // Fall back without geometry
+                }
+                return s;
+              })
+            );
+
             return NextResponse.json({
-              suggestions: googleSuggestions.slice(0, 6),
+              suggestions: [...enriched, ...googleSuggestions.slice(3)],
               provider: 'google',
             });
           }

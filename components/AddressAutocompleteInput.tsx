@@ -1,8 +1,8 @@
-'use client';
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { MapPin, Search, Check, X, Loader2, Navigation, Compass, Sparkles } from 'lucide-react';
+import { MapPin, Search, Check, X, Loader2, Navigation, Compass, Sparkles, Key } from 'lucide-react';
 import { AddressSuggestion } from '@/app/api/address-autocomplete/route';
+import { getGoogleMapsApiKey } from '@/lib/googleMapsConfig';
+import GoogleMapsKeyModal from '@/components/GoogleMapsKeyModal';
 
 interface AddressValue {
   address: string;
@@ -44,9 +44,21 @@ export default function AddressAutocompleteInput({
   const [isLoading, setIsLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
   const [isLocating, setIsLocating] = useState(false);
+  const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
+  const [activeKey, setActiveKey] = useState<string>('');
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setActiveKey(getGoogleMapsApiKey());
+    const handleKeyChange = (e: Event) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setActiveKey((e as any).detail?.apiKey || '');
+    };
+    window.addEventListener('google-maps-key-changed', handleKeyChange);
+    return () => window.removeEventListener('google-maps-key-changed', handleKeyChange);
+  }, []);
 
   // Sync internal input only when external address value changes from outside (e.g. form reset)
   useEffect(() => {
@@ -83,7 +95,9 @@ export default function AddressAutocompleteInput({
 
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/address-autocomplete?q=${encodeURIComponent(query)}`);
+      const currentKey = getGoogleMapsApiKey();
+      const keyParam = currentKey ? `&key=${encodeURIComponent(currentKey)}` : '';
+      const res = await fetch(`/api/address-autocomplete?q=${encodeURIComponent(query)}${keyParam}`);
       if (res.ok) {
         const data = await res.json();
         const results: AddressSuggestion[] = data.suggestions || [];
@@ -344,7 +358,26 @@ export default function AddressAutocompleteInput({
               <Compass className="w-3.5 h-3.5" />
               <span>Google Maps &amp; Address Suggestions</span>
             </span>
-            <span className="text-[10px] text-stone-400 font-normal">Click or press ↑↓ Enter</span>
+            <div className="flex items-center gap-2">
+              {activeKey ? (
+                <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Google Places Active</span>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsKeyModalOpen(true);
+                  }}
+                  className="text-[10px] text-blue-700 hover:text-blue-900 font-bold underline flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 transition-colors"
+                >
+                  <Key className="w-2.5 h-2.5 text-amber-600" />
+                  <span>Connect API Key</span>
+                </button>
+              )}
+            </div>
           </div>
 
           <ul className="max-h-64 overflow-y-auto divide-y divide-stone-100">
@@ -382,6 +415,24 @@ export default function AddressAutocompleteInput({
               );
             })}
           </ul>
+
+          {!activeKey && (
+            <div className="px-3.5 py-2 bg-amber-50/80 border-t border-amber-100 flex items-center justify-between text-[11px]">
+              <span className="text-stone-600">
+                Want live Google suggestions for all US addresses?
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsKeyModalOpen(true);
+                }}
+                className="text-blue-700 hover:text-blue-900 font-bold underline"
+              >
+                Set up Google Places API
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -450,6 +501,13 @@ export default function AddressAutocompleteInput({
           ))}
         </div>
       )}
+
+      {/* Google Maps Setup Assistant Modal */}
+      <GoogleMapsKeyModal
+        isOpen={isKeyModalOpen}
+        onClose={() => setIsKeyModalOpen(false)}
+        onKeySaved={(newKey) => setActiveKey(newKey)}
+      />
     </div>
   );
 }
