@@ -100,7 +100,29 @@ export const VenueCustomQuoteModal: React.FC<VenueCustomQuoteModalProps> = ({
       setIsTaxAndServiceIncluded(Boolean(existingQuote.isTaxAndServiceIncluded));
       setServiceChargePercent(existingQuote.serviceChargePercent !== undefined ? String(existingQuote.serviceChargePercent) : '22');
       setTaxPercent(existingQuote.taxPercent !== undefined ? String(existingQuote.taxPercent) : (venue.state === 'PA' ? '8.0' : '6.625'));
-      setAvailableDates(existingQuote.availableDates || []);
+      const existingDates = existingQuote.availableDates || [];
+      const venueDates: AvailableVenueDateEntry[] = (venue.availableDates || []).map((d, i) => {
+        const trimmed = d.trim();
+        const datePart = trimmed.split(' ')[0];
+        let dayOfWeek: string | undefined = undefined;
+        if (/sat/i.test(trimmed)) dayOfWeek = 'Saturday';
+        else if (/sun/i.test(trimmed)) dayOfWeek = 'Sunday';
+        else if (/fri/i.test(trimmed)) dayOfWeek = 'Friday';
+        return {
+          id: `venue-seed-${i}-${datePart.replace(/[^a-zA-Z0-9]/g, '')}`,
+          date: datePart,
+          dayOfWeek,
+          notes: trimmed.includes('(') ? trimmed : undefined,
+        };
+      });
+
+      const mergedDates = [...existingDates];
+      venueDates.forEach((vd) => {
+        if (!mergedDates.some((ed) => ed.date === vd.date)) {
+          mergedDates.push(vd);
+        }
+      });
+      setAvailableDates(mergedDates);
       setSelectedDateId(existingQuote.selectedDateId || '');
       setCoordinatorName(existingQuote.coordinatorName || venue.contactPerson || '');
       setCoordinatorPhone(existingQuote.coordinatorPhone || venue.contactPhone || '');
@@ -127,12 +149,20 @@ export const VenueCustomQuoteModal: React.FC<VenueCustomQuoteModalProps> = ({
       setServiceChargePercent(venue.pricing?.serviceChargePercent ? String(venue.pricing.serviceChargePercent) : '22');
       setTaxPercent(venue.pricing?.taxPercent ? String(venue.pricing.taxPercent) : (venue.state === 'PA' ? '8.0' : '6.625'));
       setAvailableDates(
-        (venue.availableDates || []).map((d, i) => ({
-          id: `seed-${i}`,
-          date: d.split(' ')[0],
-          dayOfWeek: d.includes('Sat') ? 'Saturday' : d.includes('Sun') ? 'Sunday' : undefined,
-          notes: 'Preloaded open window',
-        }))
+        (venue.availableDates || []).map((d, i) => {
+          const trimmed = d.trim();
+          const datePart = trimmed.split(' ')[0];
+          let dayOfWeek: string | undefined = undefined;
+          if (/sat/i.test(trimmed)) dayOfWeek = 'Saturday';
+          else if (/sun/i.test(trimmed)) dayOfWeek = 'Sunday';
+          else if (/fri/i.test(trimmed)) dayOfWeek = 'Friday';
+          return {
+            id: `seed-${i}-${datePart.replace(/[^a-zA-Z0-9]/g, '')}`,
+            date: datePart,
+            dayOfWeek,
+            notes: trimmed.includes('(') ? trimmed : 'Confirmed open slot',
+          };
+        })
       );
       setSelectedDateId('');
       setCoordinatorName(venue.contactPerson || '');

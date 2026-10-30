@@ -324,6 +324,7 @@ export interface VenueOption {
   notes: string;
   isFavorite?: boolean;
   isSelectedOfficialVenue?: boolean;
+  isCustomUserAddedVenue?: boolean;
 }
 
 export type VenuePricingQuoteType =

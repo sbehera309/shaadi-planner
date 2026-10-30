@@ -38,6 +38,8 @@ export const DEFAULT_USER_VENUE_QUOTES: Record<string, UserVenueCustomQuote> = {
     flatTotalAmount: 85000,
     isTaxAndServiceIncluded: true,
     coordinatorName: 'Sunny Patel (Banquet Sales)',
+    coordinatorPhone: '+1 (201) 768-7171',
+    coordinatorEmail: 'events@therockleigh.com',
     callNotes: 'Quoted $85,000 flat total package for whole day event.',
     availableDates: [
       { id: 'rockleigh-date-1', date: '2026-10-17', dayOfWeek: 'Saturday', isPreferred: true, notes: 'Grand Pavilion' },
@@ -54,6 +56,8 @@ export const DEFAULT_USER_VENUE_QUOTES: Record<string, UserVenueCustomQuote> = {
     serviceChargePercent: 22,
     taxPercent: 6.625,
     coordinatorName: 'Catering Office',
+    coordinatorPhone: '+1 (973) 239-6000',
+    coordinatorEmail: 'events@thegrovenj.com',
     callNotes: 'Gave 1 flat price of $250/person for the whole day event including ceremony through reception.',
     availableDates: [
       { id: 'grove-date-1', date: '2026-10-24', dayOfWeek: 'Saturday', isPreferred: true },
@@ -69,12 +73,52 @@ export const DEFAULT_USER_VENUE_QUOTES: Record<string, UserVenueCustomQuote> = {
     isTaxAndServiceIncluded: false,
     serviceChargePercent: 22,
     taxPercent: 6.625,
-    coordinatorName: 'Legacy Banquet Sales',
+    coordinatorName: 'Elena Rostova (Wedding Sales Director)',
+    coordinatorPhone: '+1 (973) 835-2400',
+    coordinatorEmail: 'weddings@thelegacycastle.com',
     callNotes: 'Legacy gave price per person for each event: $125/pp for morning wedding ceremony and $175/pp for evening reception dinner.',
     availableDates: [
       { id: 'legacy-date-1', date: '2026-10-17', dayOfWeek: 'Saturday', isPreferred: true, notes: 'Grand Ballroom' },
       { id: 'legacy-date-2', date: '2026-10-24', dayOfWeek: 'Saturday', isHold: true },
       { id: 'legacy-date-3', date: '2026-11-07', dayOfWeek: 'Saturday' },
+      { id: 'legacy-date-4', date: '2026-11-14', dayOfWeek: 'Saturday' },
+    ],
+  },
+  'curated-nj-hyatt-jersey-city': {
+    venueId: 'curated-nj-hyatt-jersey-city',
+    updatedAt: '2026-10-29T18:00:00Z',
+    pricingType: 'per_person_per_event',
+    perPersonWeddingRate: 110,
+    perPersonReceptionRate: 145,
+    isTaxAndServiceIncluded: false,
+    serviceChargePercent: 24,
+    taxPercent: 6.625,
+    coordinatorName: 'Sanjay Kapoor (Desi Wedding Specialist)',
+    coordinatorPhone: '+1 (201) 469-1234',
+    coordinatorEmail: 'sanjay.kapoor@hyatt.com',
+    callNotes: 'Confirmed Manhattan skyline ballroom. $110/pp ceremony + $145/pp reception with outside Indian catering buyout ($15/pp).',
+    availableDates: [
+      { id: 'hyatt-date-1', date: '2026-10-24', dayOfWeek: 'Saturday', isPreferred: true, notes: 'Manhattan Skyline Ballroom' },
+      { id: 'hyatt-date-2', date: '2026-10-31', dayOfWeek: 'Saturday', isHold: true, notes: 'Hold on Hudson Ballroom' },
+      { id: 'hyatt-date-3', date: '2026-11-21', dayOfWeek: 'Saturday' },
+    ],
+  },
+  'curated-nj-westin-gov-morris': {
+    venueId: 'curated-nj-westin-gov-morris',
+    updatedAt: '2026-10-29T18:00:00Z',
+    pricingType: 'per_person_whole_day',
+    perPersonWholeDayRate: 195,
+    isTaxAndServiceIncluded: false,
+    serviceChargePercent: 23,
+    taxPercent: 6.625,
+    coordinatorName: 'Rachel Miller (Director of Catering)',
+    coordinatorPhone: '+1 (973) 539-7300',
+    coordinatorEmail: 'rmiller@westingovernormorris.com',
+    callNotes: 'All-day Desi package rate of $195/guest for both ceremony & reception combined. On-site room block discount $169/night.',
+    availableDates: [
+      { id: 'westin-date-1', date: '2026-10-17', dayOfWeek: 'Saturday' },
+      { id: 'westin-date-2', date: '2026-10-24', dayOfWeek: 'Saturday', isPreferred: true, notes: 'Grand Ballroom' },
+      { id: 'westin-date-3', date: '2026-11-07', dayOfWeek: 'Saturday' },
     ],
   },
   'curated-nj-crystal-plaza': {
@@ -84,6 +128,8 @@ export const DEFAULT_USER_VENUE_QUOTES: Record<string, UserVenueCustomQuote> = {
     flatTotalAmount: 85000,
     isTaxAndServiceIncluded: true,
     coordinatorName: 'Sales Director',
+    coordinatorPhone: '+1 (973) 992-8100',
+    coordinatorEmail: 'info@crystalplaza.com',
     callNotes: 'Crystal Plaza does pricing based on dates: $75k for June/July summer dates but $85k for September peak fall dates.',
     selectedDateId: 'cp-date-summer-1',
     availableDates: [
@@ -140,16 +186,37 @@ export function findDefaultVenueQuote(
   const venueName = typeof venueOrId === 'object' ? (venueOrId.name || '').toLowerCase() : '';
   const idLower = (venueId || '').toLowerCase();
 
-  if (idLower.includes('rockleigh') || venueName.includes('rockleigh')) {
-    return { ...DEFAULT_USER_VENUE_QUOTES['curated-nj-the-rockleigh'], venueId };
-  }
-  if (idLower.includes('grove') || venueName.includes('grove')) {
-    return { ...DEFAULT_USER_VENUE_QUOTES['curated-nj-the-grove'], venueId };
-  }
-  if (idLower.includes('legacy') || venueName.includes('legacy')) {
+  // Preloaded template & curated ID aliases:
+  if (idLower === 'v-1' || idLower === 'curated-nj-legacy-castle' || idLower.includes('legacy') || venueName.includes('legacy')) {
     return { ...DEFAULT_USER_VENUE_QUOTES['curated-nj-legacy-castle'], venueId };
   }
-  if (idLower.includes('crystal') || venueName.includes('crystal')) {
+  if (
+    idLower === 'v-2' ||
+    idLower === 'curated-nj-hyatt-jersey-city' ||
+    idLower.includes('hyatt-jersey-city') ||
+    (idLower.includes('hyatt') && !idLower.includes('new-brunswick')) ||
+    venueName.includes('hyatt regency jersey city') ||
+    (venueName.includes('hyatt') && venueName.includes('jersey city'))
+  ) {
+    return { ...DEFAULT_USER_VENUE_QUOTES['curated-nj-hyatt-jersey-city'], venueId };
+  }
+  if (
+    idLower === 'v-3' ||
+    idLower === 'curated-nj-westin-gov-morris' ||
+    idLower.includes('westin-gov-morris') ||
+    idLower.includes('westin') ||
+    venueName.includes('westin governor') ||
+    venueName.includes('governor morris')
+  ) {
+    return { ...DEFAULT_USER_VENUE_QUOTES['curated-nj-westin-gov-morris'], venueId };
+  }
+  if (idLower === 'curated-nj-the-rockleigh' || idLower.includes('rockleigh') || venueName.includes('rockleigh')) {
+    return { ...DEFAULT_USER_VENUE_QUOTES['curated-nj-the-rockleigh'], venueId };
+  }
+  if (idLower === 'curated-nj-the-grove' || idLower.includes('grove') || venueName.includes('grove')) {
+    return { ...DEFAULT_USER_VENUE_QUOTES['curated-nj-the-grove'], venueId };
+  }
+  if (idLower === 'curated-nj-crystal-plaza' || idLower.includes('crystal') || venueName.includes('crystal')) {
     return { ...DEFAULT_USER_VENUE_QUOTES['curated-nj-crystal-plaza'], venueId };
   }
 
@@ -181,7 +248,32 @@ export function calculateEffectiveVenuePricing(
     const feeMultiplier = 1 + svcPct + taxPct;
 
     // Check for date-specific pricing overrides (e.g. 75k for June/July vs 85k for Sept)
-    const availableDates = effectiveQuote.availableDates || [];
+    // Merge dates from effectiveQuote and venue.availableDates so confirmed user dates are never dropped
+    const quoteDates: AvailableVenueDateEntry[] = effectiveQuote.availableDates ? [...effectiveQuote.availableDates] : [];
+    const venueRawDates: string[] = venue.availableDates || [];
+
+    venueRawDates.forEach((rawStr, idx) => {
+      const trimmed = rawStr.trim();
+      if (!trimmed) return;
+      const datePart = trimmed.split(' ')[0];
+      const exists = quoteDates.some((qd) => qd.date === datePart || qd.date === trimmed);
+      if (!exists) {
+        let dayOfWeek: string | undefined = undefined;
+        if (/sat/i.test(trimmed)) dayOfWeek = 'Saturday';
+        else if (/sun/i.test(trimmed)) dayOfWeek = 'Sunday';
+        else if (/fri/i.test(trimmed)) dayOfWeek = 'Friday';
+
+        quoteDates.push({
+          id: `confirmed-date-${venue.id}-${idx}-${datePart.replace(/[^a-zA-Z0-9]/g, '')}`,
+          date: datePart,
+          dayOfWeek,
+          notes: trimmed.includes('(') ? trimmed : undefined,
+          isPreferred: quoteDates.length === 0,
+        });
+      }
+    });
+
+    const availableDates = quoteDates;
     const datesWithPricing = availableDates.filter((d) => Number(d.customPriceOverride) > 0);
     const hasDateSpecificPricing = datesWithPricing.length > 0;
 
@@ -320,12 +412,21 @@ export function calculateEffectiveVenuePricing(
 
   // Fallback to directory default estimate
   const defaultEstimate = calculateVenueEstimateForGuests(venue, safeGuests, eventFormat);
-  const fallbackDates: AvailableVenueDateEntry[] = (venue.availableDates || []).map((dateStr, idx) => ({
-    id: `default-${idx}`,
-    date: dateStr.split(' ')[0],
-    dayOfWeek: dateStr.includes('Sat') ? 'Saturday' : dateStr.includes('Sun') ? 'Sunday' : undefined,
-    notes: 'Directory estimate slot',
-  }));
+  const fallbackDates: AvailableVenueDateEntry[] = (venue.availableDates || []).map((dateStr, idx) => {
+    const trimmed = dateStr.trim();
+    const datePart = trimmed.split(' ')[0];
+    let dayOfWeek: string | undefined = undefined;
+    if (/sat/i.test(trimmed)) dayOfWeek = 'Saturday';
+    else if (/sun/i.test(trimmed)) dayOfWeek = 'Sunday';
+    else if (/fri/i.test(trimmed)) dayOfWeek = 'Friday';
+    return {
+      id: `default-${venue.id}-${idx}`,
+      date: datePart,
+      dayOfWeek,
+      notes: trimmed.includes('(') ? trimmed : 'Confirmed directory slot',
+      isPreferred: idx === 0,
+    };
+  });
 
   return {
     isCustomUserQuote: false,
@@ -454,7 +555,21 @@ export function useUserVenueQuotes() {
 
   const getQuote = useCallback(
     (venueId: string, venueName?: string): UserVenueCustomQuote | undefined => {
-      return quotes[venueId] || findDefaultVenueQuote({ id: venueId, name: venueName });
+      // 1. Direct hit in user saved quotes
+      if (quotes[venueId]) return quotes[venueId];
+
+      // 2. Cross-bridge template IDs (v-1, v-2, v-3) and curated IDs
+      if (venueId === 'v-1' && quotes['curated-nj-legacy-castle']) return quotes['curated-nj-legacy-castle'];
+      if (venueId === 'curated-nj-legacy-castle' && quotes['v-1']) return quotes['v-1'];
+
+      if (venueId === 'v-2' && quotes['curated-nj-hyatt-jersey-city']) return quotes['curated-nj-hyatt-jersey-city'];
+      if (venueId === 'curated-nj-hyatt-jersey-city' && quotes['v-2']) return quotes['v-2'];
+
+      if (venueId === 'v-3' && quotes['curated-nj-westin-gov-morris']) return quotes['curated-nj-westin-gov-morris'];
+      if (venueId === 'curated-nj-westin-gov-morris' && quotes['v-3']) return quotes['v-3'];
+
+      // 3. Fallback to preloaded / verified default quote
+      return findDefaultVenueQuote({ id: venueId, name: venueName });
     },
     [quotes]
   );
@@ -481,10 +596,10 @@ export function useUserVenueQuotes() {
       eventFormat: EventPackageFormat = 'all_day',
       targetDateId?: string
     ): EffectiveVenuePricingResult => {
-      const userQuote = quotes[venue.id] || findDefaultVenueQuote(venue);
+      const userQuote = getQuote(venue.id, venue.name);
       return calculateEffectiveVenuePricing(venue, userQuote, guestCount, eventFormat, targetDateId);
     },
-    [quotes]
+    [getQuote]
   );
 
   return {

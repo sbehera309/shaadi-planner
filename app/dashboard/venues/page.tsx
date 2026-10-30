@@ -145,6 +145,31 @@ export default function VenuesPage() {
     setIsQuoteModalOpen(true);
   };
 
+  const handleSaveQuoteAndSync = async (quote: import('@/lib/types').UserVenueCustomQuote) => {
+    await saveUserVenueQuote(quote);
+
+    // Synchronize available dates back to matching shortlisted venue if it exists in store
+    if (quote.availableDates && quote.availableDates.length > 0) {
+      const targetName = (quoteModalVenue?.name || '').toLowerCase();
+      const matchingVenue = venues.find(
+        (v) =>
+          v.id === quote.venueId ||
+          (quote.venueId === 'curated-nj-legacy-castle' && v.id === 'v-1') ||
+          (quote.venueId === 'curated-nj-hyatt-jersey-city' && v.id === 'v-2') ||
+          (quote.venueId === 'curated-nj-westin-gov-morris' && v.id === 'v-3') ||
+          v.name.toLowerCase() === targetName
+      );
+
+      const formattedDates = quote.availableDates.map(
+        (d) => `${d.date}${d.dayOfWeek ? ` (${d.dayOfWeek.slice(0, 3)})` : ''}`
+      );
+
+      if (matchingVenue) {
+        updateVenue(matchingVenue.id, { availableDates: formattedDates });
+      }
+    }
+  };
+
   // Verified Historical Pricing & Reddit Intel Inspection Modal
   const [inspectingPricingVenue, setInspectingPricingVenue] = useState<VenueOption | null>(null);
 
@@ -738,8 +763,92 @@ export default function VenuesPage() {
     });
   };
 
-  // Filter & Sort Curated Venues List
-  const processedCuratedVenues = curatedVenues
+  // Helper to match shortlisted venues with directory venues
+  const findMatchingShortlistedVenue = (curated: VenueOption, shortlist: VenueOption[]): VenueOption | undefined => {
+    // 1. Direct ID match
+    let match = shortlist.find((sv) => sv.id === curated.id);
+    if (match) return match;
+
+    // 2. Preloaded template ID aliases: v-1 -> Legacy Castle, v-2 -> Hyatt Jersey City, v-3 -> Westin Gov Morris
+    if (curated.id === 'curated-nj-legacy-castle') {
+      match = shortlist.find((sv) => sv.id === 'v-1');
+      if (match) return match;
+    }
+    if (curated.id === 'curated-nj-hyatt-jersey-city') {
+      match = shortlist.find((sv) => sv.id === 'v-2');
+      if (match) return match;
+    }
+    if (curated.id === 'curated-nj-westin-gov-morris') {
+      match = shortlist.find((sv) => sv.id === 'v-3');
+      if (match) return match;
+    }
+
+    // 3. Normalized name match
+    const cName = curated.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    match = shortlist.find((sv) => {
+      const svName = sv.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+      return svName === cName || svName.includes(cName) || cName.includes(svName);
+    });
+    return match;
+  };
+
+  // Combine curated directory venues with user shortlisted venues & custom added venues
+  const combinedDirectoryVenues = React.useMemo(() => {
+    // A. Track which shortlisted venues were mapped to curated directory venues
+    const matchedShortlistIds = new Set<string>();
+
+    const mergedCurated: VenueOption[] = curatedVenues.map((curated) => {
+      const matchingShortlist = findMatchingShortlistedVenue(curated, venues);
+      if (!matchingShortlist) {
+        return curated;
+      }
+
+      matchedShortlistIds.add(matchingShortlist.id);
+
+      // Merge dates: prioritize confirmed user dates from shortlist & quote
+      const userDates = matchingShortlist.availableDates || [];
+      const curatedDates = curated.availableDates || [];
+      // Combine unique dates
+      const combinedDates = [...userDates];
+      curatedDates.forEach((cd) => {
+        const cdBase = cd.trim().split(' ')[0];
+        if (!combinedDates.some((ud) => ud.trim().startsWith(cdBase))) {
+          combinedDates.push(cd);
+        }
+      });
+
+      return {
+        ...curated,
+        availableDates: combinedDates,
+        tourStatus: matchingShortlist.tourStatus || curated.tourStatus,
+        tourScheduledDate: matchingShortlist.tourScheduledDate || curated.tourScheduledDate,
+        tourScheduledTime: matchingShortlist.tourScheduledTime || curated.tourScheduledTime,
+        notes: matchingShortlist.notes || curated.notes,
+        contactPerson: matchingShortlist.contactPerson || curated.contactPerson,
+        contactPhone: matchingShortlist.contactPhone || curated.contactPhone,
+        contactEmail: matchingShortlist.contactEmail || curated.contactEmail,
+        isFavorite: matchingShortlist.isFavorite || curated.isFavorite,
+        isSelectedOfficialVenue: matchingShortlist.isSelectedOfficialVenue || curated.isSelectedOfficialVenue,
+      };
+    });
+
+    // B. Find custom user-added venues in `venues` that were not in `curatedVenues`
+    const customUserVenues: VenueOption[] = venues
+      .filter((sv) => !matchedShortlistIds.has(sv.id) && !curatedVenues.some((cv) => cv.id === sv.id))
+      .map((userV) => ({
+        ...userV,
+        curatedState: (userV.curatedState || userV.state || 'NJ') as 'NJ' | 'PA',
+        popularityScore: userV.popularityScore || 96,
+        rating: userV.rating || 5,
+        isCustomUserAddedVenue: true,
+      }));
+
+    // Prepend user's custom added venues so they appear prominently at the top of the directory
+    return [...customUserVenues, ...mergedCurated];
+  }, [curatedVenues, venues]);
+
+  // Filter & Sort Combined Directory Venues List
+  const processedCuratedVenues = combinedDirectoryVenues
     .filter((v) => {
       if (curatedStateFilter !== 'ALL' && v.curatedState !== curatedStateFilter && v.state !== curatedStateFilter) {
         return false;
@@ -760,6 +869,10 @@ export default function VenuesPage() {
       return true;
     })
     .sort((a, b) => {
+      // Put custom user-added venues first
+      if (a.isCustomUserAddedVenue && !b.isCustomUserAddedVenue) return -1;
+      if (!a.isCustomUserAddedVenue && b.isCustomUserAddedVenue) return 1;
+
       if (curatedSortBy === 'best') {
         return (b.popularityScore || 90) - (a.popularityScore || 90);
       }
@@ -872,14 +985,14 @@ export default function VenuesPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-2xs">
           <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-stone-500 block">
-            Preloaded Venues (NJ & PA)
+            Preloaded &amp; Shortlisted Venues
           </span>
           <div className="mt-1.5 text-xl sm:text-2xl font-extrabold text-stone-900">
-            {curatedVenues.length} <span className="text-xs font-medium text-stone-400">verified</span>
+            {combinedDirectoryVenues.length} <span className="text-xs font-medium text-stone-400">tracked</span>
           </div>
           <div className="mt-1 text-[11px] text-amber-800 font-medium">
-            {curatedVenues.filter((v) => v.curatedState === 'NJ' || v.state === 'NJ').length} in NJ •{' '}
-            {curatedVenues.filter((v) => v.curatedState === 'PA' || v.state === 'PA').length} in PA
+            {combinedDirectoryVenues.filter((v) => v.curatedState === 'NJ' || v.state === 'NJ').length} in NJ •{' '}
+            {combinedDirectoryVenues.filter((v) => v.curatedState === 'PA' || v.state === 'PA').length} in PA
           </div>
         </div>
 
@@ -935,7 +1048,7 @@ export default function VenuesPage() {
           <Compass className="w-4 h-4" />
           <span>Explore Curated Venues (NJ & PA)</span>
           <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-bold">
-            {curatedVenues.length}
+            {combinedDirectoryVenues.length}
           </span>
         </button>
 
@@ -1145,7 +1258,7 @@ export default function VenuesPage() {
                         : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
                     }`}
                   >
-                    All States ({curatedVenues.length})
+                    All States ({combinedDirectoryVenues.length})
                   </button>
                   <button
                     type="button"
@@ -1156,7 +1269,7 @@ export default function VenuesPage() {
                         : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
                     }`}
                   >
-                    New Jersey ({curatedVenues.filter((v) => v.curatedState === 'NJ' || v.state === 'NJ').length})
+                    New Jersey ({combinedDirectoryVenues.filter((v) => v.curatedState === 'NJ' || v.state === 'NJ').length})
                   </button>
                   <button
                     type="button"
@@ -1167,7 +1280,7 @@ export default function VenuesPage() {
                         : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
                     }`}
                   >
-                    Pennsylvania ({curatedVenues.filter((v) => v.curatedState === 'PA' || v.state === 'PA').length})
+                    Pennsylvania ({combinedDirectoryVenues.filter((v) => v.curatedState === 'PA' || v.state === 'PA').length})
                   </button>
                 </div>
               </div>
@@ -1257,7 +1370,12 @@ export default function VenuesPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {processedCuratedVenues.map((venue) => {
                 const isAlreadyShortlisted = venues.some(
-                  (v) => v.name.toLowerCase() === venue.name.toLowerCase()
+                  (v) =>
+                    v.id === venue.id ||
+                    (venue.id === 'curated-nj-legacy-castle' && v.id === 'v-1') ||
+                    (venue.id === 'curated-nj-hyatt-jersey-city' && v.id === 'v-2') ||
+                    (venue.id === 'curated-nj-westin-gov-morris' && v.id === 'v-3') ||
+                    v.name.toLowerCase() === venue.name.toLowerCase()
                 );
                 const tierInfo = venue.popularityScore ? getVenueTierInfo(venue.popularityScore) : null;
 
@@ -1271,6 +1389,34 @@ export default function VenuesPage() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-1.5">
+                            {isAlreadyShortlisted && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 inline-flex items-center gap-1 shadow-2xs">
+                                <Check className="w-3 h-3 text-emerald-700" />
+                                <span>In My Shortlist</span>
+                              </span>
+                            )}
+
+                            {venue.isCustomUserAddedVenue && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-300 inline-flex items-center gap-1 shadow-2xs">
+                                <Sparkles className="w-3 h-3 text-purple-700" />
+                                <span>Custom Added Venue</span>
+                              </span>
+                            )}
+
+                            {venue.tourStatus === 'tour_scheduled' && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-300 inline-flex items-center gap-1 shadow-2xs">
+                                <Clock className="w-3 h-3 text-blue-700" />
+                                <span>Tour Scheduled{venue.tourScheduledDate ? `: ${venue.tourScheduledDate}` : ''}</span>
+                              </span>
+                            )}
+
+                            {(venue.tourStatus === 'selected' || venue.isSelectedOfficialVenue) && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-600 text-white inline-flex items-center gap-1 shadow-2xs">
+                                <CheckCircle2 className="w-3 h-3" />
+                                <span>Official Venue</span>
+                              </span>
+                            )}
+
                             <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-50 text-rose-800 border border-rose-200">
                               {venue.curatedState === 'NJ' ? 'New Jersey (NJ)' : 'Pennsylvania (PA)'}
                             </span>
@@ -1625,7 +1771,7 @@ export default function VenuesPage() {
                                   <div className="flex items-center justify-between text-[10px] mb-1">
                                     <span className="font-bold text-stone-800 flex items-center gap-1">
                                       <Calendar className="w-3 h-3 text-rose-600" />
-                                      <span>Available Dates ({effective.availableDates.length}):</span>
+                                      <span>Confirmed Available Dates ({effective.availableDates.length}):</span>
                                     </span>
                                     <button
                                       type="button"
@@ -1636,7 +1782,7 @@ export default function VenuesPage() {
                                     </button>
                                   </div>
                                   <div className="flex flex-wrap gap-1">
-                                    {effective.availableDates.slice(0, 4).map((d) => {
+                                    {effective.availableDates.map((d) => {
                                       const hasPrice = Number(d.customPriceOverride) > 0;
                                       const isActiveDate = effective.activeDate?.id === d.id && hasPrice;
 
@@ -1648,7 +1794,7 @@ export default function VenuesPage() {
                                             e.stopPropagation();
                                             selectActiveVenueDate(venue.id, d.id);
                                           }}
-                                          title={hasPrice ? `Click to calculate estimate for ${d.seasonLabel || d.date}` : undefined}
+                                          title={hasPrice ? `Click to calculate estimate for ${d.seasonLabel || d.date}` : `Confirmed date: ${d.date}`}
                                           className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 cursor-pointer transition-all ${
                                             isActiveDate
                                               ? 'bg-amber-200 text-amber-950 border-amber-400 ring-2 ring-amber-400/40 shadow-2xs'
@@ -1678,15 +1824,6 @@ export default function VenuesPage() {
                                         </button>
                                       );
                                     })}
-                                    {effective.availableDates.length > 4 && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleOpenQuoteModal(venue)}
-                                        className="text-[10px] text-stone-500 hover:text-stone-800 font-medium py-0.5 underline cursor-pointer"
-                                      >
-                                        +{effective.availableDates.length - 4} more
-                                      </button>
-                                    )}
                                   </div>
                                 </div>
                               )}
@@ -1801,15 +1938,27 @@ export default function VenuesPage() {
 
                       <div>
                         {isAlreadyShortlisted ? (
-                          <span className="px-3.5 py-2 rounded-xl bg-emerald-50 text-emerald-800 font-bold text-xs border border-emerald-300 inline-flex items-center gap-1.5">
-                            <Check className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>In Your Shortlist</span>
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 font-bold text-xs border border-emerald-300 inline-flex items-center gap-1.5">
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>In Your Shortlist</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setStatusFilter('all');
+                                setActiveTab('my-venues');
+                              }}
+                              className="px-2.5 py-1.5 rounded-xl text-stone-600 hover:text-stone-900 hover:bg-stone-100 text-xs font-semibold underline cursor-pointer"
+                            >
+                              View in Shortlist →
+                            </button>
+                          </div>
                         ) : (
                           <button
                             type="button"
                             onClick={() => handleAddCuratedToMyShortlist(venue)}
-                            className="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-700 to-amber-700 hover:from-rose-800 hover:to-amber-800 text-white font-bold text-xs shadow-md shadow-rose-900/20 transition-all flex items-center gap-1.5"
+                            className="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-700 to-amber-700 hover:from-rose-800 hover:to-amber-800 text-white font-bold text-xs shadow-md shadow-rose-900/20 transition-all flex items-center gap-1.5 cursor-pointer"
                           >
                             <BookmarkPlus className="w-4 h-4" />
                             <span>+ Add to My Shortlist</span>
@@ -4237,7 +4386,7 @@ export default function VenuesPage() {
         venue={quoteModalVenue}
         existingQuote={quoteModalVenue ? getUserVenueQuote(quoteModalVenue.id) : undefined}
         planningGuestCount={planningGuestCount}
-        onSaveQuote={saveUserVenueQuote}
+        onSaveQuote={handleSaveQuoteAndSync}
         onDeleteQuote={deleteUserVenueQuote}
         isLoggedIn={isLoggedIn}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
