@@ -1,6 +1,7 @@
 import { VenueOption } from './types';
 import { db, isFirebaseConfigured } from './firebase';
 import { collection, doc, setDoc, getDocs } from 'firebase/firestore';
+import { VENUE_PRICING_INTELLIGENCE } from './venuePricingIntelligence';
 
 /**
  * Curated, verified database of premier South Asian / Desi wedding venues
@@ -2414,6 +2415,13 @@ export const PRELOADED_CURATED_VENUES: VenueOption[] = [
       'A hidden architectural jewel in Center City. Perfect for couples wanting an authentic historical ambiance with hardwood dance floors and classic chandeliers.',
   },
 ];
+
+// Enrich all preloaded venues with verified day-of-week & historical pricing intelligence
+PRELOADED_CURATED_VENUES.forEach((venue) => {
+  if (VENUE_PRICING_INTELLIGENCE[venue.id]) {
+    venue.historicalPricingIntelligence = VENUE_PRICING_INTELLIGENCE[venue.id];
+  }
+});
 
 /**
  * Syncs curated venues to Cloud Firestore in collection 'curated_venues'

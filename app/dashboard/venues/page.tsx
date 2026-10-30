@@ -82,6 +82,8 @@ import {
   History,
   LogIn,
   BookmarkCheck,
+  ChevronRight,
+  Lightbulb,
 } from 'lucide-react';
 
 type CuratedSortOption = 'best' | 'service_desc' | 'price_asc' | 'price_desc' | 'capacity_desc';
@@ -142,6 +144,9 @@ export default function VenuesPage() {
     setQuoteModalVenue(venue);
     setIsQuoteModalOpen(true);
   };
+
+  // Verified Historical Pricing & Reddit Intel Inspection Modal
+  const [inspectingPricingVenue, setInspectingPricingVenue] = useState<VenueOption | null>(null);
 
   // Curated Database Filters & Sorting
   const [curatedVenues, setCuratedVenues] = useState<VenueOption[]>(PRELOADED_CURATED_VENUES);
@@ -2248,6 +2253,29 @@ export default function VenuesPage() {
                                   </span>
                                 </div>
                               </div>
+
+                              {/* Historical Day-of-Week Variance & Reddit Intel Quick Bar */}
+                              {venue.historicalPricingIntelligence && (
+                                <div className="pt-2 border-t border-amber-200/60 flex flex-wrap items-center justify-between gap-1 text-[10px]">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="font-semibold text-stone-800">
+                                      <span className="font-bold text-amber-950">Sat:</span> {venue.historicalPricingIntelligence.peakSaturdayRate.split('(')[0].trim()}
+                                    </span>
+                                    <span className="text-stone-300">•</span>
+                                    <span className="font-semibold text-emerald-800">
+                                      <span className="font-bold text-emerald-950">Fri:</span> {venue.historicalPricingIntelligence.fridayRate.split('(')[0].trim()}
+                                    </span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setInspectingPricingVenue(venue)}
+                                    className="text-amber-900 font-bold hover:underline flex items-center gap-0.5 cursor-pointer"
+                                  >
+                                    <span>💬 {venue.historicalPricingIntelligence.realCouplesRedditQuotes.length} Reddit Reports &amp; Intel</span>
+                                    <ChevronRight className="w-3 h-3 text-amber-700" />
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </div>
                         );
@@ -2266,6 +2294,18 @@ export default function VenuesPage() {
                           />
                           <span>Include in Site Tour Day</span>
                         </label>
+
+                        {venue.historicalPricingIntelligence && (
+                          <button
+                            type="button"
+                            onClick={() => setInspectingPricingVenue(venue)}
+                            className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 cursor-pointer bg-amber-50 hover:bg-amber-100 text-amber-950 border-amber-300 shadow-2xs"
+                            title="View verified Reddit historical contracts and Saturday vs Friday pricing"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Reddit Intel &amp; Day Rates</span>
+                          </button>
+                        )}
 
                         <button
                           type="button"
@@ -4126,6 +4166,215 @@ export default function VenuesPage() {
         isLoggedIn={isLoggedIn}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
       />
+
+      {/* Verified Reddit Pricing Intelligence & Day-of-Week Variance Modal */}
+      {inspectingPricingVenue && inspectingPricingVenue.historicalPricingIntelligence && (
+        <Modal
+          isOpen={!!inspectingPricingVenue}
+          onClose={() => setInspectingPricingVenue(null)}
+          title={inspectingPricingVenue.name}
+          maxWidth="2xl"
+        >
+          <div className="space-y-5 text-xs text-stone-800 max-h-[75vh] overflow-y-auto pr-1">
+            {/* Top Identity Box */}
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-600 text-white">
+                  📍 {inspectingPricingVenue.city}, {inspectingPricingVenue.state}
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-emerald-100 text-emerald-900 border border-emerald-200">
+                  Tier: {inspectingPricingVenue.historicalPriceTier}
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-white text-stone-700 border border-stone-200">
+                  {inspectingPricingVenue.type.replace('_', ' ').toUpperCase()}
+                </span>
+              </div>
+              <p className="text-xs text-amber-950 font-medium">
+                Verified Historical Contract Intelligence &amp; Day-of-Week Pricing Variance (Researched from r/DesiWeddings &amp; r/WedditNYC)
+              </p>
+            </div>
+
+            {/* Day-of-Week Pricing Variance Table */}
+            <div>
+              <h4 className="font-bold text-stone-900 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Calendar className="w-4 h-4 text-amber-700" />
+                <span>Day-of-Week Pricing Variance &amp; Guest Minimums</span>
+              </h4>
+              <div className="border border-stone-200 rounded-xl overflow-hidden divide-y divide-stone-200">
+                {/* Saturday */}
+                <div className="p-3 bg-amber-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-stone-900">Peak Saturday Evening</span>
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-200 text-amber-950">
+                        Peak Benchmark
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-stone-500 mt-0.5">
+                      Strict Minimum: <strong>{inspectingPricingVenue.historicalPricingIntelligence.saturdayMinGuestCount} guests</strong>
+                    </div>
+                  </div>
+                  <div className="font-bold text-amber-900 text-xs sm:text-sm font-mono shrink-0">
+                    {inspectingPricingVenue.historicalPricingIntelligence.peakSaturdayRate}
+                  </div>
+                </div>
+
+                {/* Friday */}
+                <div className="p-3 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-stone-900">Friday Evening</span>
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-900">
+                        Save ~20% – 25%
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-stone-500 mt-0.5">
+                      Reduced Minimum: <strong>{inspectingPricingVenue.historicalPricingIntelligence.fridayMinGuestCount} guests</strong>
+                    </div>
+                  </div>
+                  <div className="font-bold text-emerald-800 text-xs sm:text-sm font-mono shrink-0">
+                    {inspectingPricingVenue.historicalPricingIntelligence.fridayRate}
+                  </div>
+                </div>
+
+                {/* Sunday */}
+                <div className="p-3 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-stone-900">Sunday Slot (Day or Evening)</span>
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-800">
+                        Save ~18% – 22%
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-stone-500 mt-0.5">
+                      Reduced Minimum: <strong>{inspectingPricingVenue.historicalPricingIntelligence.sundayMinGuestCount} guests</strong>
+                    </div>
+                  </div>
+                  <div className="font-bold text-stone-800 text-xs sm:text-sm font-mono shrink-0">
+                    {inspectingPricingVenue.historicalPricingIntelligence.sundayRate}
+                  </div>
+                </div>
+
+                {/* Weekday */}
+                {inspectingPricingVenue.historicalPricingIntelligence.weekdayRate && (
+                  <div className="p-3 bg-stone-50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-stone-700">Weekday (Mon – Thu)</span>
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-stone-200 text-stone-700">
+                          Deepest Discount
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-stone-500 mt-0.5">Ideal for pre-wedding Pujas or Sangeets</div>
+                    </div>
+                    <div className="font-bold text-stone-700 text-xs sm:text-sm font-mono shrink-0">
+                      {inspectingPricingVenue.historicalPricingIntelligence.weekdayRate}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Seasonal Variance */}
+            <div className="p-3.5 rounded-xl bg-stone-50 border border-stone-200 space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-stone-900 text-xs uppercase tracking-wider">
+                <Clock className="w-4 h-4 text-amber-600" />
+                <span>Seasonal Variance &amp; Off-Peak Windows</span>
+              </div>
+              <div className="text-stone-700 text-[11px] leading-relaxed">
+                <div>• <strong className="text-stone-900">Peak Season:</strong> {inspectingPricingVenue.historicalPricingIntelligence.peakSeasonMonths}</div>
+                <div>• <strong className="text-stone-900">Off-Peak Window:</strong> {inspectingPricingVenue.historicalPricingIntelligence.offPeakSeasonDiscount}</div>
+              </div>
+            </div>
+
+            {/* Verified Reddit Community Quotes */}
+            <div>
+              <h4 className="font-bold text-stone-900 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-rose-600" />
+                <span>Real Couples&apos; Reddit Quotes &amp; Historical Contract Reports</span>
+              </h4>
+              <div className="space-y-2">
+                {inspectingPricingVenue.historicalPricingIntelligence.realCouplesRedditQuotes.map((quote, idx) => (
+                  <div key={idx} className="p-3 rounded-xl bg-amber-50/60 border border-amber-200/80 text-[11px] text-stone-800 italic leading-relaxed">
+                    &ldquo;{quote.replace(/^"|"$/g, '')}&rdquo;
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Fine Print, Hidden Surcharges & Outside Catering */}
+            {inspectingPricingVenue.historicalPricingIntelligence.hiddenFeesAndSurcharges.length > 0 && (
+              <div className="p-3.5 rounded-xl bg-rose-50/70 border border-rose-200 space-y-1.5">
+                <div className="flex items-center gap-1.5 font-bold text-rose-950 text-[11px] uppercase tracking-wider">
+                  <AlertTriangle className="w-4 h-4 text-rose-700" />
+                  <span>Fine Print, Surcharges &amp; Catering Royalties</span>
+                </div>
+                <ul className="space-y-1 text-stone-700 text-[11px]">
+                  {inspectingPricingVenue.historicalPricingIntelligence.hiddenFeesAndSurcharges.map((surcharge, i) => (
+                    <li key={i} className="flex items-start gap-1.5">
+                      <span className="text-rose-700 font-bold">•</span>
+                      <span>{surcharge}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Insider Negotiation Tips */}
+            {inspectingPricingVenue.historicalPricingIntelligence.insiderNegotiationTips.length > 0 && (
+              <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 space-y-1.5">
+                <div className="flex items-center gap-1.5 font-bold text-emerald-950 text-[11px] uppercase tracking-wider">
+                  <Lightbulb className="w-4 h-4 text-emerald-700" />
+                  <span>How to Negotiate &amp; Save Money with This Venue</span>
+                </div>
+                <ul className="space-y-1 text-stone-800 text-[11px]">
+                  {inspectingPricingVenue.historicalPricingIntelligence.insiderNegotiationTips.map((tip, i) => (
+                    <li key={i} className="flex items-start gap-1.5">
+                      <span className="text-emerald-700 font-bold">💡</span>
+                      <span>{tip}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="pt-4 border-t border-stone-200 flex flex-wrap items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setInspectingPricingVenue(null)}
+                className="px-4 py-2 rounded-xl border border-stone-300 text-stone-600 hover:bg-stone-50 font-medium"
+              >
+                Close
+              </button>
+
+              <div className="flex items-center gap-2">
+                {inspectingPricingVenue.contactPhone && (
+                  <a
+                    href={`tel:${inspectingPricingVenue.contactPhone}`}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold"
+                  >
+                    <Phone className="w-3.5 h-3.5 text-stone-600" />
+                    <span>Call Venue</span>
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const v = inspectingPricingVenue;
+                    setInspectingPricingVenue(null);
+                    handleOpenQuoteModal(v);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-rose-700 hover:opacity-95 text-white font-bold shadow-sm flex items-center gap-1.5"
+                >
+                  <DollarSign className="w-3.5 h-3.5" />
+                  <span>Log My Custom Quote / Dates</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

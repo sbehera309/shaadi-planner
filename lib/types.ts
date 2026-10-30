@@ -249,6 +249,21 @@ export interface VenueServiceRating {
   highlight: string;
 }
 
+export interface VenueDayPricingVariance {
+  peakSaturdayRate: string;         // e.g. "$260 – $320 / guest" or "$85,000 – $110,000 total"
+  fridayRate: string;               // e.g. "$195 – $240 / guest" (~20-25% discount vs Saturday)
+  sundayRate: string;               // e.g. "$200 – $250 / guest"
+  weekdayRate?: string;             // e.g. "$150 – $190 / guest"
+  saturdayMinGuestCount: number;    // e.g. 200 or 250
+  fridayMinGuestCount: number;      // e.g. 150
+  sundayMinGuestCount: number;      // e.g. 150
+  peakSeasonMonths: string;         // e.g. "May, June, September, October"
+  offPeakSeasonDiscount: string;    // e.g. "15%–25% off per guest in Jan–March or mid-summer July/August"
+  realCouplesRedditQuotes: string[];// Quotes from Reddit r/DesiWeddings & r/WedditNYC
+  hiddenFeesAndSurcharges: string[];// Surcharges reported by couples (admin fees, outside catering buyout, ceremony fees, etc.)
+  insiderNegotiationTips: string[]; // Negotiation tips from real couples
+}
+
 export interface VenueTouringHours {
   weekdayHours: string;          // e.g. "10:00 AM – 6:00 PM (Tue–Fri, Closed Mon)"
   saturdayHours: string;         // e.g. "09:30 AM – 1:30 PM (Morning Only before evening Baraat)"
@@ -290,6 +305,7 @@ export interface VenueOption {
   popularityScore?: number; // 1 to 100
   serviceRating?: VenueServiceRating;
   historicalPriceTier?: '$' | '$$' | '$$$' | '$$$$';
+  historicalPricingIntelligence?: VenueDayPricingVariance;
   touringHours?: VenueTouringHours;
   availableDates: string[]; // e.g. ["2026-10-24 (Sat)", "2026-11-07 (Sat)"]
   tourStatus: VenueStatus;
