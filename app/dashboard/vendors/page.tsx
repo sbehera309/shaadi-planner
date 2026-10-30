@@ -45,6 +45,7 @@ const CATEGORY_TABS: { label: string; value: string }[] = [
   { label: 'Bridal MUA & Hair', value: 'Bridal MUA & Hair' },
   { label: 'Mehendi Artist', value: 'Mehendi Artist' },
   { label: 'Pandit Ji / Priest', value: 'Pandit Ji' },
+  { label: '🚗 Baraat & Vidai Cars', value: 'Baraat & Farewell Transport' },
 ];
 
 const REGION_OPTIONS = ['All', 'NJ', 'NY', 'PA', 'CT', 'DE'] as const;
