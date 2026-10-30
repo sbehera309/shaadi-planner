@@ -30,7 +30,7 @@ import {
   sampleUsaWeddingTemplate,
 } from './mockData';
 import { isFirebaseConfigured, db } from './firebase';
-import { doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, getDoc, onSnapshot, collection, getDocs, query, where } from 'firebase/firestore';
 
 interface WeddingContextType {
   wedding: WeddingProfile | null;
@@ -169,6 +169,8 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [cloudSyncError, setCloudSyncError] = useState<string | null>(null);
 
   const isApplyingRemoteRef = useRef(false);
+  const hasHydratedFromCloudRef = useRef(false);
+  const allowEmptySyncRef = useRef(false);
 
   // 1. Initial Load from localStorage on client mount (instant offline cache)
   useEffect(() => {
@@ -227,62 +229,104 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const unsubscribe = onSnapshot(
       userWeddingDocRef,
       async (snapshot) => {
+        let remoteData: any = null;
+
         if (snapshot.exists()) {
-          const remote = snapshot.data();
+          const data = snapshot.data();
+          const hasMeaningfulRemote =
+            (data.profile !== null && data.profile !== undefined && (data.profile.isConfigured || data.profile.brideName || data.profile.groomName)) ||
+            (Array.isArray(data.venues) && data.venues.length > 0 && data.venues.some((v: any) => v.tourStatus === 'shortlisted' || v.isSelectedOfficialVenue)) ||
+            (Array.isArray(data.vendors) && data.vendors.some((v: any) => v.status === 'shortlisted' || v.status === 'booked'));
+
+          if (hasMeaningfulRemote) {
+            remoteData = data;
+          }
+        }
+
+        // If user's main doc is empty, missing, or unconfigured, fallback to check weddings collection
+        if (!remoteData) {
+          try {
+            const weddingsCol = collection(firestore, 'weddings');
+            const qUser = query(weddingsCol, where('userId', '==', user.uid));
+            const snapUser = await getDocs(qUser);
+            if (!snapUser.empty) {
+              remoteData = snapUser.docs[0].data();
+            } else if (user.email) {
+              const qEmail = query(weddingsCol, where('userEmail', '==', user.email));
+              const snapEmail = await getDocs(qEmail);
+              if (!snapEmail.empty) {
+                remoteData = snapEmail.docs[0].data();
+              }
+            }
+          } catch (lookupErr) {
+            console.warn('Fallback lookup in weddings collection failed:', lookupErr);
+          }
+        }
+
+        if (remoteData) {
           isApplyingRemoteRef.current = true;
 
           // Hydrate user profile, shortlists, route planning & budget
-          if (remote.profile) setWedding(remote.profile);
-          if (Array.isArray(remote.events)) setEvents(remote.events);
-          if (Array.isArray(remote.guests)) setGuests(remote.guests);
-          if (Array.isArray(remote.budgetItems)) setBudgetItems(remote.budgetItems);
-          if (Array.isArray(remote.vendors)) setVendors(remote.vendors);
-          if (Array.isArray(remote.shagunRecords)) setShagunRecords(remote.shagunRecords);
-          if (Array.isArray(remote.rooms)) setRooms(remote.rooms);
-          if (Array.isArray(remote.venues)) setVenues(remote.venues);
-          if (remote.tourPlan !== undefined) setTourPlan(remote.tourPlan);
-          if (remote.officialSangeetVenue !== undefined) setOfficialSangeetVenueState(remote.officialSangeetVenue);
+          if (remoteData.profile) setWedding(remoteData.profile);
+          if (Array.isArray(remoteData.events)) setEvents(remoteData.events);
+          if (Array.isArray(remoteData.guests)) setGuests(remoteData.guests);
+          if (Array.isArray(remoteData.budgetItems)) setBudgetItems(remoteData.budgetItems);
+          if (Array.isArray(remoteData.vendors)) setVendors(remoteData.vendors);
+          if (Array.isArray(remoteData.shagunRecords)) setShagunRecords(remoteData.shagunRecords);
+          if (Array.isArray(remoteData.rooms)) setRooms(remoteData.rooms);
+          if (Array.isArray(remoteData.venues)) setVenues(remoteData.venues);
+          if (remoteData.tourPlan !== undefined) setTourPlan(remoteData.tourPlan);
+          if (remoteData.officialSangeetVenue !== undefined) setOfficialSangeetVenueState(remoteData.officialSangeetVenue);
 
           // Update local cache for offline availability
           try {
-            if (remote.profile) localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(remote.profile));
-            if (remote.events) localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(remote.events));
-            if (remote.guests) localStorage.setItem(STORAGE_KEYS.GUESTS, JSON.stringify(remote.guests));
-            if (remote.budgetItems) localStorage.setItem(STORAGE_KEYS.BUDGET, JSON.stringify(remote.budgetItems));
-            if (remote.vendors) localStorage.setItem(STORAGE_KEYS.VENDORS, JSON.stringify(remote.vendors));
-            if (remote.shagunRecords) localStorage.setItem(STORAGE_KEYS.SHAGUN, JSON.stringify(remote.shagunRecords));
-            if (remote.rooms) localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(remote.rooms));
-            if (remote.venues) localStorage.setItem(STORAGE_KEYS.VENUES, JSON.stringify(remote.venues));
-            if (remote.tourPlan) localStorage.setItem(STORAGE_KEYS.TOUR_PLAN, JSON.stringify(remote.tourPlan));
-            if (remote.officialSangeetVenue) localStorage.setItem(STORAGE_KEYS.SANGEET_VENUE, JSON.stringify(remote.officialSangeetVenue));
+            if (remoteData.profile) localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(remoteData.profile));
+            if (remoteData.events) localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(remoteData.events));
+            if (remoteData.guests) localStorage.setItem(STORAGE_KEYS.GUESTS, JSON.stringify(remoteData.guests));
+            if (remoteData.budgetItems) localStorage.setItem(STORAGE_KEYS.BUDGET, JSON.stringify(remoteData.budgetItems));
+            if (remoteData.vendors) localStorage.setItem(STORAGE_KEYS.VENDORS, JSON.stringify(remoteData.vendors));
+            if (remoteData.shagunRecords) localStorage.setItem(STORAGE_KEYS.SHAGUN, JSON.stringify(remoteData.shagunRecords));
+            if (remoteData.rooms) localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(remoteData.rooms));
+            if (remoteData.venues) localStorage.setItem(STORAGE_KEYS.VENUES, JSON.stringify(remoteData.venues));
+            if (remoteData.tourPlan) localStorage.setItem(STORAGE_KEYS.TOUR_PLAN, JSON.stringify(remoteData.tourPlan));
+            if (remoteData.officialSangeetVenue) localStorage.setItem(STORAGE_KEYS.SANGEET_VENUE, JSON.stringify(remoteData.officialSangeetVenue));
 
-            if (remote.scenarioSelection) {
-              if (remote.scenarioSelection.selectedVenueId !== undefined) {
-                localStorage.setItem('shaadi_scenario_selected_venue_id', remote.scenarioSelection.selectedVenueId || '');
+            if (remoteData.scenarioSelection) {
+              if (remoteData.scenarioSelection.selectedVenueId !== undefined) {
+                localStorage.setItem('shaadi_scenario_selected_venue_id', remoteData.scenarioSelection.selectedVenueId || '');
               }
-              if (remote.scenarioSelection.includedVendorIds) {
-                localStorage.setItem('shaadi_scenario_included_vendors', JSON.stringify(remote.scenarioSelection.includedVendorIds));
+              if (remoteData.scenarioSelection.includedVendorIds) {
+                localStorage.setItem('shaadi_scenario_included_vendors', JSON.stringify(remoteData.scenarioSelection.includedVendorIds));
               }
             }
           } catch {}
 
+          // Ensure user's main doc in Firestore has this full verified copy
+          if (!snapshot.exists() || !snapshot.data()?.profile) {
+            setDoc(userWeddingDocRef, {
+              ...remoteData,
+              userId: user.uid,
+              userEmail: user.email || '',
+              updatedAt: new Date().toISOString(),
+            }, { merge: true }).catch(() => {});
+          }
+
+          hasHydratedFromCloudRef.current = true;
           setIsCloudSynced(true);
-          setLastSyncedAt(remote.updatedAt || new Date().toISOString());
+          setCloudSyncError(null);
+          setLastSyncedAt(remoteData.updatedAt || new Date().toISOString());
 
           setTimeout(() => {
             isApplyingRemoteRef.current = false;
-          }, 350);
+          }, 400);
         } else {
           // Document does not exist in Firestore yet for this user.
           // If the user already has data created locally on this device, immediately upload it to seed their cloud profile!
           try {
             const hasLocalData =
-              wedding !== null ||
-              venues.length > 0 ||
-              vendors.length > 0 ||
-              events.length > 0 ||
-              budgetItems.length > 0 ||
-              tourPlan !== null;
+              (wedding !== null && wedding.isConfigured) ||
+              venues.some((v) => v.tourStatus === 'shortlisted' || v.isSelectedOfficialVenue) ||
+              vendors.some((v) => v.status === 'shortlisted' || v.status === 'confirmed');
 
             if (hasLocalData) {
               setIsSyncing(true);
@@ -314,6 +358,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
             console.warn('Failed to seed user profile data to Firestore:', seedErr);
           } finally {
             setIsSyncing(false);
+            hasHydratedFromCloudRef.current = true;
           }
         }
       },
@@ -364,6 +409,24 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       // Sync directly to the Authenticated User's Firestore Profile
       if (!isApplyingRemoteRef.current && isFirebaseConfigured && db && user) {
+        // Critical Guard 1: Do NOT push to Firestore until this device has completed initial hydration from the cloud!
+        if (!hasHydratedFromCloudRef.current) {
+          return;
+        }
+
+        // Critical Guard 2: Never push a completely empty/unconfigured state that could overwrite cloud profile
+        const hasMeaningfulLocalData =
+          allowEmptySyncRef.current ||
+          (wedding !== null && wedding.isConfigured) ||
+          venues.some((v) => v.tourStatus === 'shortlisted' || v.isSelectedOfficialVenue) ||
+          vendors.some((v) => v.status === 'shortlisted' || v.status === 'confirmed') ||
+          budgetItems.some((b) => (b.installments && b.installments.length > 0)) ||
+          (tourPlan !== null && tourPlan.optimizedStops && tourPlan.optimizedStops.length > 0);
+
+        if (!hasMeaningfulLocalData) {
+          return;
+        }
+
         setIsSyncing(true);
         const firestore = db;
         const cloudData = {
@@ -1140,7 +1203,8 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const resetToDefaultData = () => {
-    setWedding(initialWeddingProfile);
+    allowEmptySyncRef.current = true;
+    setWedding(null);
     setEvents(initialEvents);
     setGuests(initialGuests);
     setBudgetItems(initialBudgetItems);
