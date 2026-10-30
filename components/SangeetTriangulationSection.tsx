@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useWedding } from '@/lib/store';
 import {
   SangeetVenueOption,
@@ -42,18 +42,31 @@ import {
   Info,
   Calendar,
   Compass,
+  Bookmark,
+  History,
+  BookOpen,
 } from 'lucide-react';
 
 interface SangeetTriangulationSectionProps {
   initialGroomAddress?: FamilyAddressInput;
   initialBrideAddress?: FamilyAddressInput;
+  savedAddresses?: ProfileSavedAddress[];
+  onSelectSavedAddress?: (saved: ProfileSavedAddress, side: 'groom' | 'bride') => void;
   onOpenAddressBook?: (side: 'groom' | 'bride') => void;
+  onAddressesChange?: (groom: FamilyAddressInput, bride: FamilyAddressInput) => void;
+  isLoggedIn?: boolean;
+  onOpenAuthModal?: () => void;
 }
 
 export default function SangeetTriangulationSection({
   initialGroomAddress,
   initialBrideAddress,
+  savedAddresses,
+  onSelectSavedAddress,
   onOpenAddressBook,
+  onAddressesChange,
+  isLoggedIn,
+  onOpenAuthModal,
 }: SangeetTriangulationSectionProps) {
   const {
     wedding,
@@ -102,6 +115,108 @@ export default function SangeetTriangulationSection({
       longitude: -75.9376,
     }
   );
+
+  // Synchronize state if parent changes initial addresses (e.g. from address book or other tabs)
+  useEffect(() => {
+    if (initialGroomAddress && initialGroomAddress.address) {
+      setGroomAddress((prev) => {
+        if (
+          prev.address === initialGroomAddress.address &&
+          prev.city === initialGroomAddress.city &&
+          prev.state === initialGroomAddress.state &&
+          prev.latitude === initialGroomAddress.latitude &&
+          prev.longitude === initialGroomAddress.longitude
+        ) {
+          return prev;
+        }
+        return initialGroomAddress;
+      });
+    }
+  }, [
+    initialGroomAddress?.address,
+    initialGroomAddress?.city,
+    initialGroomAddress?.state,
+    initialGroomAddress?.latitude,
+    initialGroomAddress?.longitude,
+    initialGroomAddress?.label,
+  ]);
+
+  useEffect(() => {
+    if (initialBrideAddress && initialBrideAddress.address) {
+      setBrideAddress((prev) => {
+        if (
+          prev.address === initialBrideAddress.address &&
+          prev.city === initialBrideAddress.city &&
+          prev.state === initialBrideAddress.state &&
+          prev.latitude === initialBrideAddress.latitude &&
+          prev.longitude === initialBrideAddress.longitude
+        ) {
+          return prev;
+        }
+        return initialBrideAddress;
+      });
+    }
+  }, [
+    initialBrideAddress?.address,
+    initialBrideAddress?.city,
+    initialBrideAddress?.state,
+    initialBrideAddress?.latitude,
+    initialBrideAddress?.longitude,
+    initialBrideAddress?.label,
+  ]);
+
+  const handleApplySavedAddress = (saved: ProfileSavedAddress, side: 'groom' | 'bride') => {
+    const updated: FamilyAddressInput = {
+      side,
+      label: saved.label,
+      address: saved.address,
+      city: saved.city,
+      state: saved.state,
+      zipCode: saved.zipCode,
+      latitude: saved.latitude,
+      longitude: saved.longitude,
+    };
+
+    if (side === 'groom') {
+      setGroomAddress(updated);
+      if (onAddressesChange) {
+        onAddressesChange(updated, brideAddress);
+      }
+    } else {
+      setBrideAddress(updated);
+      if (onAddressesChange) {
+        onAddressesChange(groomAddress, updated);
+      }
+    }
+
+    if (onSelectSavedAddress) {
+      onSelectSavedAddress(saved, side);
+    }
+  };
+
+  const handleUpdateGroomAddress = (updated: Partial<FamilyAddressInput>) => {
+    const newGroom: FamilyAddressInput = {
+      ...groomAddress,
+      ...updated,
+      side: 'groom',
+    };
+    setGroomAddress(newGroom);
+    if (onAddressesChange) {
+      onAddressesChange(newGroom, brideAddress);
+    }
+  };
+
+  const handleUpdateBrideAddress = (updated: Partial<FamilyAddressInput>) => {
+    const newBride: FamilyAddressInput = {
+      ...brideAddress,
+      ...updated,
+      side: 'bride',
+    };
+    setBrideAddress(newBride);
+    if (onAddressesChange) {
+      onAddressesChange(groomAddress, newBride);
+    }
+  };
 
   // Guest count for Sangeet catering calculation (default to 250 or wedding profile)
   const [sangeetGuestCount, setSangeetGuestCount] = useState<number>(
@@ -359,6 +474,52 @@ export default function SangeetTriangulationSection({
           </div>
         </div>
 
+        {/* Quick Select Chips from Saved Addresses */}
+        {savedAddresses && savedAddresses.length > 0 && (
+          <div className="p-3 sm:p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-[11px] font-bold text-amber-900 flex items-center gap-1.5">
+              <History className="w-3.5 h-3.5 text-amber-700" />
+              <span>Fill Anchors from Saved Addresses:</span>
+            </span>
+            {savedAddresses.map((sa) => (
+              <div
+                key={sa.id}
+                className="inline-flex items-center rounded-xl border border-stone-200/90 bg-white shadow-2xs overflow-hidden text-[11px]"
+              >
+                <span className="px-2.5 py-1 font-semibold text-stone-800 bg-stone-50/90 border-r border-stone-200 truncate max-w-[170px]">
+                  {sa.label}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleApplySavedAddress(sa, 'groom')}
+                  className="px-2.5 py-1 text-blue-700 hover:bg-blue-50 font-bold border-r border-stone-100 transition-colors cursor-pointer"
+                  title={`Set Groom's anchor to ${sa.address}`}
+                >
+                  Fill Groom
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleApplySavedAddress(sa, 'bride')}
+                  className="px-2.5 py-1 text-rose-700 hover:bg-rose-50 font-bold transition-colors cursor-pointer"
+                  title={`Set Bride's anchor to ${sa.address}`}
+                >
+                  Fill Bride
+                </button>
+              </div>
+            ))}
+            {onOpenAddressBook && (
+              <button
+                type="button"
+                onClick={() => onOpenAddressBook('groom')}
+                className="text-[11px] font-semibold text-amber-800 hover:text-amber-950 underline flex items-center gap-1 ml-auto cursor-pointer"
+              >
+                <Bookmark className="w-3 h-3" />
+                <span>All Saved ({savedAddresses.length})</span>
+              </button>
+            )}
+          </div>
+        )}
+
         {/* 3 Anchor Cards Display */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {/* Anchor 1: Groom */}
@@ -372,7 +533,7 @@ export default function SangeetTriangulationSection({
                 <button
                   type="button"
                   onClick={() => onOpenAddressBook('groom')}
-                  className="text-[11px] font-semibold text-blue-700 hover:underline"
+                  className="text-[11px] font-semibold text-blue-700 hover:underline cursor-pointer"
                 >
                   Select Saved
                 </button>
@@ -395,7 +556,7 @@ export default function SangeetTriangulationSection({
                 <button
                   type="button"
                   onClick={() => onOpenAddressBook('bride')}
-                  className="text-[11px] font-semibold text-rose-700 hover:underline"
+                  className="text-[11px] font-semibold text-rose-700 hover:underline cursor-pointer"
                 >
                   Select Saved
                 </button>
@@ -436,30 +597,28 @@ export default function SangeetTriangulationSection({
               <div>
                 <AddressAutocompleteInput
                   value={groomAddress}
-                  onChange={(updated) =>
-                    setGroomAddress((prev) => ({
-                      ...prev,
-                      ...updated,
-                    }))
-                  }
+                  onChange={handleUpdateGroomAddress}
                   label="🤵 Groom's Starting Address"
                   placeholder="Enter Groom's house address"
                   accentColor="blue"
+                  savedAddresses={savedAddresses}
+                  onSelectSavedAddress={(saved) => handleApplySavedAddress(saved, 'groom')}
+                  isLoggedIn={isLoggedIn}
+                  onOpenAuthModal={onOpenAuthModal}
                 />
               </div>
 
               <div>
                 <AddressAutocompleteInput
                   value={brideAddress}
-                  onChange={(updated) =>
-                    setBrideAddress((prev) => ({
-                      ...prev,
-                      ...updated,
-                    }))
-                  }
+                  onChange={handleUpdateBrideAddress}
                   label="👰 Bride's Starting Address"
                   placeholder="Enter Bride's house address"
                   accentColor="rose"
+                  savedAddresses={savedAddresses}
+                  onSelectSavedAddress={(saved) => handleApplySavedAddress(saved, 'bride')}
+                  isLoggedIn={isLoggedIn}
+                  onOpenAuthModal={onOpenAuthModal}
                 />
               </div>
             </div>

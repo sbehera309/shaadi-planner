@@ -125,6 +125,7 @@ export default function VenuesPage() {
   } = useProfileAddresses();
 
   const [isAddressBookModalOpen, setIsAddressBookModalOpen] = useState(false);
+  const [addressBookTargetSide, setAddressBookTargetSide] = useState<'groom' | 'bride' | undefined>(undefined);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // User Venue Custom Negotiated Quotes Hook
@@ -2722,7 +2723,10 @@ export default function VenuesPage() {
                   {isLoggedIn ? (
                     <button
                       type="button"
-                      onClick={() => setIsAddressBookModalOpen(true)}
+                      onClick={() => {
+                        setAddressBookTargetSide(undefined);
+                        setIsAddressBookModalOpen(true);
+                      }}
                       className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-stone-50 text-stone-800 border border-stone-300 hover:border-amber-400 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
                     >
                       <BookOpen className="w-3.5 h-3.5 text-amber-700" />
@@ -3914,7 +3918,25 @@ export default function VenuesPage() {
         <SangeetTriangulationSection
           initialGroomAddress={tourForm.groomAddress}
           initialBrideAddress={tourForm.brideAddress}
-          onOpenAddressBook={() => setIsAddressBookModalOpen(true)}
+          savedAddresses={savedAddresses}
+          onSelectSavedAddress={handleSelectAddressForSide}
+          onOpenAddressBook={(side) => {
+            setAddressBookTargetSide(side);
+            setIsAddressBookModalOpen(true);
+          }}
+          onAddressesChange={(groom, bride) => {
+            const updatedForm = {
+              ...tourForm,
+              groomAddress: groom,
+              brideAddress: bride,
+            };
+            setTourForm(updatedForm);
+            if (tourPlan && tourPlan.optimizedStops.length > 0) {
+              recalculateTourPlan(updatedForm);
+            }
+          }}
+          isLoggedIn={isLoggedIn}
+          onOpenAuthModal={() => setIsAuthModalOpen(true)}
         />
       )}
 
@@ -4362,9 +4384,13 @@ export default function VenuesPage() {
       {/* Profile Address Book Modal */}
       <ProfileAddressBookModal
         isOpen={isAddressBookModalOpen}
-        onClose={() => setIsAddressBookModalOpen(false)}
+        onClose={() => {
+          setIsAddressBookModalOpen(false);
+          setAddressBookTargetSide(undefined);
+        }}
         savedAddresses={savedAddresses}
         userEmail={user?.email}
+        defaultTargetSide={addressBookTargetSide}
         onSelectAddress={handleSelectAddressForSide}
         onDeleteAddress={deleteAddress}
         onUpdateDetails={updateAddressDetails}

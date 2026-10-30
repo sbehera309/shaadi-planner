@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ProfileSavedAddress } from '@/lib/types';
 import {
   Bookmark,
@@ -26,6 +26,7 @@ interface ProfileAddressBookModalProps {
   onDeleteAddress: (id: string) => Promise<void> | void;
   onUpdateDetails: (id: string, updates: Partial<Pick<ProfileSavedAddress, 'label' | 'side'>>) => Promise<void> | void;
   onAddNewAddress?: () => void;
+  defaultTargetSide?: 'groom' | 'bride';
 }
 
 export default function ProfileAddressBookModal({
@@ -36,11 +37,24 @@ export default function ProfileAddressBookModal({
   onSelectAddress,
   onDeleteAddress,
   onUpdateDetails,
+  defaultTargetSide,
 }: ProfileAddressBookModalProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState('');
   const [editSide, setEditSide] = useState<'groom' | 'bride' | 'mutual' | 'other'>('mutual');
-  const [filterSide, setFilterSide] = useState<'all' | 'groom' | 'bride'>('all');
+  const [filterSide, setFilterSide] = useState<'all' | 'groom' | 'bride'>(
+    defaultTargetSide || 'all'
+  );
+
+  useEffect(() => {
+    if (isOpen) {
+      if (defaultTargetSide) {
+        setFilterSide(defaultTargetSide);
+      } else {
+        setFilterSide('all');
+      }
+    }
+  }, [isOpen, defaultTargetSide]);
 
   if (!isOpen) return null;
 
@@ -92,6 +106,15 @@ export default function ProfileAddressBookModal({
             <span>Saved securely under profile: </span>
             <span className="font-semibold text-amber-200">{userEmail || 'Active User'}</span>
           </p>
+
+          {defaultTargetSide && (
+            <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 border border-white/25 text-xs font-semibold text-white">
+              <span>Target Selection:</span>
+              <span className="font-bold text-amber-300">
+                {defaultTargetSide === 'groom' ? "🤵 Groom's Family Side" : "👰 Bride's Family Side"}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Filter Pills */}
@@ -297,9 +320,13 @@ export default function ProfileAddressBookModal({
                                 onSelectAddress(item, 'groom');
                                 onClose();
                               }}
-                              className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 text-[11px] font-semibold transition-colors"
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+                                defaultTargetSide === 'groom'
+                                  ? 'bg-blue-600 text-white shadow-xs hover:bg-blue-700 ring-2 ring-blue-300'
+                                  : 'bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200'
+                              }`}
                             >
-                              Fill Groom Side
+                              Fill Groom Side {defaultTargetSide === 'groom' ? '✓' : ''}
                             </button>
                             <button
                               type="button"
@@ -307,9 +334,13 @@ export default function ProfileAddressBookModal({
                                 onSelectAddress(item, 'bride');
                                 onClose();
                               }}
-                              className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 text-[11px] font-semibold transition-colors"
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+                                defaultTargetSide === 'bride'
+                                  ? 'bg-rose-600 text-white shadow-xs hover:bg-rose-700 ring-2 ring-rose-300'
+                                  : 'bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200'
+                              }`}
                             >
-                              Fill Bride Side
+                              Fill Bride Side {defaultTargetSide === 'bride' ? '✓' : ''}
                             </button>
                           </div>
                         </div>
