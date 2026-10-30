@@ -49,7 +49,8 @@ interface WeddingContextType {
   isCloudSynced: boolean;
   isSyncing: boolean;
   lastSyncedAt: string | null;
-  forceCloudSync: () => Promise<void>;
+  cloudSyncError: string | null;
+  forceCloudSync: () => Promise<{ success: boolean; error?: string }>;
 
   // Wedding Profile
   createWeddingProfile: (profile: Omit<WeddingProfile, 'id' | 'ownerId'>) => void;
@@ -165,6 +166,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isCloudSynced, setIsCloudSynced] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+  const [cloudSyncError, setCloudSyncError] = useState<string | null>(null);
 
   const isApplyingRemoteRef = useRef(false);
 
@@ -315,8 +317,16 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           }
         }
       },
-      (err) => {
+      (err: any) => {
         console.warn('Real-time cloud profile sync listener error:', err);
+        setIsCloudSynced(false);
+        if (err?.code === 'permission-denied') {
+          setCloudSyncError(
+            'Firestore Security Rules are denying access (Permission Denied). Please update rules in Firebase Console.'
+          );
+        } else {
+          setCloudSyncError(err?.message || 'Firestore connection error');
+        }
       }
     );
 
@@ -376,10 +386,19 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setDoc(userDocRef, cloudData, { merge: true })
           .then(() => {
             setIsCloudSynced(true);
+            setCloudSyncError(null);
             setLastSyncedAt(new Date().toISOString());
           })
-          .catch((err) => {
+          .catch((err: any) => {
             console.warn('Failed to sync changes to user profile:', err);
+            setIsCloudSynced(false);
+            if (err?.code === 'permission-denied') {
+              setCloudSyncError(
+                'Firestore Security Rules are denying access (Permission Denied). Please update rules in Firebase Console.'
+              );
+            } else {
+              setCloudSyncError(err?.message || 'Failed to sync changes to user profile');
+            }
           })
           .finally(() => {
             setIsSyncing(false);
@@ -408,10 +427,17 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     officialSangeetVenue,
   ]);
 
-  // 4. Force Cloud Sync helper
-  const forceCloudSync = useCallback(async () => {
-    if (!isFirebaseConfigured || !db || !user) return;
+  // 4. Force Cloud Sync helper (with verified status and error reporting)
+  const forceCloudSync = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    if (!isFirebaseConfigured || !db || !user) {
+      const msg = !user
+        ? 'Please sign in to sync with your cloud profile'
+        : 'Firebase is not configured in this environment';
+      setCloudSyncError(msg);
+      return { success: false, error: msg };
+    }
     setIsSyncing(true);
+    setCloudSyncError(null);
     const firestore = db;
     try {
       const userDocRef = doc(firestore, 'users', user.uid, 'wedding_data', 'main');
@@ -431,8 +457,24 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         updatedAt: new Date().toISOString(),
       };
       await setDoc(userDocRef, cloudData, { merge: true });
+      await setDoc(
+        doc(firestore, 'users', user.uid),
+        { email: user.email, hasWeddingData: true, updatedAt: new Date().toISOString() },
+        { merge: true }
+      );
       setIsCloudSynced(true);
+      setCloudSyncError(null);
       setLastSyncedAt(new Date().toISOString());
+      return { success: true };
+    } catch (err: any) {
+      console.warn('Force sync to Firestore user profile failed:', err);
+      const errMsg =
+        err?.code === 'permission-denied'
+          ? 'Firestore Security Rules blocked write (Permission Denied). Please update rules in Firebase Console.'
+          : err?.message || 'Sync failed';
+      setCloudSyncError(errMsg);
+      setIsCloudSynced(false);
+      return { success: false, error: errMsg };
     } finally {
       setIsSyncing(false);
     }
@@ -1201,6 +1243,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         isCloudSynced,
         isSyncing,
         lastSyncedAt,
+        cloudSyncError,
         forceCloudSync,
         createWeddingProfile,
         updateWeddingProfile,

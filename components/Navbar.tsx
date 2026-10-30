@@ -5,18 +5,20 @@ import { useWedding } from '@/lib/store';
 import { useAuth } from '@/lib/authContext';
 import { EditWeddingModal } from './EditWeddingModal';
 import { AuthModal } from './AuthModal';
+import { CloudSyncStatusModal } from './CloudSyncStatusModal';
 import { BudgetHeaderWidget } from './BudgetHeaderWidget';
-import { Calendar, Share2, Check, RefreshCw, Database, Menu, LogIn, LogOut, User as UserIcon, Cloud, CloudOff } from 'lucide-react';
+import { Calendar, Share2, Check, RefreshCw, Database, Menu, LogIn, LogOut, User as UserIcon, Cloud, CloudOff, AlertTriangle } from 'lucide-react';
 
 interface NavbarProps {
   onOpenMobileMenu?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
-  const { wedding, isDemoMode, resetToDefaultData, isCloudSynced, isSyncing, lastSyncedAt, forceCloudSync } = useWedding();
+  const { wedding, isDemoMode, resetToDefaultData, isCloudSynced, isSyncing, lastSyncedAt, cloudSyncError, forceCloudSync } = useWedding();
   const { user, logout, isFirebaseConfigured } = useAuth();
   const [copied, setCopied] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   // Calculate days left
@@ -99,47 +101,78 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
           {/* Cloud Sync Status Badge */}
           <button
             type="button"
-            onClick={() => {
-              if (user && forceCloudSync) forceCloudSync();
-            }}
-            className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border shrink-0 transition-all ${
+            onClick={() => setIsSyncModalOpen(true)}
+            className={`flex items-center gap-1.5 px-2 py-1 sm:px-2.5 rounded-full text-xs font-medium border shrink-0 transition-all ${
               user
-                ? isSyncing
-                  ? 'bg-amber-50 text-amber-900 border-amber-300'
-                  : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100 cursor-pointer'
+                ? cloudSyncError
+                  ? 'bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100 cursor-pointer shadow-xs'
+                  : isSyncing
+                  ? 'bg-amber-50 text-amber-900 border-amber-300 cursor-pointer'
+                  : isCloudSynced
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100 cursor-pointer'
+                  : 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100 cursor-pointer'
                 : isFirebaseConfigured
-                ? 'bg-amber-50 text-amber-900 border-amber-200'
-                : 'bg-stone-100 text-stone-700 border-stone-200'
+                ? 'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100 cursor-pointer'
+                : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200 cursor-pointer'
             }`}
             title={
               user
-                ? `Signed in as ${user.email} • Click to force sync now • Last synced: ${
-                    lastSyncedAt ? new Date(lastSyncedAt).toLocaleTimeString() : 'Active'
-                  }`
+                ? cloudSyncError
+                  ? `Sync Blocked: ${cloudSyncError}. Click to view details and resolve.`
+                  : `Signed in as ${user.email} • Click to test sync or export backup • Last synced: ${
+                      lastSyncedAt ? new Date(lastSyncedAt).toLocaleTimeString() : 'Active'
+                    }`
                 : isFirebaseConfigured
-                ? 'Firebase configured. Sign in to sync across devices.'
-                : 'Using Local Storage'
+                ? 'Firebase configured. Sign in or click to view device sync tools.'
+                : 'Using Local Storage. Click to view cloud status.'
             }
           >
             {user ? (
-              isSyncing ? (
-                <RefreshCw className="w-3.5 h-3.5 text-amber-600 animate-spin" />
+              cloudSyncError ? (
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-600 animate-pulse shrink-0" />
+              ) : isSyncing ? (
+                <RefreshCw className="w-3.5 h-3.5 text-amber-600 animate-spin shrink-0" />
+              ) : isCloudSynced ? (
+                <Cloud className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
               ) : (
-                <Cloud className="w-3.5 h-3.5 text-emerald-600" />
+                <RefreshCw className="w-3.5 h-3.5 text-amber-600 shrink-0" />
               )
             ) : isFirebaseConfigured ? (
-              <Database className="w-3.5 h-3.5 text-amber-600" />
+              <Database className="w-3.5 h-3.5 text-amber-600 shrink-0" />
             ) : (
-              <CloudOff className="w-3.5 h-3.5 text-stone-400" />
+              <CloudOff className="w-3.5 h-3.5 text-stone-400 shrink-0" />
             )}
             <span>
-              {user
-                ? isSyncing
-                  ? 'Syncing...'
-                  : 'Cloud Synced'
-                : isFirebaseConfigured
-                ? 'Firebase Ready'
-                : 'Local Storage'}
+              {user ? (
+                cloudSyncError ? (
+                  <>
+                    <span className="hidden sm:inline">Sync Blocked</span>
+                    <span className="sm:hidden text-[11px]">Blocked</span>
+                  </>
+                ) : isSyncing ? (
+                  <>
+                    <span className="hidden sm:inline">Syncing...</span>
+                    <span className="sm:hidden text-[11px]">Syncing</span>
+                  </>
+                ) : isCloudSynced ? (
+                  <>
+                    <span className="hidden sm:inline">Cloud Synced</span>
+                    <span className="sm:hidden text-[11px]">Synced</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="hidden sm:inline">Push to Cloud</span>
+                    <span className="sm:hidden text-[11px]">Sync</span>
+                  </>
+                )
+              ) : isFirebaseConfigured ? (
+                <>
+                  <span className="hidden sm:inline">Local Only</span>
+                  <span className="sm:hidden text-[11px]">Local</span>
+                </>
+              ) : (
+                'Local'
+              )}
             </span>
           </button>
 
@@ -252,6 +285,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
+      />
+
+      <CloudSyncStatusModal
+        isOpen={isSyncModalOpen}
+        onClose={() => setIsSyncModalOpen(false)}
       />
     </>
   );
