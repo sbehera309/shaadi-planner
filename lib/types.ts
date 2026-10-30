@@ -130,6 +130,39 @@ export interface Vendor {
   deliverables: string[];
 }
 
+export interface VendorPricingTier {
+  tierOrItem: string;
+  rate: string;
+  details: string;
+}
+
+export interface CuratedVendor {
+  id: string;
+  name: string;
+  category: Vendor['category'];
+  tagline: string;
+  baseLocation: string;
+  serviceRegions: ('NJ' | 'NY' | 'PA' | 'CT' | 'DE' | 'Destination')[];
+  priceTier: '$' | '$$' | '$$$' | '$$$$';
+  priceStartingAt: number;
+  typicalPackagePrice: number;
+  priceUnit: 'per_guest' | 'package' | 'per_event' | 'per_hour';
+  pricingHeadline: string;
+  historicalPricingBreakdown: VendorPricingTier[];
+  hiddenFeesAndFinePrint: string[];
+  inclusions: string[];
+  desiSpecialties: string[];
+  estateApprovedVenues: string[];
+  typicalCapacityOrTeam: string;
+  contactPerson?: string;
+  contactPhone: string;
+  contactEmail: string;
+  websiteUrl: string;
+  instagramHandle: string;
+  curatorReviewAndVerdict: string;
+  negotiationTips: string[];
+}
+
 export interface ShagunRecord {
   id: string;
   weddingId: string;
