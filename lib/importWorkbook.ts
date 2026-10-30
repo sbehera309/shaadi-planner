@@ -288,7 +288,8 @@ export async function parseWeddingExcelFile(file: File): Promise<ImportedWedding
 
         const rawStatus = String(r['Booking Status'] || r['status'] || '').toLowerCase();
         let status: Vendor['status'] = 'contacted';
-        if (rawStatus.includes('confirm')) status = 'confirmed';
+        if (rawStatus.includes('shortlist')) status = 'shortlisted';
+        else if (rawStatus.includes('confirm')) status = 'confirmed';
         else if (rawStatus.includes('complete') || rawStatus.includes('done')) status = 'completed';
         else if (rawStatus.includes('negotiat')) status = 'negotiating';
 

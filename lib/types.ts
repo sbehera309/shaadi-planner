@@ -124,10 +124,11 @@ export interface Vendor {
   email?: string;
   agreedAmount: number;
   depositPaid: number;
-  status: 'contacted' | 'negotiating' | 'confirmed' | 'completed';
+  status: 'shortlisted' | 'contacted' | 'negotiating' | 'confirmed' | 'completed';
   contractUrl?: string;
   notes: string;
   deliverables: string[];
+  curatedVendorId?: string;
 }
 
 export interface VendorPricingTier {

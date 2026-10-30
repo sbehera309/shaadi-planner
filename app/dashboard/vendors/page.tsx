@@ -28,6 +28,9 @@ import {
   Award,
   Filter,
   Check,
+  Bookmark,
+  BookmarkCheck,
+  BookmarkPlus,
 } from 'lucide-react';
 
 const CATEGORY_TABS: { label: string; value: string }[] = [
@@ -53,6 +56,11 @@ export default function VendorsPage() {
   const [selectedRegion, setSelectedRegion] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<'recommended' | 'price_asc' | 'price_desc'>('recommended');
+  const [showShortlistedOnly, setShowShortlistedOnly] = useState<boolean>(false);
+  const [addedSuccessId, setAddedSuccessId] = useState<string | null>(null);
+
+  // Tab 2 Status Filter
+  const [statusFilter, setStatusFilter] = useState<'all' | 'shortlisted' | 'negotiating' | 'contacted' | 'confirmed' | 'completed'>('all');
 
   // Inspection Drawer / Modal
   const [inspectingVendor, setInspectingVendor] = useState<CuratedVendor | null>(null);
@@ -68,10 +76,54 @@ export default function VendorsPage() {
     email: '',
     agreedAmount: 50000,
     depositPaid: 10000,
-    status: 'confirmed' as Vendor['status'],
+    status: 'shortlisted' as Vendor['status'],
     notes: '',
     deliverablesString: '',
   });
+
+  // Helper to match curated vendor with stored user vendor
+  const getCuratedStatus = (curated: CuratedVendor) => {
+    return vendors.find(
+      (v) =>
+        v.curatedVendorId === curated.id ||
+        v.name.toLowerCase() === curated.name.toLowerCase()
+    );
+  };
+
+  // 1-Click Shortlist toggle for curated vendors
+  const handleToggleShortlist = (curated: CuratedVendor) => {
+    const existing = getCuratedStatus(curated);
+    if (existing) {
+      if (existing.status === 'shortlisted') {
+        deleteVendor(existing.id);
+        setAddedSuccessId(null);
+      } else {
+        if (
+          confirm(
+            `"${curated.name}" is currently saved under status "${existing.status}". Do you want to remove it from your vendors?`
+          )
+        ) {
+          deleteVendor(existing.id);
+        }
+      }
+    } else {
+      addVendor({
+        name: curated.name,
+        category: curated.category,
+        contactPerson: curated.contactPerson || curated.name,
+        phone: curated.contactPhone,
+        email: curated.contactEmail,
+        agreedAmount: 0,
+        depositPaid: 0,
+        status: 'shortlisted',
+        notes: `${curated.tagline}\nLocation: ${curated.baseLocation}\nTypical Rate: ${curated.pricingHeadline}\nApproved Venues: ${curated.estateApprovedVenues.join(', ')}`,
+        deliverables: curated.inclusions.slice(0, 4),
+        curatedVendorId: curated.id,
+      });
+      setAddedSuccessId(curated.id);
+      setTimeout(() => setAddedSuccessId(null), 3000);
+    }
+  };
 
   const handleOpenAdd = () => {
     setEditingVendor(null);
@@ -81,9 +133,9 @@ export default function VendorsPage() {
       contactPerson: '',
       phone: '',
       email: '',
-      agreedAmount: 15000,
-      depositPaid: 5000,
-      status: 'negotiating',
+      agreedAmount: 0,
+      depositPaid: 0,
+      status: 'shortlisted',
       notes: '',
       deliverablesString: '',
     });
@@ -149,6 +201,7 @@ export default function VendorsPage() {
       status: formData.status,
       notes: formData.notes,
       deliverables,
+      curatedVendorId: editingVendor?.curatedVendorId,
     };
 
     if (editingVendor) {
@@ -170,6 +223,17 @@ export default function VendorsPage() {
   // Filter & Sort Curated Directory
   const filteredVendors = useMemo(() => {
     return PRELOADED_CURATED_VENDORS.filter((v) => {
+      // Shortlist Only Filter
+      if (showShortlistedOnly) {
+        const isShortlisted = vendors.some(
+          (mv) =>
+            (mv.curatedVendorId === v.id || mv.name.toLowerCase() === v.name.toLowerCase()) &&
+            mv.status === 'shortlisted'
+        );
+        if (!isShortlisted) {
+          return false;
+        }
+      }
       // Category Filter
       if (selectedCategory !== 'All' && v.category !== selectedCategory) {
         return false;
@@ -201,12 +265,21 @@ export default function VendorsPage() {
       }
       return 0; // default order
     });
-  }, [selectedCategory, selectedRegion, searchQuery, sortBy]);
+  }, [selectedCategory, selectedRegion, searchQuery, sortBy, showShortlistedOnly, vendors]);
 
-  // Aggregate stats for user's personal vendors
-  const totalAgreed = vendors.reduce((sum, v) => sum + v.agreedAmount, 0);
-  const totalDeposits = vendors.reduce((sum, v) => sum + v.depositPaid, 0);
+  // Aggregate stats for user's personal vendors & shortlist
+  const shortlistedVendors = useMemo(() => vendors.filter((v) => v.status === 'shortlisted'), [vendors]);
+  const shortlistedCount = shortlistedVendors.length;
+  const committedVendors = useMemo(() => vendors.filter((v) => v.status !== 'shortlisted'), [vendors]);
+  const totalAgreed = committedVendors.reduce((sum, v) => sum + (v.agreedAmount || 0), 0);
+  const totalDeposits = committedVendors.reduce((sum, v) => sum + (v.depositPaid || 0), 0);
   const totalBalanceDue = totalAgreed - totalDeposits;
+
+  // Filter personal vendors by status in Tab 2
+  const filteredMyVendors = useMemo(() => {
+    if (statusFilter === 'all') return vendors;
+    return vendors.filter((v) => v.status === statusFilter);
+  }, [vendors, statusFilter]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -248,6 +321,11 @@ export default function VendorsPage() {
         >
           <Sparkles className="w-4 h-4" />
           <span>Explore Curated Vendors Directory ({PRELOADED_CURATED_VENDORS.length})</span>
+          {shortlistedCount > 0 && (
+            <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-bold">
+              {shortlistedCount} Shortlisted
+            </span>
+          )}
         </button>
         <button
           onClick={() => setActiveTab('my_vendors')}
@@ -258,8 +336,8 @@ export default function VendorsPage() {
           }`}
         >
           <Briefcase className="w-4 h-4" />
-          <span>My Booked & Shortlisted Vendors ({vendors.length})</span>
-          {vendors.length > 0 && (
+          <span>My Shortlist & Booked Vendors ({vendors.length})</span>
+          {committedVendors.length > 0 && (
             <span className={`px-2 py-0.5 rounded-full text-[10px] ${
               activeTab === 'my_vendors' ? 'bg-amber-700 text-white' : 'bg-stone-200 text-stone-700'
             }`}>
@@ -293,21 +371,37 @@ export default function VendorsPage() {
 
           {/* Filter Controls Bar */}
           <div className="bg-white rounded-2xl border border-stone-200 p-4 shadow-xs space-y-4">
-            {/* Category Pills */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
-              {CATEGORY_TABS.map((tab) => (
-                <button
-                  key={tab.value}
-                  onClick={() => setSelectedCategory(tab.value)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-                    selectedCategory === tab.value
-                      ? 'bg-amber-700 text-white shadow-xs'
-                      : 'bg-stone-100 hover:bg-stone-200 text-stone-600'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+            {/* Category Pills & Shortlisted Quick Toggle */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+                {CATEGORY_TABS.map((tab) => (
+                  <button
+                    key={tab.value}
+                    onClick={() => setSelectedCategory(tab.value)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors tap-button active:scale-95 cursor-pointer ${
+                      selectedCategory === tab.value
+                        ? 'bg-amber-700 text-white shadow-xs'
+                        : 'bg-stone-100 hover:bg-stone-200 text-stone-600'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Shortlist Filter Toggle */}
+              <button
+                type="button"
+                onClick={() => setShowShortlistedOnly(!showShortlistedOnly)}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 tap-button active:scale-95 cursor-pointer ${
+                  showShortlistedOnly
+                    ? 'bg-amber-500 text-stone-950 shadow-sm ring-2 ring-amber-400/50'
+                    : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300'
+                }`}
+              >
+                <Bookmark className={`w-3.5 h-3.5 ${showShortlistedOnly ? 'fill-stone-950 text-stone-950' : 'text-amber-700'}`} />
+                <span>Shortlisted Only ({shortlistedCount})</span>
+              </button>
             </div>
 
             {/* Second row: Search & Region & Sort */}
@@ -359,128 +453,221 @@ export default function VendorsPage() {
           {/* Vendors Grid */}
           {filteredVendors.length === 0 ? (
             <div className="bg-white p-12 rounded-3xl border border-dashed border-stone-300 text-center space-y-3">
-              <Search className="w-8 h-8 text-stone-300 mx-auto" />
-              <h3 className="text-sm font-bold text-stone-700">No matching vendors found</h3>
-              <p className="text-xs text-stone-500 max-w-sm mx-auto">
-                Try clearing your search query or switching category filters.
-              </p>
-              <button
-                onClick={() => {
-                  setSelectedCategory('All');
-                  setSelectedRegion('All');
-                  setSearchQuery('');
-                }}
-                className="px-4 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold"
-              >
-                Reset All Filters
-              </button>
+              {showShortlistedOnly ? (
+                <>
+                  <Bookmark className="w-9 h-9 text-amber-500 mx-auto" />
+                  <h3 className="text-base font-bold text-stone-900 font-serif">No vendors in your shortlist yet</h3>
+                  <p className="text-xs text-stone-500 max-w-sm mx-auto">
+                    Click "+ Shortlist" on any vendor card to narrow down your favorite caterers, decorators, DJs, and photographers here.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowShortlistedOnly(false)}
+                    className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs tap-button active:scale-95 cursor-pointer"
+                  >
+                    Browse All {PRELOADED_CURATED_VENDORS.length} Curated Vendors
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Search className="w-8 h-8 text-stone-300 mx-auto" />
+                  <h3 className="text-sm font-bold text-stone-700">No matching vendors found</h3>
+                  <p className="text-xs text-stone-500 max-w-sm mx-auto">
+                    Try clearing your search query or switching category filters.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory('All');
+                      setSelectedRegion('All');
+                      setSearchQuery('');
+                    }}
+                    className="px-4 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold"
+                  >
+                    Reset All Filters
+                  </button>
+                </>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {filteredVendors.map((vendor) => (
-                <div
-                  key={vendor.id}
-                  className="bg-white rounded-2xl border border-stone-200 hover:border-amber-400 shadow-xs hover:shadow-md transition-all p-5 flex flex-col justify-between interactive-card"
-                >
-                  <div>
-                    {/* Top Badges */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200">
-                          {vendor.category}
-                        </span>
-                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-stone-100 text-stone-700">
-                          📍 {vendor.baseLocation}
-                        </span>
-                        <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-                          {vendor.priceTier}
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-stone-400 font-medium whitespace-nowrap">
-                        Services: {vendor.serviceRegions.join(', ')}
-                      </span>
-                    </div>
+              {filteredVendors.map((vendor) => {
+                const storedVendor = getCuratedStatus(vendor);
+                const isShortlisted = storedVendor?.status === 'shortlisted';
+                const isBooked = storedVendor && storedVendor.status !== 'shortlisted';
+                const isJustAdded = addedSuccessId === vendor.id;
 
-                    {/* Name & Tagline */}
-                    <div className="mt-2.5">
-                      <h3 className="text-lg font-bold text-stone-900 font-serif">
-                        {vendor.name}
-                      </h3>
-                      <p className="text-xs text-amber-800 font-medium mt-0.5 line-clamp-1">
-                        {vendor.tagline}
-                      </p>
-                    </div>
-
-                    {/* Prominent Pricing Banner */}
-                    <div className="mt-3.5 p-3 rounded-xl bg-stone-50 border border-stone-200/80 flex items-center justify-between">
-                      <div>
-                        <div className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
-                          Historical Pricing Rate
-                        </div>
-                        <div className="text-xs sm:text-sm font-bold text-stone-900 mt-0.5">
-                          {vendor.pricingHeadline}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-[10px] text-stone-400 uppercase tracking-wider">Starting at</div>
-                        <div className="text-xs font-bold text-amber-700">
-                          {vendor.priceUnit === 'per_guest' ? `$${vendor.priceStartingAt}/guest` : `$${vendor.priceStartingAt.toLocaleString()}`}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Specialties Pills */}
-                    <div className="mt-3">
-                      <div className="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1.5">
-                        Desi Specialties
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {vendor.desiSpecialties.map((spec, i) => (
-                          <span
-                            key={i}
-                            className="px-2 py-0.5 rounded-md bg-stone-100 text-stone-700 text-[11px] font-medium"
-                          >
-                            • {spec}
+                return (
+                  <div
+                    key={vendor.id}
+                    className={`bg-white rounded-2xl border transition-all p-5 flex flex-col justify-between interactive-card ${
+                      isShortlisted
+                        ? 'border-amber-400 ring-2 ring-amber-400/25 shadow-xs'
+                        : isBooked
+                        ? 'border-emerald-500/80 ring-2 ring-emerald-500/15 shadow-xs'
+                        : 'border-stone-200 hover:border-amber-400 shadow-xs hover:shadow-md'
+                    }`}
+                  >
+                    <div>
+                      {/* Top Badges */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {isShortlisted && (
+                            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-950 border border-amber-300 inline-flex items-center gap-1 shadow-2xs">
+                              <Bookmark className="w-3 h-3 fill-amber-600 text-amber-700" />
+                              <span>In My Shortlist</span>
+                            </span>
+                          )}
+                          {isBooked && (
+                            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 inline-flex items-center gap-1 shadow-2xs">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+                              <span className="capitalize">{storedVendor.status}</span>
+                            </span>
+                          )}
+                          <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200">
+                            {vendor.category}
                           </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Estate Credentials */}
-                    {vendor.estateApprovedVenues.length > 0 && (
-                      <div className="mt-3 text-[11px] text-stone-600 bg-amber-50/50 p-2.5 rounded-xl border border-amber-100">
-                        <div className="flex items-center gap-1 font-semibold text-amber-900 mb-1">
-                          <Building className="w-3.5 h-3.5" />
-                          <span>Approved / Regular at:</span>
+                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-stone-100 text-stone-700">
+                            📍 {vendor.baseLocation}
+                          </span>
+                          <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            {vendor.priceTier}
+                          </span>
                         </div>
-                        <p className="line-clamp-2 text-stone-700">
-                          {vendor.estateApprovedVenues.join(' • ')}
+                        <span className="text-[10px] text-stone-400 font-medium whitespace-nowrap">
+                          Services: {vendor.serviceRegions.join(', ')}
+                        </span>
+                      </div>
+
+                      {/* Name & Tagline */}
+                      <div className="mt-2.5">
+                        <h3 className="text-lg font-bold text-stone-900 font-serif">
+                          {vendor.name}
+                        </h3>
+                        <p className="text-xs text-amber-800 font-medium mt-0.5 line-clamp-1">
+                          {vendor.tagline}
                         </p>
                       </div>
-                    )}
-                  </div>
 
-                  {/* Actions Bar */}
-                  <div className="mt-5 pt-3.5 border-t border-stone-100 flex flex-wrap items-center justify-between gap-2 text-xs">
-                    <button
-                      onClick={() => setInspectingVendor(vendor)}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold transition-colors"
-                    >
-                      <Info className="w-3.5 h-3.5 text-stone-500" />
-                      <span>Rates & Fine Print</span>
-                      <ChevronRight className="w-3 h-3 text-stone-400" />
-                    </button>
+                      {/* Prominent Pricing Banner */}
+                      <div className="mt-3.5 p-3 rounded-xl bg-stone-50 border border-stone-200/80 flex items-center justify-between">
+                        <div>
+                          <div className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                            Historical Pricing Rate
+                          </div>
+                          <div className="text-xs sm:text-sm font-bold text-stone-900 mt-0.5">
+                            {vendor.pricingHeadline}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-[10px] text-stone-400 uppercase tracking-wider">Starting at</div>
+                          <div className="text-xs font-bold text-amber-700">
+                            {vendor.priceUnit === 'per_guest' ? `$${vendor.priceStartingAt}/guest` : `$${vendor.priceStartingAt.toLocaleString()}`}
+                          </div>
+                        </div>
+                      </div>
 
-                    <button
-                      onClick={() => handleAddFromCurated(vendor)}
-                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold shadow-xs transition-colors"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Add to My Vendors</span>
-                    </button>
+                      {/* Specialties Pills */}
+                      <div className="mt-3">
+                        <div className="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1.5">
+                          Desi Specialties
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {vendor.desiSpecialties.map((spec, i) => (
+                            <span
+                              key={i}
+                              className="px-2 py-0.5 rounded-md bg-stone-100 text-stone-700 text-[11px] font-medium"
+                            >
+                              • {spec}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Estate Credentials */}
+                      {vendor.estateApprovedVenues.length > 0 && (
+                        <div className="mt-3 text-[11px] text-stone-600 bg-amber-50/50 p-2.5 rounded-xl border border-amber-100">
+                          <div className="flex items-center gap-1 font-semibold text-amber-900 mb-1">
+                            <Building className="w-3.5 h-3.5" />
+                            <span>Approved / Regular at:</span>
+                          </div>
+                          <p className="line-clamp-2 text-stone-700">
+                            {vendor.estateApprovedVenues.join(' • ')}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions Bar */}
+                    <div className="mt-5 pt-3.5 border-t border-stone-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setInspectingVendor(vendor)}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold transition-colors tap-button active:scale-95 cursor-pointer"
+                      >
+                        <Info className="w-3.5 h-3.5 text-stone-500" />
+                        <span>Rates & Fine Print</span>
+                        <ChevronRight className="w-3 h-3 text-stone-400" />
+                      </button>
+
+                      <div className="flex items-center gap-2">
+                        {isShortlisted ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleShortlist(vendor)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold border border-amber-300 transition-all tap-button active:scale-95 cursor-pointer shadow-2xs"
+                              title="Click to remove from shortlist"
+                            >
+                              <BookmarkCheck className="w-3.5 h-3.5 fill-amber-700 text-amber-800" />
+                              <span>Shortlisted ✓</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleAddFromCurated(vendor)}
+                              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-semibold shadow-xs transition-colors tap-button active:scale-95 cursor-pointer"
+                            >
+                              <span>Book / Contract →</span>
+                            </button>
+                          </>
+                        ) : isBooked ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setStatusFilter('all');
+                              setActiveTab('my_vendors');
+                            }}
+                            className="text-emerald-800 font-bold text-xs hover:underline flex items-center gap-1 cursor-pointer"
+                          >
+                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>View in My Vendors →</span>
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleShortlist(vendor)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-500 text-stone-950 font-bold shadow-xs transition-all tap-button active:scale-95 cursor-pointer"
+                            >
+                              <BookmarkPlus className="w-3.5 h-3.5" />
+                              <span>{isJustAdded ? 'Added! ✓' : '+ Shortlist'}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleAddFromCurated(vendor)}
+                              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-medium transition-colors tap-button active:scale-95 cursor-pointer"
+                              title="Log agreed fee and deposit contract"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Book Contract</span>
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -491,39 +678,103 @@ export default function VendorsPage() {
       {/* ========================================================================= */}
       {activeTab === 'my_vendors' && (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-200">
-          {/* Summary Stat Bar */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs interactive-card">
-              <div className="text-[11px] font-bold text-stone-400 uppercase tracking-wider">
+          {/* Summary Stat Bar: 4 Metrics */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-xs interactive-card">
+              <div className="text-[10px] sm:text-[11px] font-bold text-stone-400 uppercase tracking-wider truncate">
                 Total Committed Contracts
               </div>
-              <div className="text-xl font-bold font-serif text-stone-900 mt-1">
+              <div className="text-xl sm:text-2xl font-bold font-serif text-stone-900 mt-1">
                 {formatCurr(totalAgreed)}
               </div>
-              <div className="text-[11px] text-stone-500 mt-0.5">Across {vendors.length} vendors</div>
+              <div className="text-[11px] text-stone-500 mt-0.5 truncate">
+                Across {committedVendors.length} booked vendors
+              </div>
             </div>
 
-            <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs interactive-card">
-              <div className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">
+            <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-xs interactive-card">
+              <div className="text-[10px] sm:text-[11px] font-bold text-emerald-700 uppercase tracking-wider truncate">
                 Deposits Paid
               </div>
-              <div className="text-xl font-bold font-serif text-emerald-700 mt-1">
+              <div className="text-xl sm:text-2xl font-bold font-serif text-emerald-700 mt-1">
                 {formatCurr(totalDeposits)}
               </div>
-              <div className="text-[11px] text-stone-500 mt-0.5">
+              <div className="text-[11px] text-stone-500 mt-0.5 truncate">
                 {totalAgreed > 0 ? `${Math.round((totalDeposits / totalAgreed) * 100)}% secured` : 'No deposits logged'}
               </div>
             </div>
 
-            <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs interactive-card">
-              <div className="text-[11px] font-bold text-rose-700 uppercase tracking-wider">
+            <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-xs interactive-card">
+              <div className="text-[10px] sm:text-[11px] font-bold text-rose-700 uppercase tracking-wider truncate">
                 Remaining Balance Due
               </div>
-              <div className="text-xl font-bold font-serif text-rose-700 mt-1">
+              <div className="text-xl sm:text-2xl font-bold font-serif text-rose-700 mt-1">
                 {formatCurr(totalBalanceDue)}
               </div>
-              <div className="text-[11px] text-stone-500 mt-0.5">Due before wedding days</div>
+              <div className="text-[11px] text-stone-500 mt-0.5 truncate">
+                Due before wedding dates
+              </div>
             </div>
+
+            <div
+              onClick={() => setStatusFilter(statusFilter === 'shortlisted' ? 'all' : 'shortlisted')}
+              className={`p-4 sm:p-5 rounded-2xl border shadow-xs interactive-card cursor-pointer transition-all ${
+                statusFilter === 'shortlisted'
+                  ? 'bg-amber-100 border-amber-400 ring-2 ring-amber-400/40'
+                  : 'bg-white border-stone-200'
+              }`}
+            >
+              <div className="text-[10px] sm:text-[11px] font-bold text-amber-900 uppercase tracking-wider flex items-center justify-between">
+                <span>Shortlist Candidates</span>
+                <Bookmark className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
+              </div>
+              <div className="text-xl sm:text-2xl font-bold font-serif text-stone-900 mt-1">
+                {shortlistedCount} <span className="text-xs font-normal text-stone-500">evaluating</span>
+              </div>
+              <div className="text-[11px] text-amber-800 mt-0.5 font-medium truncate">
+                {statusFilter === 'shortlisted' ? '✓ Filter active' : 'Click to filter shortlist'}
+              </div>
+            </div>
+          </div>
+
+          {/* Status Filter Bar & Add Custom Button */}
+          <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-stone-200 shadow-2xs flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 font-semibold text-stone-600 flex-wrap">
+              <Filter className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+              <span>Status:</span>
+              <div className="flex flex-wrap gap-1.5 ml-1">
+                {[
+                  { id: 'all', label: `All (${vendors.length})` },
+                  { id: 'shortlisted', label: `⭐ Shortlist (${shortlistedCount})` },
+                  { id: 'contacted', label: `💬 Contacted (${vendors.filter((v) => v.status === 'contacted').length})` },
+                  { id: 'negotiating', label: `🤝 Negotiating (${vendors.filter((v) => v.status === 'negotiating').length})` },
+                  { id: 'confirmed', label: `✅ Confirmed (${vendors.filter((v) => v.status === 'confirmed').length})` },
+                  { id: 'completed', label: `Completed (${vendors.filter((v) => v.status === 'completed').length})` },
+                ].map((st) => (
+                  <button
+                    key={st.id}
+                    type="button"
+                    onClick={() => setStatusFilter(st.id as any)}
+                    className={`px-3 py-1 rounded-xl capitalize font-semibold transition-all tap-button active:scale-95 cursor-pointer ${
+                      statusFilter === st.id
+                        ? 'bg-amber-600 text-white shadow-2xs font-bold'
+                        : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
+                    }`}
+                  >
+                    {st.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleOpenAdd}
+              className="px-3.5 py-1.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs transition-colors flex items-center gap-1.5 tap-button active:scale-95 cursor-pointer shadow-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>+ Add Custom Vendor</span>
+            </button>
           </div>
 
           {/* Vendor Cards Grid */}
@@ -532,52 +783,86 @@ export default function VendorsPage() {
               <div className="w-12 h-12 bg-amber-50 text-amber-700 rounded-2xl flex items-center justify-center mx-auto">
                 <Briefcase className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-stone-900 font-serif">No personal vendors added yet</h3>
+              <h3 className="text-base font-bold text-stone-900 font-serif">No personal vendors or shortlists yet</h3>
               <p className="text-xs text-stone-500 max-w-sm mx-auto">
-                Explore our curated Tri-State directory to add pre-vetted vendors, or manually add your own caterer, decorator, DJ, or pandit ji.
+                Explore our curated Tri-State directory to shortlist pre-vetted vendors, or manually add your own caterer, decorator, DJ, or pandit ji.
               </p>
               <div className="flex items-center justify-center gap-3 pt-2">
                 <button
+                  type="button"
                   onClick={() => setActiveTab('directory')}
-                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs shadow-sm"
+                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs shadow-sm tap-button active:scale-95"
                 >
                   🧭 Explore Curated Directory
                 </button>
                 <button
+                  type="button"
                   onClick={handleOpenAdd}
-                  className="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold text-xs"
+                  className="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold text-xs tap-button active:scale-95"
                 >
                   + Add Custom Vendor
                 </button>
               </div>
             </div>
+          ) : filteredMyVendors.length === 0 ? (
+            <div className="bg-white p-10 rounded-3xl border border-dashed border-stone-300 text-center space-y-3">
+              <Filter className="w-8 h-8 text-stone-400 mx-auto" />
+              <h3 className="text-sm font-bold text-stone-800">No vendors match the "{statusFilter}" status</h3>
+              <p className="text-xs text-stone-500 max-w-sm mx-auto">
+                You currently have no vendors saved under this status filter.
+              </p>
+              <button
+                type="button"
+                onClick={() => setStatusFilter('all')}
+                className="px-4 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold tap-button active:scale-95 cursor-pointer"
+              >
+                Show All ({vendors.length})
+              </button>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {vendors.map((vendor) => {
+              {filteredMyVendors.map((vendor) => {
                 const balance = vendor.agreedAmount - vendor.depositPaid;
+                const isShortlist = vendor.status === 'shortlisted';
+                const curatedMatch = PRELOADED_CURATED_VENDORS.find(
+                  (cv) => cv.id === vendor.curatedVendorId || cv.name.toLowerCase() === vendor.name.toLowerCase()
+                );
+
                 const statusColors = {
-                  confirmed: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-                  negotiating: 'bg-amber-50 text-amber-800 border-amber-200',
-                  contacted: 'bg-blue-50 text-blue-800 border-blue-200',
+                  shortlisted: 'bg-amber-100 text-amber-900 border-amber-300 font-bold',
+                  confirmed: 'bg-emerald-50 text-emerald-800 border-emerald-200 font-bold',
+                  negotiating: 'bg-amber-50 text-amber-800 border-amber-200 font-semibold',
+                  contacted: 'bg-blue-50 text-blue-800 border-blue-200 font-semibold',
                   completed: 'bg-stone-100 text-stone-700 border-stone-300',
                 }[vendor.status] || 'bg-stone-100 text-stone-700 border-stone-300';
 
                 return (
                   <div
                     key={vendor.id}
-                    className="bg-white rounded-2xl border border-stone-200 shadow-xs hover:shadow-md transition-all p-6 flex flex-col justify-between interactive-card"
+                    className={`bg-white rounded-2xl border p-6 flex flex-col justify-between interactive-card transition-all ${
+                      isShortlist
+                        ? 'border-amber-300 ring-2 ring-amber-400/20 shadow-xs'
+                        : 'border-stone-200 shadow-xs hover:shadow-md'
+                    }`}
                   >
                     <div>
                       {/* Header row */}
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200">
                               {vendor.category}
                             </span>
-                            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${statusColors}`}>
-                              {vendor.status}
-                            </span>
+                            {isShortlist ? (
+                              <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-950 border border-amber-300 inline-flex items-center gap-1 shadow-2xs">
+                                <Bookmark className="w-3 h-3 fill-amber-700 text-amber-800" />
+                                <span>Shortlisted Candidate</span>
+                              </span>
+                            ) : (
+                              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${statusColors}`}>
+                                {vendor.status}
+                              </span>
+                            )}
                           </div>
                           <h3 className="text-lg font-bold text-stone-900 mt-2 font-serif">
                             {vendor.name}
@@ -586,18 +871,22 @@ export default function VendorsPage() {
                         </div>
                         <div className="flex items-center gap-1">
                           <button
+                            type="button"
                             onClick={() => handleOpenEdit(vendor)}
-                            className="p-1 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-colors"
+                            className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-colors cursor-pointer"
                             title="Edit Vendor"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
                           <button
+                            type="button"
                             onClick={() => {
-                              if (confirm(`Remove "${vendor.name}"?`)) deleteVendor(vendor.id);
+                              if (confirm(`Remove "${vendor.name}" from ${isShortlist ? 'your shortlist' : 'vendors'}?`)) {
+                                deleteVendor(vendor.id);
+                              }
                             }}
-                            className="p-1 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                            title="Delete Vendor"
+                            className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                            title={isShortlist ? 'Remove from Shortlist' : 'Delete Vendor'}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -609,6 +898,23 @@ export default function VendorsPage() {
                         <p className="mt-3 text-xs text-stone-600 leading-relaxed bg-stone-50 p-3 rounded-xl border border-stone-100 whitespace-pre-line">
                           {vendor.notes}
                         </p>
+                      )}
+
+                      {/* Curated Intel Link */}
+                      {curatedMatch && (
+                        <div className="mt-3 pt-2.5 border-t border-stone-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                          <button
+                            type="button"
+                            onClick={() => setInspectingVendor(curatedMatch)}
+                            className="text-xs text-amber-800 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                            <span>View Curated Intel, Rates & Fine Print →</span>
+                          </button>
+                          <span className="text-[11px] font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                            {curatedMatch.priceTier} Starting ~${curatedMatch.priceStartingAt.toLocaleString()}
+                          </span>
+                        </div>
                       )}
 
                       {/* Deliverables Checklist */}
@@ -630,29 +936,62 @@ export default function VendorsPage() {
                     </div>
 
                     {/* Bottom Financial & Action Row */}
-                    <div className="mt-6 pt-4 border-t border-stone-100 flex items-center justify-between text-xs">
-                      <div>
-                        <div className="text-stone-500 text-[11px]">Contract / Balance Due</div>
-                        <div className="font-bold text-stone-900">
-                          {formatCurr(vendor.agreedAmount)}{' '}
-                          <span className="text-rose-700 font-normal">
-                            (Due: {formatCurr(balance)})
-                          </span>
+                    {isShortlist ? (
+                      <div className="mt-6 pt-4 border-t border-stone-100 flex flex-wrap items-center justify-between gap-3 text-xs">
+                        <div>
+                          <div className="text-amber-800 font-bold text-[11px] uppercase tracking-wider flex items-center gap-1">
+                            <span>Candidate Under Evaluation</span>
+                          </div>
+                          <div className="text-xs text-stone-500 mt-0.5">
+                            {curatedMatch ? `Typical starting rate: $${curatedMatch.priceStartingAt.toLocaleString()}` : 'No contract amount committed yet'}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEdit(vendor)}
+                            className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-600 to-rose-700 hover:opacity-95 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 tap-button active:scale-95 cursor-pointer"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Finalize Contract / Book</span>
+                          </button>
+                          {vendor.phone && (
+                            <a
+                              href={`tel:${vendor.phone}`}
+                              className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 transition-colors"
+                              title={`Call ${vendor.name}`}
+                            >
+                              <Phone className="w-3.5 h-3.5 text-stone-600" />
+                            </a>
+                          )}
                         </div>
                       </div>
+                    ) : (
+                      <div className="mt-6 pt-4 border-t border-stone-100 flex items-center justify-between text-xs">
+                        <div>
+                          <div className="text-stone-500 text-[11px]">Contract / Balance Due</div>
+                          <div className="font-bold text-stone-900">
+                            {formatCurr(vendor.agreedAmount)}{' '}
+                            <span className="text-rose-700 font-normal">
+                              (Due: {formatCurr(balance)})
+                            </span>
+                          </div>
+                        </div>
 
-                      <div className="flex items-center gap-2">
-                        {vendor.phone && (
-                          <a
-                            href={`tel:${vendor.phone}`}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 font-medium transition-colors"
-                          >
-                            <Phone className="w-3.5 h-3.5 text-stone-600" />
-                            <span>{vendor.phone}</span>
-                          </a>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {vendor.phone && (
+                            <a
+                              href={`tel:${vendor.phone}`}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 font-medium transition-colors"
+                            >
+                              <Phone className="w-3.5 h-3.5 text-stone-600" />
+                              <span>{vendor.phone}</span>
+                            </a>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 );
               })}
@@ -833,22 +1172,48 @@ export default function VendorsPage() {
             </div>
 
             {/* Modal Bottom Action Button */}
-            <div className="pt-4 border-t border-stone-200 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setInspectingVendor(null)}
-                className="px-4 py-2 rounded-xl border border-stone-300 text-stone-600 hover:bg-stone-50 font-medium"
-              >
-                Close
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAddFromCurated(inspectingVendor)}
-                className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-rose-700 hover:opacity-95 text-white font-semibold shadow-sm flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add to My Vendors & Customize Quote</span>
-              </button>
+            <div className="pt-4 border-t border-stone-200 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleToggleShortlist(inspectingVendor)}
+                  className={`px-4 py-2 rounded-xl font-bold border transition-all flex items-center gap-2 cursor-pointer text-xs ${
+                    getCuratedStatus(inspectingVendor)?.status === 'shortlisted'
+                      ? 'bg-amber-100 hover:bg-amber-200 text-amber-950 border-amber-300 shadow-2xs'
+                      : 'bg-stone-100 hover:bg-stone-200 text-stone-800 border-stone-300'
+                  }`}
+                >
+                  {getCuratedStatus(inspectingVendor)?.status === 'shortlisted' ? (
+                    <>
+                      <BookmarkCheck className="w-4 h-4 text-amber-700 fill-amber-700" />
+                      <span>Shortlisted Candidate ✓</span>
+                    </>
+                  ) : (
+                    <>
+                      <BookmarkPlus className="w-4 h-4 text-stone-600" />
+                      <span>+ Add to Shortlist</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setInspectingVendor(null)}
+                  className="px-4 py-2 rounded-xl border border-stone-300 text-stone-600 hover:bg-stone-50 font-medium cursor-pointer text-xs"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAddFromCurated(inspectingVendor)}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-rose-700 hover:opacity-95 text-white font-semibold shadow-xs flex items-center gap-2 cursor-pointer text-xs"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Book Contract & Customize</span>
+                </button>
+              </div>
             </div>
           </div>
         </Modal>
@@ -906,9 +1271,10 @@ export default function VendorsPage() {
                 onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
                 className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-amber-500 bg-white"
               >
-                <option value="contacted">Contacted</option>
-                <option value="negotiating">Negotiating</option>
-                <option value="confirmed">Confirmed / Contract Signed</option>
+                <option value="shortlisted">⭐ Shortlisted (Evaluating candidate)</option>
+                <option value="contacted">💬 Contacted</option>
+                <option value="negotiating">🤝 Negotiating</option>
+                <option value="confirmed">✅ Confirmed / Contract Signed</option>
                 <option value="completed">Completed</option>
               </select>
             </div>
