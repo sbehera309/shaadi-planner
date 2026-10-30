@@ -13,7 +13,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
-  const { wedding, isDemoMode, resetToDefaultData } = useWedding();
+  const { wedding, isDemoMode, resetToDefaultData, isCloudSynced, isSyncing, lastSyncedAt, forceCloudSync } = useWedding();
   const { user, logout, isFirebaseConfigured } = useAuth();
   const [copied, setCopied] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -98,33 +98,51 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
           )}
 
           {/* Cloud Sync Status Badge */}
-          <div
-            className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border shrink-0 ${
+          <button
+            type="button"
+            onClick={() => {
+              if (user && forceCloudSync) forceCloudSync();
+            }}
+            className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border shrink-0 transition-all ${
               user
-                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                ? isSyncing
+                  ? 'bg-amber-50 text-amber-900 border-amber-300'
+                  : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100 cursor-pointer'
                 : isFirebaseConfigured
                 ? 'bg-amber-50 text-amber-900 border-amber-200'
                 : 'bg-stone-100 text-stone-700 border-stone-200'
             }`}
             title={
               user
-                ? `Signed in as ${user.email} (Cloud Sync Active)`
+                ? `Signed in as ${user.email} • Click to force sync now • Last synced: ${
+                    lastSyncedAt ? new Date(lastSyncedAt).toLocaleTimeString() : 'Active'
+                  }`
                 : isFirebaseConfigured
                 ? 'Firebase configured. Sign in to sync across devices.'
                 : 'Using Local Storage'
             }
           >
             {user ? (
-              <Cloud className="w-3.5 h-3.5 text-emerald-600" />
+              isSyncing ? (
+                <RefreshCw className="w-3.5 h-3.5 text-amber-600 animate-spin" />
+              ) : (
+                <Cloud className="w-3.5 h-3.5 text-emerald-600" />
+              )
             ) : isFirebaseConfigured ? (
               <Database className="w-3.5 h-3.5 text-amber-600" />
             ) : (
               <CloudOff className="w-3.5 h-3.5 text-stone-400" />
             )}
             <span>
-              {user ? 'Cloud Synced' : isFirebaseConfigured ? 'Firebase Ready' : 'Local Storage'}
+              {user
+                ? isSyncing
+                  ? 'Syncing...'
+                  : 'Cloud Synced'
+                : isFirebaseConfigured
+                ? 'Firebase Ready'
+                : 'Local Storage'}
             </span>
-          </div>
+          </button>
 
           {/* User Profile or Sign In Button */}
           {user ? (

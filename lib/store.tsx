@@ -1,6 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { useAuth } from './authContext';
 import {
   WeddingProfile,
   WeddingEvent,
@@ -28,7 +29,7 @@ import {
   sampleUsaWeddingTemplate,
 } from './mockData';
 import { isFirebaseConfigured, db } from './firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
 
 interface WeddingContextType {
   wedding: WeddingProfile | null;
@@ -42,6 +43,12 @@ interface WeddingContextType {
   tourPlan: SiteTourDayPlan | null;
   officialSangeetVenue: SangeetVenueOption | null;
   isDemoMode: boolean;
+
+  // Cloud Sync Status
+  isCloudSynced: boolean;
+  isSyncing: boolean;
+  lastSyncedAt: string | null;
+  forceCloudSync: () => Promise<void>;
 
   // Wedding Profile
   createWeddingProfile: (profile: Omit<WeddingProfile, 'id' | 'ownerId'>) => void;
@@ -130,6 +137,7 @@ const STORAGE_KEYS = {
 };
 
 export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [wedding, setWedding] = useState<WeddingProfile | null>(initialWeddingProfile);
   const [events, setEvents] = useState<WeddingEvent[]>(initialEvents);
   const [guests, setGuests] = useState<Guest[]>(initialGuests);
@@ -142,7 +150,14 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [officialSangeetVenue, setOfficialSangeetVenueState] = useState<SangeetVenueOption | null>(null);
   const [mounted, setMounted] = useState(false);
 
-  // Load from localStorage on client mount
+  // Cloud Sync State
+  const [isCloudSynced, setIsCloudSynced] = useState<boolean>(false);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+
+  const isApplyingRemoteRef = useRef(false);
+
+  // 1. Initial Load from localStorage on client mount (instant offline cache)
   useEffect(() => {
     try {
       const savedProfile = localStorage.getItem(STORAGE_KEYS.PROFILE);
@@ -185,7 +200,121 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setMounted(true);
   }, []);
 
-  // Save changes to localStorage
+  // 2. Real-Time Cloud Firestore Sync Linked Directly to User's Profile (Mobile + Desktop)
+  useEffect(() => {
+    if (!mounted || !isFirebaseConfigured || !db || !user) {
+      setIsCloudSynced(false);
+      return;
+    }
+
+    const firestore = db;
+    const userWeddingDocRef = doc(firestore, 'users', user.uid, 'wedding_data', 'main');
+
+    // Subscribe to real-time changes from the user's cloud profile
+    const unsubscribe = onSnapshot(
+      userWeddingDocRef,
+      async (snapshot) => {
+        if (snapshot.exists()) {
+          const remote = snapshot.data();
+          isApplyingRemoteRef.current = true;
+
+          // Hydrate user profile, shortlists, route planning & budget
+          if (remote.profile) setWedding(remote.profile);
+          if (Array.isArray(remote.events)) setEvents(remote.events);
+          if (Array.isArray(remote.guests)) setGuests(remote.guests);
+          if (Array.isArray(remote.budgetItems)) setBudgetItems(remote.budgetItems);
+          if (Array.isArray(remote.vendors)) setVendors(remote.vendors);
+          if (Array.isArray(remote.shagunRecords)) setShagunRecords(remote.shagunRecords);
+          if (Array.isArray(remote.rooms)) setRooms(remote.rooms);
+          if (Array.isArray(remote.venues)) setVenues(remote.venues);
+          if (remote.tourPlan !== undefined) setTourPlan(remote.tourPlan);
+          if (remote.officialSangeetVenue !== undefined) setOfficialSangeetVenueState(remote.officialSangeetVenue);
+
+          // Update local cache for offline availability
+          try {
+            if (remote.profile) localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(remote.profile));
+            if (remote.events) localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(remote.events));
+            if (remote.guests) localStorage.setItem(STORAGE_KEYS.GUESTS, JSON.stringify(remote.guests));
+            if (remote.budgetItems) localStorage.setItem(STORAGE_KEYS.BUDGET, JSON.stringify(remote.budgetItems));
+            if (remote.vendors) localStorage.setItem(STORAGE_KEYS.VENDORS, JSON.stringify(remote.vendors));
+            if (remote.shagunRecords) localStorage.setItem(STORAGE_KEYS.SHAGUN, JSON.stringify(remote.shagunRecords));
+            if (remote.rooms) localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(remote.rooms));
+            if (remote.venues) localStorage.setItem(STORAGE_KEYS.VENUES, JSON.stringify(remote.venues));
+            if (remote.tourPlan) localStorage.setItem(STORAGE_KEYS.TOUR_PLAN, JSON.stringify(remote.tourPlan));
+            if (remote.officialSangeetVenue) localStorage.setItem(STORAGE_KEYS.SANGEET_VENUE, JSON.stringify(remote.officialSangeetVenue));
+
+            if (remote.scenarioSelection) {
+              if (remote.scenarioSelection.selectedVenueId !== undefined) {
+                localStorage.setItem('shaadi_scenario_selected_venue_id', remote.scenarioSelection.selectedVenueId || '');
+              }
+              if (remote.scenarioSelection.includedVendorIds) {
+                localStorage.setItem('shaadi_scenario_included_vendors', JSON.stringify(remote.scenarioSelection.includedVendorIds));
+              }
+            }
+          } catch {}
+
+          setIsCloudSynced(true);
+          setLastSyncedAt(remote.updatedAt || new Date().toISOString());
+
+          setTimeout(() => {
+            isApplyingRemoteRef.current = false;
+          }, 350);
+        } else {
+          // Document does not exist in Firestore yet for this user.
+          // If the user already has data created locally on this device, immediately upload it to seed their cloud profile!
+          try {
+            const hasLocalData =
+              wedding !== null ||
+              venues.length > 0 ||
+              vendors.length > 0 ||
+              events.length > 0 ||
+              budgetItems.length > 0 ||
+              tourPlan !== null;
+
+            if (hasLocalData) {
+              setIsSyncing(true);
+              const seedData = {
+                profile: wedding,
+                events,
+                guests,
+                budgetItems,
+                vendors,
+                shagunRecords,
+                rooms,
+                venues,
+                tourPlan,
+                officialSangeetVenue,
+                userId: user.uid,
+                userEmail: user.email || '',
+                updatedAt: new Date().toISOString(),
+              };
+              await setDoc(userWeddingDocRef, seedData, { merge: true });
+              await setDoc(
+                doc(firestore, 'users', user.uid),
+                { email: user.email, hasWeddingData: true, updatedAt: new Date().toISOString() },
+                { merge: true }
+              );
+              setIsCloudSynced(true);
+              setLastSyncedAt(new Date().toISOString());
+            }
+          } catch (seedErr) {
+            console.warn('Failed to seed user profile data to Firestore:', seedErr);
+          } finally {
+            setIsSyncing(false);
+          }
+        }
+      },
+      (err) => {
+        console.warn('Real-time cloud profile sync listener error:', err);
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, [user, mounted]);
+
+  // 3. Save changes locally & push updates to User's Cloud Profile
   useEffect(() => {
     if (!mounted) return;
     try {
@@ -212,8 +341,10 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         localStorage.removeItem(STORAGE_KEYS.SANGEET_VENUE);
       }
 
-      // Real-time Cloud Firestore sync when configured
-      if (isFirebaseConfigured && db && wedding) {
+      // Sync directly to the Authenticated User's Firestore Profile
+      if (!isApplyingRemoteRef.current && isFirebaseConfigured && db && user) {
+        setIsSyncing(true);
+        const firestore = db;
         const cloudData = {
           profile: wedding,
           events,
@@ -225,14 +356,76 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           venues,
           tourPlan,
           officialSangeetVenue,
+          userId: user.uid,
+          userEmail: user.email || '',
           updatedAt: new Date().toISOString(),
         };
-        setDoc(doc(db, 'weddings', wedding.id), cloudData, { merge: true }).catch(() => {});
+
+        const userDocRef = doc(firestore, 'users', user.uid, 'wedding_data', 'main');
+        setDoc(userDocRef, cloudData, { merge: true })
+          .then(() => {
+            setIsCloudSynced(true);
+            setLastSyncedAt(new Date().toISOString());
+          })
+          .catch((err) => {
+            console.warn('Failed to sync changes to user profile:', err);
+          })
+          .finally(() => {
+            setIsSyncing(false);
+          });
+
+        // Also update public wedding record if wedding profile exists
+        if (wedding && wedding.id) {
+          setDoc(doc(firestore, 'weddings', wedding.id), cloudData, { merge: true }).catch(() => {});
+        }
       }
     } catch (e) {
       console.error('Failed to sync changes:', e);
     }
-  }, [mounted, wedding, events, guests, budgetItems, vendors, shagunRecords, rooms, venues, tourPlan, officialSangeetVenue]);
+  }, [
+    mounted,
+    user,
+    wedding,
+    events,
+    guests,
+    budgetItems,
+    vendors,
+    shagunRecords,
+    rooms,
+    venues,
+    tourPlan,
+    officialSangeetVenue,
+  ]);
+
+  // 4. Force Cloud Sync helper
+  const forceCloudSync = useCallback(async () => {
+    if (!isFirebaseConfigured || !db || !user) return;
+    setIsSyncing(true);
+    const firestore = db;
+    try {
+      const userDocRef = doc(firestore, 'users', user.uid, 'wedding_data', 'main');
+      const cloudData = {
+        profile: wedding,
+        events,
+        guests,
+        budgetItems,
+        vendors,
+        shagunRecords,
+        rooms,
+        venues,
+        tourPlan,
+        officialSangeetVenue,
+        userId: user.uid,
+        userEmail: user.email || '',
+        updatedAt: new Date().toISOString(),
+      };
+      await setDoc(userDocRef, cloudData, { merge: true });
+      setIsCloudSynced(true);
+      setLastSyncedAt(new Date().toISOString());
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [user, wedding, events, guests, budgetItems, vendors, shagunRecords, rooms, venues, tourPlan, officialSangeetVenue]);
 
   const createWeddingProfile = (profileData: Omit<WeddingProfile, 'id' | 'ownerId'>) => {
     const bride = profileData.brideName.trim();
@@ -765,6 +958,10 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         tourPlan,
         officialSangeetVenue,
         isDemoMode: !isFirebaseConfigured,
+        isCloudSynced,
+        isSyncing,
+        lastSyncedAt,
+        forceCloudSync,
         createWeddingProfile,
         updateWeddingProfile,
         initializeGuidedWedding,
