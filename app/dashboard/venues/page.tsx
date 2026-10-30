@@ -86,7 +86,9 @@ import {
   BookmarkCheck,
   ChevronRight,
   Lightbulb,
+  CreditCard,
 } from 'lucide-react';
+import { RecordPaymentModal } from '@/components/RecordPaymentModal';
 
 type CuratedSortOption = 'best' | 'service_desc' | 'price_asc' | 'price_desc' | 'capacity_desc';
 
@@ -108,6 +110,7 @@ export default function VenuesPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | VenueStatus>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVenue, setEditingVenue] = useState<VenueOption | null>(null);
+  const [payingVenue, setPayingVenue] = useState<VenueOption | null>(null);
   const [copiedWhatsApp, setCopiedWhatsApp] = useState(false);
   const [addedSuccessId, setAddedSuccessId] = useState<string | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
@@ -1141,14 +1144,30 @@ export default function VenuesPage() {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('sangeet')}
-            className="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-stone-950 font-bold text-xs transition-all flex items-center justify-center gap-2 shrink-0 shadow-sm"
-          >
-            <Music className="w-4 h-4" />
-            <span>Launch Sangeet Triangulation Engine →</span>
-          </button>
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setPayingVenue(officialVenue)}
+              className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 transition-all flex items-center justify-center gap-1.5 shadow-sm tap-button active:scale-95 cursor-pointer"
+              title="Record and track venue contract milestone payments"
+            >
+              <CreditCard className="w-4 h-4 text-amber-300" />
+              <span>
+                {officialVenue.installments?.length
+                  ? `${officialVenue.installments.length} Payment${officialVenue.installments.length === 1 ? '' : 's'} Logged`
+                  : '+ Record Venue Payment'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('sangeet')}
+              className="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-stone-950 font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-sm tap-button active:scale-95 cursor-pointer"
+            >
+              <Music className="w-4 h-4" />
+              <span>Launch Sangeet Triangulation Engine →</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -2626,10 +2645,25 @@ export default function VenuesPage() {
                             <span>Select as Official Venue</span>
                           </button>
                         ) : (
-                          <span className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 font-bold text-xs border border-emerald-300 inline-flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>Chosen Wedding Venue</span>
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 font-bold text-xs border border-emerald-300 inline-flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Chosen Wedding Venue</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setPayingVenue(venue)}
+                              className="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-950 font-bold text-xs border border-amber-300 inline-flex items-center gap-1.5 transition-all tap-button active:scale-95 shadow-2xs cursor-pointer"
+                              title="Record or inspect venue deposit installment payments"
+                            >
+                              <CreditCard className="w-3.5 h-3.5 text-amber-700" />
+                              <span>
+                                {venue.installments?.length
+                                  ? `${venue.installments.length} Payment${venue.installments.length === 1 ? '' : 's'}`
+                                  : '+ Record Venue Payment'}
+                              </span>
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -4722,6 +4756,29 @@ export default function VenuesPage() {
         isOpen={isSimulatorOpen}
         onClose={() => setIsSimulatorOpen(false)}
       />
+
+      {/* Record Payment Installment Modal for Venue */}
+      {(() => {
+        const livePayingVenue = payingVenue
+          ? venues.find((v) => v.id === payingVenue.id) || payingVenue
+          : null;
+        if (!livePayingVenue) return null;
+        return (
+          <RecordPaymentModal
+            isOpen={!!payingVenue}
+            onClose={() => setPayingVenue(null)}
+            target={{
+              type: 'venue',
+              id: livePayingVenue.id,
+              title: livePayingVenue.name,
+              category: 'Venue & Catering',
+              totalAmount: livePayingVenue.pricing.estimatedTotalCost,
+              currencySymbol,
+            }}
+            installments={livePayingVenue.installments || []}
+          />
+        );
+      })()}
     </div>
   );
 }

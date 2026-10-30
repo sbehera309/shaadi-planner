@@ -272,6 +272,26 @@ export const sampleUsaWeddingTemplate: {
       dueDate: '2026-10-10',
       paidBy: 'split_50_50' as const,
       status: 'partial' as const,
+      installments: [
+        {
+          id: 'inst-b1-1',
+          amount: 15000,
+          date: '2026-03-15',
+          paidBy: 'groom_side',
+          paymentMethod: 'Check',
+          referenceNote: 'Castle Ballroom 25% Booking Deposit (Check #2041)',
+          recordedAt: '2026-03-15T14:30:00Z',
+        },
+        {
+          id: 'inst-b1-2',
+          amount: 20000,
+          date: '2026-06-20',
+          paidBy: 'bride_side',
+          paymentMethod: 'Bank Wire / ACH',
+          referenceNote: 'Milestone 2 Catering & Premium Bar Advance (FedWire #9081)',
+          recordedAt: '2026-06-20T11:15:00Z',
+        },
+      ],
     },
     {
       id: 'b-2',
@@ -284,6 +304,26 @@ export const sampleUsaWeddingTemplate: {
       dueDate: '2026-10-15',
       paidBy: 'split_50_50' as const,
       status: 'partial' as const,
+      installments: [
+        {
+          id: 'inst-b2-1',
+          amount: 6000,
+          date: '2026-04-10',
+          paidBy: 'bride_side',
+          paymentMethod: 'Zelle',
+          referenceNote: 'Mandap 3D CAD Mockup & Floral Retainer',
+          recordedAt: '2026-04-10T16:00:00Z',
+        },
+        {
+          id: 'inst-b2-2',
+          amount: 6000,
+          date: '2026-07-15',
+          paidBy: 'groom_side',
+          paymentMethod: 'Zelle',
+          referenceNote: 'Midway Stage Fabric & Sangeet Props Deposit',
+          recordedAt: '2026-07-15T18:20:00Z',
+        },
+      ],
     },
     {
       id: 'b-3',
@@ -296,6 +336,26 @@ export const sampleUsaWeddingTemplate: {
       dueDate: '2026-10-18',
       paidBy: 'split_50_50' as const,
       status: 'partial' as const,
+      installments: [
+        {
+          id: 'inst-b3-1',
+          amount: 3500,
+          date: '2026-02-18',
+          paidBy: 'bride_side',
+          paymentMethod: 'Credit Card',
+          referenceNote: 'Booking Retainer & Drone FAA Flight Permit Fee',
+          recordedAt: '2026-02-18T10:00:00Z',
+        },
+        {
+          id: 'inst-b3-2',
+          amount: 3500,
+          date: '2026-08-01',
+          paidBy: 'groom_side',
+          paymentMethod: 'Venmo',
+          referenceNote: 'Milestone 2 - Pre-Wedding Engagement Shoot Complete',
+          recordedAt: '2026-08-01T15:45:00Z',
+        },
+      ],
     },
     {
       id: 'b-4',
@@ -308,6 +368,17 @@ export const sampleUsaWeddingTemplate: {
       dueDate: '2026-09-30',
       paidBy: 'groom_side' as const,
       status: 'partial' as const,
+      installments: [
+        {
+          id: 'inst-b4-1',
+          amount: 1000,
+          date: '2026-05-12',
+          paidBy: 'groom_side',
+          paymentMethod: 'Credit Card',
+          referenceNote: '40% Vehicle Reservation Deposit (1965 Rolls Royce)',
+          recordedAt: '2026-05-12T12:00:00Z',
+        },
+      ],
     },
     {
       id: 'b-5',

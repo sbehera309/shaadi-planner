@@ -77,6 +77,27 @@ export interface Guest {
   eventRsvps: Record<string, RsvpStatus>;
 }
 
+export type PaymentPayer = 'bride_side' | 'groom_side' | 'split_50_50' | 'couple';
+
+export type PaymentMethod =
+  | 'Zelle'
+  | 'Bank Wire / ACH'
+  | 'Check'
+  | 'Credit Card'
+  | 'Cash'
+  | 'Venmo'
+  | 'Other';
+
+export interface PaymentInstallment {
+  id: string;
+  amount: number;
+  date: string; // YYYY-MM-DD
+  paidBy: PaymentPayer;
+  paymentMethod?: PaymentMethod;
+  referenceNote?: string; // e.g. "Booking Deposit 25%", "Check #1042", "Tasting Milestone"
+  recordedAt?: string; // ISO string timestamp
+}
+
 export interface BudgetItem {
   id: string;
   weddingId: string;
@@ -100,6 +121,7 @@ export interface BudgetItem {
   status: 'paid' | 'partial' | 'pending';
   vendorId?: string;
   notes?: string;
+  installments?: PaymentInstallment[];
 }
 
 export interface Vendor {
@@ -129,6 +151,7 @@ export interface Vendor {
   notes: string;
   deliverables: string[];
   curatedVendorId?: string;
+  installments?: PaymentInstallment[];
 }
 
 export interface VendorPricingTier {
@@ -326,6 +349,8 @@ export interface VenueOption {
   isFavorite?: boolean;
   isSelectedOfficialVenue?: boolean;
   isCustomUserAddedVenue?: boolean;
+  contractAgreedAmount?: number;
+  installments?: PaymentInstallment[];
 }
 
 export type VenuePricingQuoteType =

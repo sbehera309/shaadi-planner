@@ -15,6 +15,7 @@ import {
   VenueOption,
   SiteTourDayPlan,
   SangeetVenueOption,
+  PaymentInstallment,
 } from './types';
 import {
   initialWeddingProfile,
@@ -77,6 +78,16 @@ interface WeddingContextType {
   addBudgetItem: (item: Omit<BudgetItem, 'id' | 'weddingId'>) => void;
   updateBudgetItem: (id: string, item: Partial<BudgetItem>) => void;
   deleteBudgetItem: (id: string) => void;
+
+  // Milestone Payment Installment Tracking
+  addPaymentInstallment: (
+    target: { type: 'budget' | 'vendor' | 'venue'; id: string },
+    installment: Omit<PaymentInstallment, 'id'>
+  ) => void;
+  deletePaymentInstallment: (
+    target: { type: 'budget' | 'vendor' | 'venue'; id: string },
+    installmentId: string
+  ) => void;
 
   // Vendors
   addVendor: (vendor: Omit<Vendor, 'id' | 'weddingId'>) => void;
@@ -638,6 +649,235 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setBudgetItems((prev) => prev.filter((b) => b.id !== id));
   };
 
+  const addPaymentInstallment = (
+    target: { type: 'budget' | 'vendor' | 'venue'; id: string },
+    installmentData: Omit<PaymentInstallment, 'id'>
+  ) => {
+    const newInstallment: PaymentInstallment = {
+      ...installmentData,
+      id: `inst-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      recordedAt: installmentData.recordedAt || new Date().toISOString(),
+    };
+
+    if (target.type === 'budget') {
+      let linkedVendorId: string | undefined;
+      setBudgetItems((prev) =>
+        prev.map((b) => {
+          if (b.id !== target.id) return b;
+          linkedVendorId = b.vendorId;
+          const currentInsts = b.installments || [];
+          const updatedInsts = [...currentInsts, newInstallment];
+          const newPaid = updatedInsts.reduce((acc, inst) => acc + (Number(inst.amount) || 0), 0);
+          const newStatus: BudgetItem['status'] =
+            b.actualCost > 0 && newPaid >= b.actualCost
+              ? 'paid'
+              : newPaid > 0
+              ? 'partial'
+              : 'pending';
+          return {
+            ...b,
+            installments: updatedInsts,
+            paidAmount: newPaid,
+            status: newStatus,
+          };
+        })
+      );
+
+      if (linkedVendorId) {
+        setVendors((prev) =>
+          prev.map((v) => {
+            if (v.id !== linkedVendorId) return v;
+            const currentInsts = v.installments || [];
+            const updatedInsts = [...currentInsts, newInstallment];
+            const newDeposit = updatedInsts.reduce((acc, inst) => acc + (Number(inst.amount) || 0), 0);
+            return {
+              ...v,
+              installments: updatedInsts,
+              depositPaid: newDeposit,
+            };
+          })
+        );
+      }
+    } else if (target.type === 'vendor') {
+      setVendors((prev) =>
+        prev.map((v) => {
+          if (v.id !== target.id) return v;
+          const currentInsts = v.installments || [];
+          const updatedInsts = [...currentInsts, newInstallment];
+          const newDeposit = updatedInsts.reduce((acc, inst) => acc + (Number(inst.amount) || 0), 0);
+          return {
+            ...v,
+            installments: updatedInsts,
+            depositPaid: newDeposit,
+            status: v.status === 'shortlisted' ? 'confirmed' : v.status,
+          };
+        })
+      );
+
+      setBudgetItems((prev) =>
+        prev.map((b) => {
+          if (b.vendorId !== target.id) return b;
+          const currentInsts = b.installments || [];
+          const updatedInsts = [...currentInsts, newInstallment];
+          const newPaid = updatedInsts.reduce((acc, inst) => acc + (Number(inst.amount) || 0), 0);
+          const newStatus: BudgetItem['status'] =
+            b.actualCost > 0 && newPaid >= b.actualCost
+              ? 'paid'
+              : newPaid > 0
+              ? 'partial'
+              : 'pending';
+          return {
+            ...b,
+            installments: updatedInsts,
+            paidAmount: newPaid,
+            status: newStatus,
+          };
+        })
+      );
+    } else if (target.type === 'venue') {
+      setVenues((prev) =>
+        prev.map((v) => {
+          if (v.id !== target.id) return v;
+          const currentInsts = v.installments || [];
+          const updatedInsts = [...currentInsts, newInstallment];
+          return {
+            ...v,
+            installments: updatedInsts,
+          };
+        })
+      );
+
+      setBudgetItems((prev) =>
+        prev.map((b) => {
+          if (b.category !== 'Venue & Catering') return b;
+          const currentInsts = b.installments || [];
+          const updatedInsts = [...currentInsts, newInstallment];
+          const newPaid = updatedInsts.reduce((acc, inst) => acc + (Number(inst.amount) || 0), 0);
+          const newStatus: BudgetItem['status'] =
+            b.actualCost > 0 && newPaid >= b.actualCost
+              ? 'paid'
+              : newPaid > 0
+              ? 'partial'
+              : 'pending';
+          return {
+            ...b,
+            installments: updatedInsts,
+            paidAmount: newPaid,
+            status: newStatus,
+          };
+        })
+      );
+    }
+  };
+
+  const deletePaymentInstallment = (
+    target: { type: 'budget' | 'vendor' | 'venue'; id: string },
+    installmentId: string
+  ) => {
+    if (target.type === 'budget') {
+      let linkedVendorId: string | undefined;
+      setBudgetItems((prev) =>
+        prev.map((b) => {
+          if (b.id !== target.id) return b;
+          linkedVendorId = b.vendorId;
+          const updatedInsts = (b.installments || []).filter((i) => i.id !== installmentId);
+          const newPaid = updatedInsts.reduce((acc, inst) => acc + (Number(inst.amount) || 0), 0);
+          const newStatus: BudgetItem['status'] =
+            b.actualCost > 0 && newPaid >= b.actualCost
+              ? 'paid'
+              : newPaid > 0
+              ? 'partial'
+              : 'pending';
+          return {
+            ...b,
+            installments: updatedInsts,
+            paidAmount: newPaid,
+            status: newStatus,
+          };
+        })
+      );
+
+      if (linkedVendorId) {
+        setVendors((prev) =>
+          prev.map((v) => {
+            if (v.id !== linkedVendorId) return v;
+            const updatedInsts = (v.installments || []).filter((i) => i.id !== installmentId);
+            const newDeposit = updatedInsts.reduce((acc, inst) => acc + (Number(inst.amount) || 0), 0);
+            return {
+              ...v,
+              installments: updatedInsts,
+              depositPaid: newDeposit,
+            };
+          })
+        );
+      }
+    } else if (target.type === 'vendor') {
+      setVendors((prev) =>
+        prev.map((v) => {
+          if (v.id !== target.id) return v;
+          const updatedInsts = (v.installments || []).filter((i) => i.id !== installmentId);
+          const newDeposit = updatedInsts.reduce((acc, inst) => acc + (Number(inst.amount) || 0), 0);
+          return {
+            ...v,
+            installments: updatedInsts,
+            depositPaid: newDeposit,
+          };
+        })
+      );
+
+      setBudgetItems((prev) =>
+        prev.map((b) => {
+          if (b.vendorId !== target.id) return b;
+          const updatedInsts = (b.installments || []).filter((i) => i.id !== installmentId);
+          const newPaid = updatedInsts.reduce((acc, inst) => acc + (Number(inst.amount) || 0), 0);
+          const newStatus: BudgetItem['status'] =
+            b.actualCost > 0 && newPaid >= b.actualCost
+              ? 'paid'
+              : newPaid > 0
+              ? 'partial'
+              : 'pending';
+          return {
+            ...b,
+            installments: updatedInsts,
+            paidAmount: newPaid,
+            status: newStatus,
+          };
+        })
+      );
+    } else if (target.type === 'venue') {
+      setVenues((prev) =>
+        prev.map((v) => {
+          if (v.id !== target.id) return v;
+          const updatedInsts = (v.installments || []).filter((i) => i.id !== installmentId);
+          return {
+            ...v,
+            installments: updatedInsts,
+          };
+        })
+      );
+
+      setBudgetItems((prev) =>
+        prev.map((b) => {
+          if (b.category !== 'Venue & Catering') return b;
+          const updatedInsts = (b.installments || []).filter((i) => i.id !== installmentId);
+          const newPaid = updatedInsts.reduce((acc, inst) => acc + (Number(inst.amount) || 0), 0);
+          const newStatus: BudgetItem['status'] =
+            b.actualCost > 0 && newPaid >= b.actualCost
+              ? 'paid'
+              : newPaid > 0
+              ? 'partial'
+              : 'pending';
+          return {
+            ...b,
+            installments: updatedInsts,
+            paidAmount: newPaid,
+            status: newStatus,
+          };
+        })
+      );
+    }
+  };
+
   const addVendor = (vendorData: Omit<Vendor, 'id' | 'weddingId'>) => {
     const newVendor: Vendor = {
       ...vendorData,
@@ -979,6 +1219,8 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addBudgetItem,
         updateBudgetItem,
         deleteBudgetItem,
+        addPaymentInstallment,
+        deletePaymentInstallment,
         addVendor,
         updateVendor,
         deleteVendor,

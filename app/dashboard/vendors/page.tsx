@@ -33,7 +33,9 @@ import {
   Bookmark,
   BookmarkCheck,
   BookmarkPlus,
+  CreditCard,
 } from 'lucide-react';
+import { RecordPaymentModal } from '@/components/RecordPaymentModal';
 
 const CATEGORY_TABS: { label: string; value: string }[] = [
   { label: 'All Categories', value: 'All' },
@@ -80,6 +82,7 @@ export default function VendorsPage() {
   // Form State for User's Vendor
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
+  const [payingVendor, setPayingVendor] = useState<Vendor | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     category: 'Pandit Ji' as Vendor['category'],
@@ -1018,22 +1021,39 @@ export default function VendorsPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="mt-6 pt-4 border-t border-stone-100 flex items-center justify-between text-xs">
+                      <div className="mt-6 pt-4 border-t border-stone-100 flex flex-wrap items-center justify-between gap-3 text-xs">
                         <div>
-                          <div className="text-stone-500 text-[11px]">Contract / Balance Due</div>
-                          <div className="font-bold text-stone-900">
-                            {formatCurr(vendor.agreedAmount)}{' '}
-                            <span className="text-rose-700 font-normal">
-                              (Due: {formatCurr(balance)})
+                          <div className="text-stone-500 text-[11px] flex items-center gap-1.5">
+                            <span>Contract: {formatCurr(vendor.agreedAmount)}</span>
+                            <span>•</span>
+                            <span className="text-emerald-700 font-semibold">Paid: {formatCurr(vendor.depositPaid)}</span>
+                          </div>
+                          <div className="font-bold text-stone-900 mt-0.5">
+                            <span className={balance > 0 ? 'text-rose-700' : 'text-emerald-700 font-bold'}>
+                              {balance > 0 ? `Balance Due: ${formatCurr(balance)}` : 'Fully Settled ✓'}
                             </span>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setPayingVendor(vendor)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-950 font-bold text-xs border border-amber-300 transition-all cursor-pointer tap-button active:scale-95 shadow-2xs"
+                            title="Record or inspect milestone installment payments"
+                          >
+                            <CreditCard className="w-3.5 h-3.5 text-amber-700" />
+                            <span>
+                              {vendor.installments?.length
+                                ? `${vendor.installments.length} Payment${vendor.installments.length === 1 ? '' : 's'}`
+                                : '+ Record Payment'}
+                            </span>
+                          </button>
+
                           {vendor.phone && (
                             <a
                               href={`tel:${vendor.phone}`}
-                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 font-medium transition-colors"
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-medium transition-colors"
                             >
                               <Phone className="w-3.5 h-3.5 text-stone-600" />
                               <span>{vendor.phone}</span>
@@ -1435,6 +1455,29 @@ export default function VendorsPage() {
         isOpen={isSimulatorOpen}
         onClose={() => setIsSimulatorOpen(false)}
       />
+
+      {/* Record Payment Installment Modal for Vendor */}
+      {(() => {
+        const livePayingVendor = payingVendor
+          ? vendors.find((v) => v.id === payingVendor.id) || payingVendor
+          : null;
+        if (!livePayingVendor) return null;
+        return (
+          <RecordPaymentModal
+            isOpen={!!payingVendor}
+            onClose={() => setPayingVendor(null)}
+            target={{
+              type: 'vendor',
+              id: livePayingVendor.id,
+              title: livePayingVendor.name,
+              category: livePayingVendor.category,
+              totalAmount: livePayingVendor.agreedAmount,
+              currencySymbol,
+            }}
+            installments={livePayingVendor.installments || []}
+          />
+        );
+      })()}
     </div>
   );
 }

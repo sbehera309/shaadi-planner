@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import { useWedding } from '@/lib/store';
-import { BudgetItem } from '@/lib/types';
+import { BudgetItem, PaymentInstallment, PaymentPayer } from '@/lib/types';
 import { Modal } from '@/components/Modal';
+import { RecordPaymentModal } from '@/components/RecordPaymentModal';
 import { ShortlistBudgetModal } from '@/components/ShortlistBudgetModal';
 import { AnimatedBudgetNumber } from '@/components/AnimatedBudgetNumber';
 import { useShortlistBudget } from '@/lib/useShortlistBudget';
@@ -22,6 +23,12 @@ import {
   Sparkles,
   ChevronRight,
   HelpCircle,
+  CreditCard,
+  History,
+  Calendar,
+  Search,
+  CheckCircle2,
+  Receipt,
 } from 'lucide-react';
 
 interface DesiExpensePreset {
@@ -332,21 +339,82 @@ export default function BudgetPage() {
     }).format(val);
   };
 
+  // Milestone Payment Installment Tracking State
+  const [payingItem, setPayingItem] = useState<BudgetItem | null>(null);
+  const [activeBudgetTab, setActiveBudgetTab] = useState<'expenses' | 'payment_log'>('expenses');
+  const [paymentLogSearch, setPaymentLogSearch] = useState<string>('');
+
   // Calculations
   const totalTarget = wedding?.targetBudget || 0;
   const totalCommitted = budgetItems.reduce((acc, b) => acc + b.actualCost, 0);
   const totalPaid = budgetItems.reduce((acc, b) => acc + b.paidAmount, 0);
   const totalPending = totalCommitted - totalPaid;
 
-  const brideTotal = budgetItems
+  // Split calculations
+  // Total assigned responsibility per family side
+  const brideAssignedTotal = budgetItems
     .filter((b) => b.paidBy === 'bride_side')
     .reduce((acc, b) => acc + b.actualCost, 0);
-  const groomTotal = budgetItems
+  const groomAssignedTotal = budgetItems
     .filter((b) => b.paidBy === 'groom_side')
     .reduce((acc, b) => acc + b.actualCost, 0);
-  const splitTotal = budgetItems
+  const splitAssignedTotal = budgetItems
     .filter((b) => b.paidBy === 'split_50_50')
     .reduce((acc, b) => acc + b.actualCost, 0);
+
+  // Exact Realized Paid Amounts per family from installments
+  // If an item has logged installments, we inspect each installment's paidBy
+  // If an item doesn't have installments yet, we fallback to its static paidBy assignment
+  let brideRealPaid = 0;
+  let groomRealPaid = 0;
+
+  budgetItems.forEach((b) => {
+    if (b.installments && b.installments.length > 0) {
+      b.installments.forEach((inst) => {
+        const amt = Number(inst.amount) || 0;
+        if (inst.paidBy === 'bride_side') brideRealPaid += amt;
+        else if (inst.paidBy === 'groom_side') groomRealPaid += amt;
+        else if (inst.paidBy === 'split_50_50') {
+          brideRealPaid += amt / 2;
+          groomRealPaid += amt / 2;
+        }
+      });
+    } else if (b.paidAmount > 0) {
+      if (b.paidBy === 'bride_side') brideRealPaid += b.paidAmount;
+      else if (b.paidBy === 'groom_side') groomRealPaid += b.paidAmount;
+      else if (b.paidBy === 'split_50_50') {
+        brideRealPaid += b.paidAmount / 2;
+        groomRealPaid += b.paidAmount / 2;
+      }
+    }
+  });
+
+  const brideTotal = brideAssignedTotal;
+  const groomTotal = groomAssignedTotal;
+  const splitTotal = splitAssignedTotal;
+
+  // Full timeline audit log of all installments across all budget items
+  const allRecordedInstallments = budgetItems
+    .flatMap((b) =>
+      (b.installments || []).map((inst) => ({
+        ...inst,
+        budgetItemId: b.id,
+        budgetItemTitle: b.title,
+        budgetItemCategory: b.category,
+      }))
+    )
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const filteredInstallments = allRecordedInstallments.filter((inst) => {
+    if (!paymentLogSearch) return true;
+    const q = paymentLogSearch.toLowerCase();
+    return (
+      inst.budgetItemTitle.toLowerCase().includes(q) ||
+      inst.budgetItemCategory.toLowerCase().includes(q) ||
+      (inst.referenceNote && inst.referenceNote.toLowerCase().includes(q)) ||
+      (inst.paymentMethod && inst.paymentMethod.toLowerCase().includes(q))
+    );
+  });
 
   // Filter
   const filteredItems = budgetItems.filter((item) => {
@@ -519,30 +587,26 @@ export default function BudgetPage() {
       {/* Top 3 Split Cards: Bride vs Groom vs Shared */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="bg-white p-5 rounded-2xl border border-rose-200/80 shadow-xs relative overflow-hidden interactive-card">
-          <div className="text-xs font-bold text-rose-800 uppercase tracking-wider">
-            Bride's Family (Ladkiwale)
+          <div className="text-xs font-bold text-rose-800 uppercase tracking-wider flex items-center justify-between">
+            <span>Bride's Family (Ladkiwale)</span>
+            <span className="text-[10px] font-normal text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+              Assigned + 50% Shared
+            </span>
           </div>
-          <div className="mt-2 text-2xl font-bold text-stone-900">{formatCurr(brideTotal)}</div>
-          <div className="mt-2 text-xs text-stone-500 flex justify-between">
+          <div className="mt-2 text-2xl font-bold text-stone-900">
+            {formatCurr(brideAssignedTotal + splitAssignedTotal / 2)}
+          </div>
+          <div className="mt-2 text-xs text-stone-500 flex justify-between items-center">
             <span>
-              Paid:{' '}
-              <strong className="text-emerald-700">
-                {formatCurr(
-                  budgetItems
-                    .filter((b) => b.paidBy === 'bride_side')
-                    .reduce((acc, b) => acc + b.paidAmount, 0)
-                )}
+              Real Paid:{' '}
+              <strong className="text-emerald-700 font-mono">
+                {formatCurr(brideRealPaid)}
               </strong>
             </span>
             <span>
-              Due:{' '}
-              <strong className="text-rose-700">
-                {formatCurr(
-                  brideTotal -
-                    budgetItems
-                      .filter((b) => b.paidBy === 'bride_side')
-                      .reduce((acc, b) => acc + b.paidAmount, 0)
-                )}
+              Net Due:{' '}
+              <strong className="text-rose-700 font-mono">
+                {formatCurr(Math.max(0, brideAssignedTotal + splitAssignedTotal / 2 - brideRealPaid))}
               </strong>
             </span>
           </div>
@@ -550,30 +614,26 @@ export default function BudgetPage() {
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-blue-200/80 shadow-xs relative overflow-hidden interactive-card">
-          <div className="text-xs font-bold text-blue-800 uppercase tracking-wider">
-            Groom's Family (Ladkewale)
+          <div className="text-xs font-bold text-blue-800 uppercase tracking-wider flex items-center justify-between">
+            <span>Groom's Family (Ladkewale)</span>
+            <span className="text-[10px] font-normal text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+              Assigned + 50% Shared
+            </span>
           </div>
-          <div className="mt-2 text-2xl font-bold text-stone-900">{formatCurr(groomTotal)}</div>
-          <div className="mt-2 text-xs text-stone-500 flex justify-between">
+          <div className="mt-2 text-2xl font-bold text-stone-900">
+            {formatCurr(groomAssignedTotal + splitAssignedTotal / 2)}
+          </div>
+          <div className="mt-2 text-xs text-stone-500 flex justify-between items-center">
             <span>
-              Paid:{' '}
-              <strong className="text-emerald-700">
-                {formatCurr(
-                  budgetItems
-                    .filter((b) => b.paidBy === 'groom_side')
-                    .reduce((acc, b) => acc + b.paidAmount, 0)
-                )}
+              Real Paid:{' '}
+              <strong className="text-emerald-700 font-mono">
+                {formatCurr(groomRealPaid)}
               </strong>
             </span>
             <span>
-              Due:{' '}
-              <strong className="text-blue-700">
-                {formatCurr(
-                  groomTotal -
-                    budgetItems
-                      .filter((b) => b.paidBy === 'groom_side')
-                      .reduce((acc, b) => acc + b.paidAmount, 0)
-                )}
+              Net Due:{' '}
+              <strong className="text-blue-700 font-mono">
+                {formatCurr(Math.max(0, groomAssignedTotal + splitAssignedTotal / 2 - groomRealPaid))}
               </strong>
             </span>
           </div>
@@ -581,21 +641,24 @@ export default function BudgetPage() {
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-amber-200/80 shadow-xs relative overflow-hidden interactive-card">
-          <div className="text-xs font-bold text-amber-800 uppercase tracking-wider">
-            Shared 50-50 Split
+          <div className="text-xs font-bold text-amber-800 uppercase tracking-wider flex items-center justify-between">
+            <span>Shared 50-50 Contracts</span>
+            <span className="text-[10px] font-mono text-amber-700">
+              Each: {formatCurr(splitAssignedTotal / 2)}
+            </span>
           </div>
-          <div className="mt-2 text-2xl font-bold text-stone-900">{formatCurr(splitTotal)}</div>
-          <div className="mt-2 text-xs text-stone-500 flex justify-between">
-            <span>Each Family: <strong>{formatCurr(splitTotal / 2)}</strong></span>
+          <div className="mt-2 text-2xl font-bold text-stone-900">{formatCurr(splitAssignedTotal)}</div>
+          <div className="mt-2 text-xs text-stone-500 flex justify-between items-center">
             <span>
-              Due:{' '}
-              <strong className="text-amber-700">
-                {formatCurr(
-                  splitTotal -
-                    budgetItems
-                      .filter((b) => b.paidBy === 'split_50_50')
-                      .reduce((acc, b) => acc + b.paidAmount, 0)
-                )}
+              Total Logged Paid:{' '}
+              <strong className="text-emerald-700 font-mono">
+                {formatCurr(totalPaid)}
+              </strong>
+            </span>
+            <span>
+              Overall Due:{' '}
+              <strong className="text-amber-700 font-mono">
+                {formatCurr(totalPending)}
               </strong>
             </span>
           </div>
@@ -603,179 +666,122 @@ export default function BudgetPage() {
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs flex flex-wrap gap-4 items-center justify-between text-xs">
+      {/* View Switcher: Expense Contracts vs Milestone Payment Ledger */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-200 pb-3">
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-stone-600">Category:</span>
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-1.5 rounded-xl border border-stone-200 bg-white text-stone-800 focus:outline-hidden focus:ring-2 focus:ring-amber-500"
+          <button
+            type="button"
+            onClick={() => setActiveBudgetTab('expenses')}
+            className={`px-4 py-2 rounded-xl font-bold text-xs transition-all tap-button active:scale-95 cursor-pointer flex items-center gap-2 ${
+              activeBudgetTab === 'expenses'
+                ? 'bg-stone-900 text-white shadow-xs'
+                : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
+            }`}
           >
-            <option value="all">All Categories</option>
-            <option value="Venue & Catering">Venue & Catering</option>
-            <option value="Decor & Mandap">Decor & Mandap</option>
-            <option value="Photography & Film">Photography & Film</option>
-            <option value="Outfits & Jewellery">Outfits & Jewellery</option>
-            <option value="Bridal MUA & Mehendi">Bridal MUA & Mehendi</option>
-            <option value="Music, Dhol & Entertainment">Music, Dhol & Entertainment</option>
-            <option value="Pandit & Rituals">Pandit & Rituals</option>
-            <option value="Accommodations & Transport">Accommodations & Transport</option>
-          </select>
+            <WalletCards className="w-3.5 h-3.5" />
+            <span>Budget & Expense Items ({budgetItems.length})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveBudgetTab('payment_log')}
+            className={`px-4 py-2 rounded-xl font-bold text-xs transition-all tap-button active:scale-95 cursor-pointer flex items-center gap-2 ${
+              activeBudgetTab === 'payment_log'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
+            }`}
+          >
+            <History className="w-3.5 h-3.5" />
+            <span>Milestone Payment Ledger ({allRecordedInstallments.length})</span>
+            {allRecordedInstallments.length > 0 && (
+              <span
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+                  activeBudgetTab === 'payment_log' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-900'
+                }`}
+              >
+                {formatCurr(totalPaid)}
+              </span>
+            )}
+          </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-stone-600">Paid By:</span>
-          <select
-            value={selectedSplit}
-            onChange={(e) => setSelectedSplit(e.target.value)}
-            className="px-3 py-1.5 rounded-xl border border-stone-200 bg-white text-stone-800 focus:outline-hidden focus:ring-2 focus:ring-amber-500"
-          >
-            <option value="all">All Splits</option>
-            <option value="bride_side">Bride Side</option>
-            <option value="groom_side">Groom Side</option>
-            <option value="split_50_50">50-50 Split</option>
-            <option value="couple">Couple</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Mobile Expenses Card List */}
-      <div className="sm:hidden space-y-3">
-        {filteredItems.length === 0 ? (
-          <div className="bg-white p-8 rounded-2xl border border-stone-200 text-center">
-            <p className="text-sm font-semibold text-stone-700">No expenses recorded yet</p>
-            <p className="text-xs text-stone-400 mt-1">
-              Click "Add Expense Item" to track vendor deposits and family split payments.
-            </p>
+        {activeBudgetTab === 'payment_log' && (
+          <div className="relative w-full sm:max-w-xs">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+            <input
+              type="text"
+              placeholder="Search payer, check #, vendor..."
+              value={paymentLogSearch}
+              onChange={(e) => setPaymentLogSearch(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-white border border-stone-200 text-stone-800 text-xs focus:outline-hidden focus:ring-2 focus:ring-amber-500 shadow-2xs"
+            />
           </div>
-        ) : (
-          filteredItems.map((item) => {
-            const pending = item.actualCost - item.paidAmount;
-            return (
-              <div key={item.id} className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <h4 className="font-bold text-stone-900 text-sm">{item.title}</h4>
-                    <p className="text-xs text-stone-500 font-medium">{item.category}</p>
-                  </div>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      item.paidBy === 'bride_side'
-                        ? 'bg-rose-100 text-rose-800'
-                        : item.paidBy === 'groom_side'
-                        ? 'bg-blue-100 text-blue-800'
-                        : item.paidBy === 'split_50_50'
-                        ? 'bg-amber-100 text-amber-800'
-                        : 'bg-purple-100 text-purple-800'
-                    }`}
-                  >
-                    {item.paidBy.replace('_', ' ').toUpperCase()}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-stone-50 text-xs">
-                  <div>
-                    <span className="text-stone-500 block text-[10px]">Total Cost</span>
-                    <strong className="text-stone-900 text-sm">{formatCurr(item.actualCost)}</strong>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-emerald-700 font-bold block">Paid: {formatCurr(item.paidAmount)}</span>
-                    <span className="text-rose-700 font-semibold text-[11px] block">Due: {formatCurr(pending)}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-stone-100 text-xs">
-                  <span
-                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                      item.status === 'paid'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : item.status === 'partial'
-                        ? 'bg-amber-100 text-amber-800'
-                        : 'bg-rose-100 text-rose-800'
-                    }`}
-                  >
-                    {item.status.toUpperCase()}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleOpenEdit(item)}
-                      className="p-1.5 px-3 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold text-xs transition-colors"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (confirm(`Delete "${item.title}"?`)) {
-                          deleteBudgetItem(item.id);
-                        }
-                      }}
-                      className="p-1.5 px-2.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs transition-colors"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })
         )}
       </div>
 
-      {/* Desktop Expenses Table */}
-      <div className="hidden sm:block bg-white rounded-2xl border border-stone-200 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-stone-100/90 border-b border-stone-200 text-stone-700 font-bold uppercase tracking-wider">
-                <th className="py-3 px-4">Item / Description</th>
-                <th className="py-3 px-4">Category</th>
-                <th className="py-3 px-4">Cost</th>
-                <th className="py-3 px-4">Paid / Due</th>
-                <th className="py-3 px-4">Due Date</th>
-                <th className="py-3 px-4">Split Assignment</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-stone-100">
-              {filteredItems.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-12 text-center">
-                    <p className="text-sm font-semibold text-stone-700">No expenses recorded yet</p>
-                    <p className="text-xs text-stone-400 mt-1">
-                      Click "Add Expense Item" to track vendor deposits, venue fees, and family split payments.
-                    </p>
-                  </td>
-                </tr>
-              ) : (
-                filteredItems.map((item) => {
+      {/* ================================================================= */}
+      {/* TAB 1: ALL EXPENSES & CONTRACTS TABLE                             */}
+      {/* ================================================================= */}
+      {activeBudgetTab === 'expenses' && (
+        <div className="space-y-4 animate-in fade-in duration-150">
+          {/* Filter Tabs */}
+          <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs flex flex-wrap gap-4 items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-stone-600">Category:</span>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="px-3 py-1.5 rounded-xl border border-stone-200 bg-white text-stone-800 focus:outline-hidden focus:ring-2 focus:ring-amber-500"
+              >
+                <option value="all">All Categories</option>
+                <option value="Venue & Catering">Venue & Catering</option>
+                <option value="Decor & Mandap">Decor & Mandap</option>
+                <option value="Photography & Film">Photography & Film</option>
+                <option value="Outfits & Jewellery">Outfits & Jewellery</option>
+                <option value="Bridal MUA & Mehendi">Bridal MUA & Mehendi</option>
+                <option value="Music, Dhol & Entertainment">Music, Dhol & Entertainment</option>
+                <option value="Pandit & Rituals">Pandit & Rituals</option>
+                <option value="Accommodations & Transport">Accommodations & Transport</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-stone-600">Paid By:</span>
+              <select
+                value={selectedSplit}
+                onChange={(e) => setSelectedSplit(e.target.value)}
+                className="px-3 py-1.5 rounded-xl border border-stone-200 bg-white text-stone-800 focus:outline-hidden focus:ring-2 focus:ring-amber-500"
+              >
+                <option value="all">All Splits</option>
+                <option value="bride_side">Bride Side</option>
+                <option value="groom_side">Groom Side</option>
+                <option value="split_50_50">50-50 Split</option>
+                <option value="couple">Couple</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Mobile Expenses Card List */}
+          <div className="sm:hidden space-y-3">
+            {filteredItems.length === 0 ? (
+              <div className="bg-white p-8 rounded-2xl border border-stone-200 text-center">
+                <p className="text-sm font-semibold text-stone-700">No expenses recorded yet</p>
+                <p className="text-xs text-stone-400 mt-1">
+                  Click "Add Expense Item" to track vendor deposits and family split payments.
+                </p>
+              </div>
+            ) : (
+              filteredItems.map((item) => {
                 const pending = item.actualCost - item.paidAmount;
+                const instCount = item.installments?.length || 0;
                 return (
-                  <tr key={item.id} className="hover:bg-stone-50/70 transition-colors">
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-stone-900">{item.title}</div>
-                      <div className="text-[11px] text-stone-400">Est: {formatCurr(item.estimatedCost)}</div>
-                    </td>
-                    <td className="py-3.5 px-4 text-stone-600 font-medium">{item.category}</td>
-                    <td className="py-3.5 px-4 font-bold text-stone-900">{formatCurr(item.actualCost)}</td>
-                    <td className="py-3.5 px-4">
-                      <div className="text-emerald-700 font-semibold">
-                        Paid: {formatCurr(item.paidAmount)}
+                  <div key={item.id} className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="font-bold text-stone-900 text-sm">{item.title}</h4>
+                        <p className="text-xs text-stone-500 font-medium">{item.category}</p>
                       </div>
-                      <div className="text-rose-700 text-[11px]">
-                        Due: {formatCurr(pending)}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-stone-600">
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-stone-400" />
-                        <span>{new Date(item.dueDate).toLocaleDateString()}</span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4">
                       <span
-                        className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                           item.paidBy === 'bride_side'
                             ? 'bg-rose-100 text-rose-800'
                             : item.paidBy === 'groom_side'
@@ -785,56 +791,323 @@ export default function BudgetPage() {
                             : 'bg-purple-100 text-purple-800'
                         }`}
                       >
-                        {item.paidBy === 'bride_side'
-                          ? 'Bride Side'
-                          : item.paidBy === 'groom_side'
-                          ? 'Groom Side'
-                          : item.paidBy === 'split_50_50'
-                          ? '50-50 Split'
-                          : 'Couple'}
+                        {item.paidBy.replace('_', ' ').toUpperCase()}
                       </span>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span
-                        className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                          item.status === 'paid'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : item.status === 'partial'
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-rose-100 text-rose-800'
-                        }`}
-                      >
-                        {item.status.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
+                    </div>
+
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-stone-50 text-xs">
+                      <div>
+                        <span className="text-stone-500 block text-[10px]">Total Cost</span>
+                        <strong className="text-stone-900 text-sm">{formatCurr(item.actualCost)}</strong>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-emerald-700 font-bold block">Paid: {formatCurr(item.paidAmount)}</span>
+                        <span className="text-rose-700 font-semibold text-[11px] block">Due: {formatCurr(pending)}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-stone-100 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                            item.status === 'paid'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : item.status === 'partial'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-rose-100 text-rose-800'
+                          }`}
+                        >
+                          {item.status.toUpperCase()}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setPayingItem(item)}
+                          className="flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-[10px] tap-button active:scale-95"
+                        >
+                          <CreditCard className="w-3 h-3 text-amber-700" />
+                          <span>{instCount > 0 ? `${instCount} Logged` : '+ Pay'}</span>
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleOpenEdit(item)}
-                          className="p-1 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-colors"
-                          title="Edit Expense"
+                          className="p-1.5 px-3 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold text-xs transition-colors"
                         >
-                          <Edit2 className="w-3.5 h-3.5" />
+                          Edit
                         </button>
                         <button
                           onClick={() => {
-                            if (confirm(`Delete "${item.title}"?`)) deleteBudgetItem(item.id);
+                            if (confirm(`Delete "${item.title}"?`)) {
+                              deleteBudgetItem(item.id);
+                            }
                           }}
-                          className="p-1 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                          title="Delete Expense"
+                          className="p-1.5 px-2.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs transition-colors"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          Delete
                         </button>
                       </div>
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 );
               })
             )}
-          </tbody>
-          </table>
+          </div>
+
+          {/* Desktop Expenses Table */}
+          <div className="hidden sm:block bg-white rounded-2xl border border-stone-200 shadow-xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-stone-100/90 border-b border-stone-200 text-stone-700 font-bold uppercase tracking-wider">
+                    <th className="py-3 px-4">Item / Description</th>
+                    <th className="py-3 px-4">Category</th>
+                    <th className="py-3 px-4">Cost</th>
+                    <th className="py-3 px-4">Paid / Due / Installments</th>
+                    <th className="py-3 px-4">Due Date</th>
+                    <th className="py-3 px-4">Split Assignment</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {filteredItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-12 text-center">
+                        <p className="text-sm font-semibold text-stone-700">No expenses recorded yet</p>
+                        <p className="text-xs text-stone-400 mt-1">
+                          Click "Add Expense Item" to track vendor deposits, venue fees, and family split payments.
+                        </p>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredItems.map((item) => {
+                      const pending = item.actualCost - item.paidAmount;
+                      const instCount = item.installments?.length || 0;
+                      return (
+                        <tr key={item.id} className="hover:bg-stone-50/70 transition-colors">
+                          <td className="py-3.5 px-4">
+                            <div className="font-semibold text-stone-900">{item.title}</div>
+                            <div className="text-[11px] text-stone-400">Est: {formatCurr(item.estimatedCost)}</div>
+                          </td>
+                          <td className="py-3.5 px-4 text-stone-600 font-medium">{item.category}</td>
+                          <td className="py-3.5 px-4 font-bold text-stone-900">{formatCurr(item.actualCost)}</td>
+                          <td className="py-3.5 px-4">
+                            <div className="text-emerald-700 font-semibold">
+                              Paid: {formatCurr(item.paidAmount)}
+                            </div>
+                            <div className="text-rose-700 text-[11px]">
+                              Due: {formatCurr(pending)}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setPayingItem(item)}
+                              className="mt-1.5 flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-950 font-bold text-[10px] border border-amber-300 transition-all cursor-pointer tap-button active:scale-95 shadow-2xs"
+                              title="Record or inspect milestone installment payments"
+                            >
+                              <CreditCard className="w-3 h-3 text-amber-700" />
+                              <span>{instCount > 0 ? `${instCount} Installment${instCount === 1 ? '' : 's'}` : '+ Record Payment'}</span>
+                            </button>
+                          </td>
+                          <td className="py-3.5 px-4 text-stone-600">
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-stone-400" />
+                              <span>{new Date(item.dueDate).toLocaleDateString()}</span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                item.paidBy === 'bride_side'
+                                  ? 'bg-rose-100 text-rose-800'
+                                  : item.paidBy === 'groom_side'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : item.paidBy === 'split_50_50'
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : 'bg-purple-100 text-purple-800'
+                              }`}
+                            >
+                              {item.paidBy === 'bride_side'
+                                ? 'Bride Side'
+                                : item.paidBy === 'groom_side'
+                                ? 'Groom Side'
+                                : item.paidBy === 'split_50_50'
+                                ? '50-50 Split'
+                                : 'Couple'}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                                item.status === 'paid'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : item.status === 'partial'
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : 'bg-rose-100 text-rose-800'
+                              }`}
+                            >
+                              {item.status.toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => handleOpenEdit(item)}
+                                className="p-1 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-colors cursor-pointer"
+                                title="Edit Expense"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (confirm(`Delete "${item.title}"?`)) deleteBudgetItem(item.id);
+                                }}
+                                className="p-1 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                title="Delete Expense"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* ================================================================= */}
+      {/* TAB 2: FULL PAYMENT INSTALLMENT AUDIT LEDGER                      */}
+      {/* ================================================================= */}
+      {activeBudgetTab === 'payment_log' && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          {/* Summary metrics row for payment installments */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-2xs">
+              <div className="text-[10px] uppercase font-bold text-stone-400">Total Payments Recorded</div>
+              <div className="text-xl font-bold font-mono text-stone-900 mt-0.5">{formatCurr(totalPaid)}</div>
+              <div className="text-[11px] text-stone-500">{allRecordedInstallments.length} milestone payments logged</div>
+            </div>
+            <div className="bg-white p-4 rounded-2xl border border-rose-200/80 shadow-2xs">
+              <div className="text-[10px] uppercase font-bold text-rose-700">Bride Side Real Funds Paid</div>
+              <div className="text-xl font-bold font-mono text-rose-800 mt-0.5">{formatCurr(brideRealPaid)}</div>
+              <div className="text-[11px] text-stone-500">Ladkiwale verified payments</div>
+            </div>
+            <div className="bg-white p-4 rounded-2xl border border-blue-200/80 shadow-2xs">
+              <div className="text-[10px] uppercase font-bold text-blue-700">Groom Side Real Funds Paid</div>
+              <div className="text-xl font-bold font-mono text-blue-800 mt-0.5">{formatCurr(groomRealPaid)}</div>
+              <div className="text-[11px] text-stone-500">Ladkewale verified payments</div>
+            </div>
+            <div className="bg-white p-4 rounded-2xl border border-amber-200/80 shadow-2xs">
+              <div className="text-[10px] uppercase font-bold text-amber-700">Remaining Balance Due</div>
+              <div className="text-xl font-bold font-mono text-amber-800 mt-0.5">{formatCurr(totalPending)}</div>
+              <div className="text-[11px] text-stone-500">Across all contracts</div>
+            </div>
+          </div>
+
+          {/* Table of Installments */}
+          <div className="bg-white rounded-2xl border border-stone-200 shadow-xs overflow-hidden">
+            {filteredInstallments.length === 0 ? (
+              <div className="p-12 text-center space-y-2">
+                <Receipt className="w-8 h-8 text-stone-300 mx-auto" />
+                <h4 className="font-bold text-stone-800 text-sm">No payment installments found</h4>
+                <p className="text-xs text-stone-400 max-w-sm mx-auto">
+                  Click "+ Record Payment" on any expense item to log date, payer family, and check/Zelle details as payments happen over time.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-stone-100/90 border-b border-stone-200 text-stone-700 font-bold uppercase tracking-wider">
+                      <th className="py-3 px-4">Payment Date</th>
+                      <th className="py-3 px-4">Expense Item</th>
+                      <th className="py-3 px-4">Amount Paid</th>
+                      <th className="py-3 px-4">Who Paid</th>
+                      <th className="py-3 px-4">Method</th>
+                      <th className="py-3 px-4">Reference Note / Milestone</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-100">
+                    {filteredInstallments.map((inst) => {
+                      const parentItem = budgetItems.find((b) => b.id === inst.budgetItemId);
+                      const formattedDate = new Date(inst.date + 'T00:00:00').toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      });
+                      return (
+                        <tr key={inst.id} className="hover:bg-stone-50/70 transition-colors">
+                          <td className="py-3.5 px-4 font-medium text-stone-700 whitespace-nowrap">
+                            <div className="flex items-center gap-1.5">
+                              <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                              <span>{formattedDate}</span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div className="font-semibold text-stone-900">{inst.budgetItemTitle}</div>
+                            <div className="text-[11px] text-stone-400">{inst.budgetItemCategory}</div>
+                          </td>
+                          <td className="py-3.5 px-4 font-bold font-mono text-emerald-800 text-sm">
+                            {formatCurr(inst.amount)}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span
+                              className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                                inst.paidBy === 'bride_side'
+                                  ? 'bg-rose-100 text-rose-800 border-rose-300'
+                                  : inst.paidBy === 'groom_side'
+                                  ? 'bg-blue-100 text-blue-800 border-blue-300'
+                                  : inst.paidBy === 'split_50_50'
+                                  ? 'bg-amber-100 text-amber-800 border-amber-300'
+                                  : 'bg-purple-100 text-purple-800 border-purple-300'
+                              }`}
+                            >
+                              {inst.paidBy === 'bride_side'
+                                ? "Bride's Family"
+                                : inst.paidBy === 'groom_side'
+                                ? "Groom's Family"
+                                : inst.paidBy === 'split_50_50'
+                                ? '50-50 Split'
+                                : 'Couple'}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className="px-2 py-0.5 rounded-md bg-stone-100 text-stone-700 font-medium text-[11px] border border-stone-200">
+                              {inst.paymentMethod || 'Other'}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-stone-600 max-w-xs truncate">
+                            {inst.referenceNote ? (
+                              <span className="italic text-stone-800 font-medium">"{inst.referenceNote}"</span>
+                            ) : (
+                              <span className="text-stone-400">—</span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <button
+                              type="button"
+                              onClick={() => parentItem && setPayingItem(parentItem)}
+                              className="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 text-amber-950 font-bold text-xs transition-colors cursor-pointer"
+                            >
+                              Manage →
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Add / Edit Expense Modal */}
       <Modal
@@ -1163,6 +1436,27 @@ export default function BudgetPage() {
         isOpen={isSimulatorOpen}
         onClose={() => setIsSimulatorOpen(false)}
       />
+
+      {/* Record Payment Installment Modal */}
+      {(() => {
+        const livePayingItem = payingItem ? budgetItems.find((b) => b.id === payingItem.id) || payingItem : null;
+        if (!livePayingItem) return null;
+        return (
+          <RecordPaymentModal
+            isOpen={!!payingItem}
+            onClose={() => setPayingItem(null)}
+            target={{
+              type: 'budget',
+              id: livePayingItem.id,
+              title: livePayingItem.title,
+              category: livePayingItem.category,
+              totalAmount: livePayingItem.actualCost,
+              defaultPaidBy: livePayingItem.paidBy,
+            }}
+            installments={livePayingItem.installments || []}
+          />
+        );
+      })()}
     </div>
   );
 }
