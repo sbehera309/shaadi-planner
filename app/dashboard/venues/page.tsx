@@ -1308,6 +1308,22 @@ export default function VenuesPage() {
                                 {venue.historicalPriceTier}
                               </span>
                             )}
+
+                            {venue.historicalPricingIntelligence && (
+                              venue.historicalPricingIntelligence.confidenceLevel === 'verified_contract' ? (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 inline-flex items-center gap-1" title="High Confidence: Researched from verified real couple contracts & quotes">
+                                  <span>🟢</span> Verified Contract
+                                </span>
+                              ) : venue.historicalPricingIntelligence.confidenceLevel === 'community_reported' ? (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-1" title="Moderate Confidence: Pricing reported by couples in Reddit community forums">
+                                  <span>🟡</span> Community Reported
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-100 text-stone-700 border border-stone-300 inline-flex items-center gap-1" title="Estimated: Modeled benchmark based on catering buyout and published rental schedule. Inquire for official proposal.">
+                                  <span>⚪</span> Modeled Estimate
+                                </span>
+                              )
+                            )}
                           </div>
 
                           <h3 className="font-bold text-xl text-stone-900 font-serif leading-tight">
@@ -1571,7 +1587,13 @@ export default function VenuesPage() {
                                     ~{formatCurr(effective.costPerGuest)} / guest
                                   </span>
                                   <span className="block text-[10px] text-stone-500 mt-0.5">
-                                    {effective.isCustomUserQuote ? 'negotiated vendor rate' : 'all-in verified quote'}
+                                    {effective.isCustomUserQuote
+                                      ? 'negotiated vendor rate'
+                                      : venue.historicalPricingIntelligence?.confidenceLevel === 'verified_contract'
+                                      ? 'verified contract benchmark'
+                                      : venue.historicalPricingIntelligence?.confidenceLevel === 'community_reported'
+                                      ? 'community reported range'
+                                      : 'modeled ballpark estimate'}
                                   </span>
                                 </div>
                               </div>
@@ -1914,6 +1936,22 @@ export default function VenuesPage() {
                                 <span>Official Venue</span>
                               </span>
                             )}
+
+                            {venue.historicalPricingIntelligence && (
+                              venue.historicalPricingIntelligence.confidenceLevel === 'verified_contract' ? (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 inline-flex items-center gap-1" title="High Confidence: Researched from verified real couple contracts & quotes">
+                                  <span>🟢</span> Verified Contract
+                                </span>
+                              ) : venue.historicalPricingIntelligence.confidenceLevel === 'community_reported' ? (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-1" title="Moderate Confidence: Pricing reported by couples in Reddit community forums">
+                                  <span>🟡</span> Community Reported
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-100 text-stone-700 border border-stone-300 inline-flex items-center gap-1" title="Estimated: Modeled benchmark based on catering buyout and published rental schedule. Inquire for official proposal.">
+                                  <span>⚪</span> Modeled Estimate
+                                </span>
+                              )
+                            )}
                           </div>
 
                           <h3 className="font-bold text-xl text-stone-900 font-serif leading-tight">
@@ -2152,7 +2190,13 @@ export default function VenuesPage() {
                                     ~{formatCurr(effective.costPerGuest)} / guest
                                   </span>
                                   <span className="block text-[10px] text-stone-500 mt-0.5">
-                                    {effective.isCustomUserQuote ? 'negotiated vendor rate' : 'all-in verified quote'}
+                                    {effective.isCustomUserQuote
+                                      ? 'negotiated vendor rate'
+                                      : venue.historicalPricingIntelligence?.confidenceLevel === 'verified_contract'
+                                      ? 'verified contract benchmark'
+                                      : venue.historicalPricingIntelligence?.confidenceLevel === 'community_reported'
+                                      ? 'community reported range'
+                                      : 'modeled ballpark estimate'}
                                   </span>
                                 </div>
                               </div>
@@ -4220,10 +4264,38 @@ export default function VenuesPage() {
                 <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-white text-stone-700 border border-stone-200">
                   {inspectingPricingVenue.type.replace('_', ' ').toUpperCase()}
                 </span>
+                {/* Verification Confidence Tier */}
+                {inspectingPricingVenue.historicalPricingIntelligence.confidenceLevel === 'verified_contract' ? (
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-700 text-white inline-flex items-center gap-1 shadow-2xs">
+                    <span>🟢</span> High Confidence: Verified Contract Data
+                  </span>
+                ) : inspectingPricingVenue.historicalPricingIntelligence.confidenceLevel === 'community_reported' ? (
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-600 text-white inline-flex items-center gap-1 shadow-2xs">
+                    <span>🟡</span> Moderate Confidence: Community Reported
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-stone-600 text-white inline-flex items-center gap-1 shadow-2xs">
+                    <span>⚪</span> Estimated: Modeled Market Benchmark
+                  </span>
+                )}
               </div>
-              <p className="text-xs text-amber-950 font-medium">
-                Verified Historical Contract Intelligence &amp; Day-of-Week Pricing Variance (Researched from r/DesiWeddings &amp; r/WedditNYC)
-              </p>
+
+              {/* Research Methodology & Source Disclosure */}
+              {inspectingPricingVenue.historicalPricingIntelligence.dataSourceNotes && (
+                <div className="p-2.5 rounded-xl bg-white/90 border border-amber-200/90 text-[11px] text-stone-700 space-y-0.5">
+                  <div className="font-bold text-stone-900 flex items-center gap-1">
+                    <span>🔍 Research Source &amp; Methodology:</span>
+                  </div>
+                  <p className="text-[11px] text-stone-600 leading-relaxed">
+                    {inspectingPricingVenue.historicalPricingIntelligence.dataSourceNotes}
+                  </p>
+                </div>
+              )}
+
+              {/* Honest Planning Disclaimer */}
+              <div className="p-2 rounded-xl bg-amber-100/60 border border-amber-300 text-[10px] text-amber-950 leading-relaxed">
+                <strong>⚠️ Planning Transparency Note:</strong> Tri-State wedding pricing varies each calendar year based on exact season, guest headcount, and outside catering choice. These figures represent verified historical benchmarks and community reports to protect you from being overquoted. Always confirm official terms with an itemized written proposal from the banquet director.
+              </div>
             </div>
 
             {/* Day-of-Week Pricing Variance Table */}

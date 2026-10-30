@@ -249,7 +249,14 @@ export interface VenueServiceRating {
   highlight: string;
 }
 
+export type PricingConfidenceLevel =
+  | 'verified_contract'     // Directly verified contracts, proposals, or real couple reports (High Confidence)
+  | 'community_reported'   // Ballpark ranges and contract rules reported in Reddit community forums (Moderate Confidence)
+  | 'modeled_benchmark';   // Modeled ballpark benchmark based on published rental fees + outside catering buyouts (Estimated)
+
 export interface VenueDayPricingVariance {
+  confidenceLevel: PricingConfidenceLevel;
+  dataSourceNotes?: string;         // Explanation of where the data came from
   peakSaturdayRate: string;         // e.g. "$260 – $320 / guest" or "$85,000 – $110,000 total"
   fridayRate: string;               // e.g. "$195 – $240 / guest" (~20-25% discount vs Saturday)
   sundayRate: string;               // e.g. "$200 – $250 / guest"

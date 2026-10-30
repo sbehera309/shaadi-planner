@@ -10,6 +10,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 1. The Palace at Somerset Park (Somerset, NJ)
   // =========================================================================
   'curated-nj-palace-somerset': {
+    confidenceLevel: 'verified_contract',
+    dataSourceNotes: 'Direct couple contract reports from r/DesiWeddings; high-volume Indian wedding estate (100+ Desi weddings/year).',
     peakSaturdayRate: '$220 – $285 / guest ($75,000 – $95,000 all-in package)',
     fridayRate: '$175 – $225 / guest (Save ~20% vs Saturday)',
     sundayRate: '$180 – $230 / guest (Save ~18% vs Saturday)',
@@ -40,6 +42,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 2. The Rockleigh (Rockleigh, NJ)
   // =========================================================================
   'curated-nj-the-rockleigh': {
+    confidenceLevel: 'verified_contract',
+    dataSourceNotes: 'Verified negotiated couple proposal (k flat whole day) + r/WedditNYC couple contract sheets.',
     peakSaturdayRate: '$260 – $320 / guest ($85,000 – $120,000 total lump-sum contract)',
     fridayRate: '$200 – $250 / guest (Save ~22% vs Saturday)',
     sundayRate: '$210 – $260 / guest (Save ~20% vs Saturday)',
@@ -69,6 +73,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 3. Shadowbrook at Shrewsbury (Shrewsbury, NJ)
   // =========================================================================
   'curated-nj-shadowbrook': {
+    confidenceLevel: 'verified_contract',
+    dataSourceNotes: 'Direct couple contract reports on r/DesiWeddings for 2025–2026 peak Saturday dates (–/pp base).',
     peakSaturdayRate: '$285 – $400 / guest ($95,000 – $145,000 all-in)',
     fridayRate: '$225 – $295 / guest (Save ~25% vs Saturday)',
     sundayRate: '$235 – $305 / guest (Save ~20% vs Saturday)',
@@ -98,6 +104,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 4. Park Chateau Estate & Gardens (East Brunswick, NJ)
   // =========================================================================
   'curated-nj-park-chateau': {
+    confidenceLevel: 'verified_contract',
+    dataSourceNotes: 'Verified contracts shared by NJ Indian wedding couples; 200 Saturday guest minimum.',
     peakSaturdayRate: '$275 – $360 / guest ($85,000+ base contract)',
     fridayRate: '$210 – $275 / guest (Save ~22% vs Saturday)',
     sundayRate: '$220 – $285 / guest (Save ~18% vs Saturday)',
@@ -127,6 +135,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 5. The Park Savoy Estate (Florham Park, NJ)
   // =========================================================================
   'curated-nj-park-savoy': {
+    confidenceLevel: 'community_reported',
+    dataSourceNotes: 'Couple reports on r/WedditNYC; estimated range aligned with sister property banquet guidelines.',
     peakSaturdayRate: '$260 – $340 / guest',
     fridayRate: '$205 – $265 / guest (Save ~22% vs Saturday)',
     sundayRate: '$215 – $275 / guest (Save ~18% vs Saturday)',
@@ -154,6 +164,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 6. The Meadow Wood (Randolph, NJ)
   // =========================================================================
   'curated-nj-meadow-wood': {
+    confidenceLevel: 'community_reported',
+    dataSourceNotes: 'Community estimates on r/DesiWeddings; outside catering package + grand staircase buyout pricing.',
     peakSaturdayRate: '$240 – $310 / guest',
     fridayRate: '$190 – $245 / guest (Save ~20% vs Saturday)',
     sundayRate: '$195 – $250 / guest (Save ~18% vs Saturday)',
@@ -181,6 +193,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 7. Crystal Plaza (Livingston, NJ)
   // =========================================================================
   'curated-nj-crystal-plaza': {
+    confidenceLevel: 'verified_contract',
+    dataSourceNotes: 'Verified seasonal contract quotes (k summer vs k peak fall) with full commercial outside kitchen access.',
     peakSaturdayRate: '$300 – $400 / guest ($85,000 – $105,000 in Fall; $75,000 in Summer)',
     fridayRate: '$225 – $290 / guest (Save ~25% vs Saturday)',
     sundayRate: '$235 – $300 / guest (Save ~22% vs Saturday)',
@@ -210,6 +224,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 8. Addison Park (Aberdeen, NJ)
   // =========================================================================
   'curated-nj-addison-park': {
+    confidenceLevel: 'community_reported',
+    dataSourceNotes: 'Couple reviews and pricing estimates reported on r/WedditNYC for Monmouth County weddings.',
     peakSaturdayRate: '$280 – $298 / guest ($75,000 – $95,000)',
     fridayRate: '$245 – $255 / guest (Save ~$30–$40/guest vs Saturday)',
     sundayRate: '$235 – $245 / guest (Save ~$45/guest vs Saturday)',
@@ -237,6 +253,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 9. The Merion (Cinnaminson, NJ)
   // =========================================================================
   'curated-nj-the-merion': {
+    confidenceLevel: 'community_reported',
+    dataSourceNotes: 'South Jersey couple reports on r/PhiladelphiaWeddings; room-specific minimums for Skylight & Palazzo ballrooms.',
     peakSaturdayRate: '$240 – $320 / guest (Real verified quote: $73,000 for 230 guests)',
     fridayRate: '$185 – $240 / guest (Save ~22% vs Saturday)',
     sundayRate: '$190 – $250 / guest (Save ~20% vs Saturday)',
@@ -264,6 +282,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 10. The Mansion on Main Street (Voorhees, NJ)
   // =========================================================================
   'curated-nj-mansion-main-st': {
+    confidenceLevel: 'modeled_benchmark',
+    dataSourceNotes: 'Modeled banquet estimate based on published ballroom rental fees and regional Indian catering buyout (/pp). Inquire for official proposal.',
     peakSaturdayRate: '$165 – $225 / guest',
     fridayRate: '$135 – $175 / guest (Save ~20% vs Saturday)',
     sundayRate: '$140 – $180 / guest (Save ~18% vs Saturday)',
@@ -291,6 +311,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 11. Lucien's Manor (Berlin, NJ)
   // =========================================================================
   'curated-nj-luciens-manor': {
+    confidenceLevel: 'modeled_benchmark',
+    dataSourceNotes: 'Modeled ballpark estimate based on South Jersey banquet package pricing and outside catering fees. Inquire for official proposal.',
     peakSaturdayRate: '$150 – $210 / guest (Baseline packages start ~$21,200)',
     fridayRate: '$125 – $165 / guest (Save ~18% vs Saturday)',
     sundayRate: '$130 – $170 / guest (Save ~16% vs Saturday)',
@@ -318,6 +340,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 12. The Legacy Castle (Pompton Plains, NJ)
   // =========================================================================
   'curated-nj-legacy-castle': {
+    confidenceLevel: 'verified_contract',
+    dataSourceNotes: 'Verified couple proposal quote (/pp ceremony + /pp reception = /pp total) with /guest outside catering buyout.',
     peakSaturdayRate: '$290 – $420 / guest ($110,000 – $180,000 total contract for 300–400 guests)',
     fridayRate: '$220 – $310 / guest (Save ~25% vs Saturday)',
     sundayRate: '$230 – $320 / guest (Save ~22% vs Saturday)',
@@ -348,6 +372,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 13. Hyatt Regency Jersey City on the Hudson (Jersey City, NJ)
   // =========================================================================
   'curated-nj-hyatt-jersey-city': {
+    confidenceLevel: 'verified_contract',
+    dataSourceNotes: 'Direct hotel sales proposal structure (k ballroom rental + k F&B minimum floor) for Hudson River waterfront weddings.',
     peakSaturdayRate: '$250 – $350 / guest',
     fridayRate: '$195 – $265 / guest (Save ~22% vs Saturday)',
     sundayRate: '$205 – $275 / guest (Save ~18% vs Saturday)',
@@ -375,6 +401,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 14. The Westin Governor Morris (Morristown, NJ)
   // =========================================================================
   'curated-nj-westin-gov-morris': {
+    confidenceLevel: 'modeled_benchmark',
+    dataSourceNotes: 'Modeled hotel ballroom estimate based on published banquet minimums and Morristown area outside catering fees. Inquire for official proposal.',
     peakSaturdayRate: '$175 – $235 / guest',
     fridayRate: '$140 – $185 / guest (Save ~20% vs Saturday)',
     sundayRate: '$145 – $190 / guest (Save ~18% vs Saturday)',
@@ -402,6 +430,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 15. The Venetian (Garfield, NJ)
   // =========================================================================
   'curated-nj-the-venetian': {
+    confidenceLevel: 'community_reported',
+    dataSourceNotes: 'Community contract reports on r/WedditNYC regarding extravagant Venetian hour packages and outside Indian catering policies.',
     peakSaturdayRate: '$250 – $330 / guest',
     fridayRate: '$190 – $250 / guest (Save ~24% vs Saturday)',
     sundayRate: '$195 – $260 / guest (Save ~20% vs Saturday)',
@@ -429,6 +459,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 16. The Marigold (Somerset, NJ)
   // =========================================================================
   'curated-nj-the-marigold': {
+    confidenceLevel: 'verified_contract',
+    dataSourceNotes: 'Direct contract data from Desi couples; purpose-built Indian wedding facility with commercial in-house Indian kitchens.',
     peakSaturdayRate: '$160 – $220 / guest',
     fridayRate: '$130 – $175 / guest (Save ~20% vs Saturday)',
     sundayRate: '$135 – $180 / guest (Save ~18% vs Saturday)',
@@ -456,6 +488,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 17. Pleasantdale Chateau (West Orange, NJ)
   // =========================================================================
   'curated-nj-pleasantdale-chateau': {
+    confidenceLevel: 'verified_contract',
+    dataSourceNotes: 'Verified historical estate contracts (–/pp) from luxury NJ wedding couples on r/WedditNYC.',
     peakSaturdayRate: '$500 – $650+ / guest ($120,000 – $175,000+ all-in)',
     fridayRate: '$390 – $480 / guest (Save ~22% vs Saturday)',
     sundayRate: '$410 – $500 / guest (Save ~18% vs Saturday)',
@@ -484,6 +518,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 18. Nanina\'s in the Park (Belleville, NJ)
   // =========================================================================
   'curated-nj-naninas-in-the-park': {
+    confidenceLevel: 'community_reported',
+    dataSourceNotes: 'Historical banquet estimates reported by couples on r/WedditNYC for Belleville landmark estate.',
     peakSaturdayRate: '$240 – $320 / guest',
     fridayRate: '$190 – $245 / guest (Save ~22% vs Saturday)',
     sundayRate: '$195 – $255 / guest (Save ~18% vs Saturday)',
@@ -511,6 +547,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 19. Birchwood Manor (Whippany, NJ)
   // =========================================================================
   'curated-nj-birchwood-manor': {
+    confidenceLevel: 'modeled_benchmark',
+    dataSourceNotes: 'Modeled banquet estimate based on published rental schedule and outside catering buyout fees. Inquire for official proposal.',
     peakSaturdayRate: '$145 – $195 / guest',
     fridayRate: '$115 – $155 / guest (Save ~20% vs Saturday)',
     sundayRate: '$120 – $160 / guest (Save ~18% vs Saturday)',
@@ -538,6 +576,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 20. Hyatt Regency New Brunswick (New Brunswick, NJ)
   // =========================================================================
   'curated-nj-hyatt-new-brunswick': {
+    confidenceLevel: 'modeled_benchmark',
+    dataSourceNotes: 'Modeled hotel package based on Central NJ hotel banquet minimums and outside catering fees. Inquire for official proposal.',
     peakSaturdayRate: '$165 – $225 / guest',
     fridayRate: '$130 – $175 / guest (Save ~20% vs Saturday)',
     sundayRate: '$135 – $180 / guest (Save ~18% vs Saturday)',
@@ -565,6 +605,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 21. Sheraton Parsippany Hotel (Parsippany, NJ)
   // =========================================================================
   'curated-nj-sheraton-parsippany': {
+    confidenceLevel: 'community_reported',
+    dataSourceNotes: 'Community reports from Desi couples hosting hotel weddings with Moghul / Bukhara outside catering at Parsippany Castle hotel.',
     peakSaturdayRate: '$160 – $220 / guest',
     fridayRate: '$125 – $170 / guest (Save ~22% vs Saturday)',
     sundayRate: '$130 – $175 / guest (Save ~18% vs Saturday)',
@@ -592,6 +634,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 22. The Estate at Florentine Gardens (River Vale, NJ)
   // =========================================================================
   'curated-nj-florentine-gardens': {
+    confidenceLevel: 'community_reported',
+    dataSourceNotes: 'Couple contract reports on r/WedditNYC; single-event estate with high-tech ballroom lighting and outdoor gardens.',
     peakSaturdayRate: '$270 – $350 / guest',
     fridayRate: '$210 – $270 / guest (Save ~22% vs Saturday)',
     sundayRate: '$215 – $280 / guest (Save ~18% vs Saturday)',
@@ -619,6 +663,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 23. The Grove (Cedar Grove, NJ)
   // =========================================================================
   'curated-nj-the-grove': {
+    confidenceLevel: 'verified_contract',
+    dataSourceNotes: 'Verified couple contract quote (/guest flat all-day rate) with 250 guest Saturday minimum.',
     peakSaturdayRate: '$250 – $330 / guest (Whole-Day Indian Package: ~$225–$275/guest)',
     fridayRate: '$195 – $255 / guest (Save ~22% vs Saturday)',
     sundayRate: '$205 – $265 / guest (Save ~18% vs Saturday)',
@@ -646,6 +692,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 24. The Ritz-Carlton Philadelphia (Philadelphia, PA)
   // =========================================================================
   'curated-pa-ritz-carlton-philly': {
+    confidenceLevel: 'community_reported',
+    dataSourceNotes: 'Luxury Center City hotel estimates reported on r/PhiladelphiaWeddings; high F&B minimums and outside catering surcharge.',
     peakSaturdayRate: '$260 – $360 / guest (Base packages start $180–$200++ plus 24% svc & 8% tax)',
     fridayRate: '$210 – $280 / guest (Save ~20% vs Saturday)',
     sundayRate: '$215 – $290 / guest (Save ~18% vs Saturday)',
@@ -673,6 +721,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 25. Please Touch Museum / Memorial Hall (Philadelphia, PA)
   // =========================================================================
   'curated-pa-please-touch-museum': {
+    confidenceLevel: 'verified_contract',
+    dataSourceNotes: 'Direct historical contract data from Philadelphia couples; Memorial Hall venue fee + exclusive Brûlée Catering package.',
     peakSaturdayRate: '$240 – $340 / guest (Brûlée Catering + $12k–$16k museum rental fee)',
     fridayRate: '$195 – $270 / guest (Save ~20% vs Saturday)',
     sundayRate: '$200 – $280 / guest (Save ~18% vs Saturday)',
@@ -700,6 +750,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 26. Valley Forge Casino Resort (King of Prussia, PA)
   // =========================================================================
   'curated-pa-valley-forge-casino': {
+    confidenceLevel: 'modeled_benchmark',
+    dataSourceNotes: 'Modeled estimate based on King of Prussia resort convention rates and regional Indian catering buyout (/pp). Inquire for official proposal.',
     peakSaturdayRate: '$140 – $195 / guest',
     fridayRate: '$110 – $155 / guest (Save ~20% vs Saturday)',
     sundayRate: '$115 – $160 / guest (Save ~18% vs Saturday)',
@@ -727,6 +779,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 27. The Bellevue Hotel (Philadelphia, PA)
   // =========================================================================
   'curated-pa-the-bellevue': {
+    confidenceLevel: 'community_reported',
+    dataSourceNotes: 'Community contract reports on r/PhiladelphiaWeddings for historic Grand Ballroom on Broad Street.',
     peakSaturdayRate: '$240 – $320 / guest',
     fridayRate: '$190 – $250 / guest (Save ~20% vs Saturday)',
     sundayRate: '$195 – $260 / guest (Save ~18% vs Saturday)',
@@ -754,6 +808,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 28. Vie by Cescaphe (Philadelphia, PA)
   // =========================================================================
   'curated-pa-vie-cescaphe': {
+    confidenceLevel: 'verified_contract',
+    dataSourceNotes: 'Direct contract data from couples for Cescaphe group flagship; famous 4.5hr cocktail hour + 3-course dinner format.',
     peakSaturdayRate: '$250 – $400 / guest (All-inclusive Cescaphe model)',
     fridayRate: '$180 – $260 / guest (Major ~28% discount vs Saturday!)',
     sundayRate: '$190 – $275 / guest (Save ~25% vs Saturday)',
@@ -782,6 +838,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 29. Sheraton Philadelphia Downtown (Philadelphia, PA)
   // =========================================================================
   'curated-pa-sheraton-downtown': {
+    confidenceLevel: 'modeled_benchmark',
+    dataSourceNotes: 'Modeled estimate based on Center City hotel ballroom minimums and outside Indian catering buyout (/pp). Inquire for official proposal.',
     peakSaturdayRate: '$155 – $215 / guest',
     fridayRate: '$120 – $165 / guest (Save ~22% vs Saturday)',
     sundayRate: '$125 – $170 / guest (Save ~20% vs Saturday)',
@@ -809,6 +867,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 30. Loews Philadelphia Hotel (Philadelphia, PA)
   // =========================================================================
   'curated-pa-loews-philadelphia': {
+    confidenceLevel: 'community_reported',
+    dataSourceNotes: 'Community estimates for historic PSFS building 33rd floor ballroom from Philly wedding forums.',
     peakSaturdayRate: '$190 – $265 / guest (Base wedding packages start at $189++ per person)',
     fridayRate: '$150 – $210 / guest (Save ~20% vs Saturday)',
     sundayRate: '$155 – $215 / guest (Save ~18% vs Saturday)',
@@ -836,6 +896,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 31. The Logan Philadelphia (Philadelphia, PA)
   // =========================================================================
   'curated-pa-the-logan-philly': {
+    confidenceLevel: 'community_reported',
+    dataSourceNotes: 'Couple reviews and banquet quotes on r/PhiladelphiaWeddings for Benjamin Franklin Parkway hotel.',
     peakSaturdayRate: '$220 – $295 / guest',
     fridayRate: '$175 – $235 / guest (Save ~20% vs Saturday)',
     sundayRate: '$180 – $245 / guest (Save ~18% vs Saturday)',
@@ -863,6 +925,8 @@ export const VENUE_PRICING_INTELLIGENCE: Record<string, VenueDayPricingVariance>
   // 32. Arts Ballroom (Philadelphia, PA)
   // =========================================================================
   'curated-pa-arts-ballroom': {
+    confidenceLevel: 'community_reported',
+    dataSourceNotes: 'Community reports from Avenue of the Arts couple contracts; boutique historic venue with outside catering partnerships.',
     peakSaturdayRate: '$160 – $225 / guest',
     fridayRate: '$130 – $175 / guest (Save ~20% vs Saturday)',
     sundayRate: '$135 – $180 / guest (Save ~18% vs Saturday)',
