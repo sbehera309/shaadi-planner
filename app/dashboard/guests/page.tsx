@@ -174,7 +174,7 @@ export default function GuestsPage() {
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center text-xs">
+      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-stone-200 shadow-xs flex flex-col md:flex-row gap-3 sm:gap-4 justify-between items-stretch md:items-center text-xs">
         {/* Search Input */}
         <div className="relative flex-1">
           <Search className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
@@ -183,40 +183,40 @@ export default function GuestsPage() {
             placeholder="Search guest name, family group, phone, or city..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 rounded-xl border border-stone-200 focus:outline-hidden focus:ring-2 focus:ring-rose-500"
+            className="w-full pl-9 pr-3 py-2 rounded-xl border border-stone-200 text-stone-900 bg-white font-medium text-base sm:text-xs focus:outline-hidden focus:ring-2 focus:ring-rose-500"
           />
         </div>
 
         {/* Side Pill Filters */}
-        <div className="flex items-center gap-1.5 bg-stone-100 p-1 rounded-xl">
+        <div className="flex items-center gap-1.5 bg-stone-100 p-1 rounded-xl overflow-x-auto no-scrollbar">
           <button
             onClick={() => setSideFilter('all')}
-            className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
-              sideFilter === 'all' ? 'bg-white shadow-xs text-stone-900' : 'text-stone-600 hover:text-stone-900'
+            className={`px-3 py-1.5 rounded-lg font-medium transition-all shrink-0 tap-button active:scale-95 ${
+              sideFilter === 'all' ? 'bg-white shadow-xs text-stone-900 font-bold' : 'text-stone-600 hover:text-stone-900'
             }`}
           >
             All ({guests.length})
           </button>
           <button
             onClick={() => setSideFilter('bride')}
-            className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
-              sideFilter === 'bride' ? 'bg-rose-700 text-white shadow-xs' : 'text-rose-800 hover:bg-rose-50'
+            className={`px-3 py-1.5 rounded-lg font-medium transition-all shrink-0 tap-button active:scale-95 ${
+              sideFilter === 'bride' ? 'bg-rose-700 text-white shadow-xs font-bold' : 'text-rose-800 hover:bg-rose-50'
             }`}
           >
             👰 Bride's Side
           </button>
           <button
             onClick={() => setSideFilter('groom')}
-            className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
-              sideFilter === 'groom' ? 'bg-blue-700 text-white shadow-xs' : 'text-blue-800 hover:bg-blue-50'
+            className={`px-3 py-1.5 rounded-lg font-medium transition-all shrink-0 tap-button active:scale-95 ${
+              sideFilter === 'groom' ? 'bg-blue-700 text-white shadow-xs font-bold' : 'text-blue-800 hover:bg-blue-50'
             }`}
           >
             🤵 Groom's Side
           </button>
           <button
             onClick={() => setSideFilter('mutual')}
-            className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
-              sideFilter === 'mutual' ? 'bg-purple-700 text-white shadow-xs' : 'text-purple-800 hover:bg-purple-50'
+            className={`px-3 py-1.5 rounded-lg font-medium transition-all shrink-0 tap-button active:scale-95 ${
+              sideFilter === 'mutual' ? 'bg-purple-700 text-white shadow-xs font-bold' : 'text-purple-800 hover:bg-purple-50'
             }`}
           >
             🤝 Mutual
@@ -225,11 +225,11 @@ export default function GuestsPage() {
 
         {/* Dietary Filter */}
         <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-stone-400" />
+          <Filter className="w-4 h-4 text-stone-400 shrink-0" />
           <select
             value={dietFilter}
             onChange={(e) => setDietFilter(e.target.value as any)}
-            className="px-3 py-1.5 rounded-xl border border-stone-200 bg-white text-stone-700 focus:outline-hidden focus:ring-2 focus:ring-rose-500 font-medium"
+            className="w-full md:w-auto px-3 py-1.5 rounded-xl border border-stone-200 bg-white text-stone-700 text-base sm:text-xs focus:outline-hidden focus:ring-2 focus:ring-rose-500 font-medium"
           >
             <option value="all">All Diets</option>
             <option value="Strict Veg">Strict Veg</option>

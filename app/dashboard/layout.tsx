@@ -13,7 +13,7 @@ export default function DashboardLayout({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-[#FAF8F5]">
+    <div className="flex min-h-screen bg-[#FAF8F5] overflow-x-hidden w-full max-w-full">
       {/* Persistent Left Sidebar on Desktop & Slide Drawer on Mobile */}
       <Sidebar
         isMobileOpen={isMobileMenuOpen}
@@ -21,9 +21,9 @@ export default function DashboardLayout({
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 w-full overflow-x-hidden">
         <Navbar onOpenMobileMenu={() => setIsMobileMenuOpen(true)} />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-24 lg:pb-8">
+        <main className="flex-1 p-3 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-28 lg:pb-8 overflow-x-hidden">
           <div className="animate-fade-in-up">
             {children}
           </div>

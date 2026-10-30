@@ -921,23 +921,24 @@ export default function VenuesPage() {
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
       {/* Top Banner / Hero */}
-      <div className="bg-gradient-to-r from-stone-900 via-rose-950 to-amber-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-amber-900/40 relative overflow-hidden">
-        <div className="relative z-10 max-w-3xl space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold border border-amber-500/30">
+      {/* Top Banner / Hero */}
+      <div className="bg-gradient-to-r from-stone-900 via-rose-950 to-amber-950 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white shadow-xl border border-amber-900/40 relative overflow-hidden">
+        <div className="relative z-10 max-w-3xl space-y-2 sm:space-y-3">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-amber-500/20 text-amber-300 text-[10px] sm:text-xs font-semibold border border-amber-500/30">
             <Building2 className="w-3.5 h-3.5" />
-            <span>Phase 1 • Preloaded Venue Directory & Multi-Site Tour Day</span>
+            <span>Preloaded Venue Directory &amp; Tour Day Route Optimizer</span>
           </div>
 
-          <h1 className="text-2xl sm:text-4xl font-bold font-serif tracking-tight text-amber-100">
-            Wedding & Reception Venue Scouting
+          <h1 className="text-xl sm:text-4xl font-bold font-serif tracking-tight text-amber-100">
+            Wedding &amp; Reception Venue Scouting
           </h1>
 
-          <p className="text-xs sm:text-sm text-stone-300 leading-relaxed max-w-2xl">
+          <p className="text-xs sm:text-sm text-stone-300 leading-relaxed max-w-2xl line-clamp-2 sm:line-clamp-none">
             Explore curated, preloaded venue intelligence for <strong>New Jersey (NJ)</strong> and <strong>Pennsylvania (PA)</strong>.
             Compare outside Indian catering policies, havan open-flame permissions, sound curfews, and closest hotel accommodations without having to spend hours cold-calling sales offices.
           </p>
 
-          <div className="pt-2 flex flex-wrap items-center gap-2.5">
+          <div className="hidden sm:flex pt-2 flex-wrap items-center gap-2.5">
             <button
               type="button"
               onClick={() => setActiveTab('curated')}
@@ -948,7 +949,7 @@ export default function VenuesPage() {
               }`}
             >
               <Compass className="w-4 h-4 text-amber-400" />
-              <span>Browse Preloaded Venues (NJ & PA)</span>
+              <span>Browse Preloaded Venues (NJ &amp; PA)</span>
             </button>
 
             <button
@@ -987,7 +988,7 @@ export default function VenuesPage() {
               }`}
             >
               <Music className="w-4 h-4 text-amber-400" />
-              <span>Sangeet Triangulation (NJ & PA)</span>
+              <span>Sangeet Triangulation (NJ &amp; PA)</span>
               {officialSangeetVenue && (
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
               )}
@@ -999,128 +1000,130 @@ export default function VenuesPage() {
         <div className="absolute right-0 top-0 bottom-0 w-80 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-500/10 to-transparent pointer-events-none" />
       </div>
 
-      {/* 4 Summary Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-2xs interactive-card">
-          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-stone-500 block">
-            Preloaded &amp; Shortlisted Venues
+      {/* 4 Summary Metric Cards (Compact & Mobile-Ergonomic) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+        <div className="bg-white p-3 sm:p-5 rounded-xl sm:rounded-2xl border border-stone-200 shadow-2xs interactive-card">
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-stone-400 block truncate">
+            Curated Venues
           </span>
-          <div className="mt-1.5 text-xl sm:text-2xl font-extrabold text-stone-900">
+          <div className="mt-1 text-lg sm:text-2xl font-extrabold text-stone-900">
             {combinedDirectoryVenues.length} <span className="text-xs font-medium text-stone-400">tracked</span>
           </div>
-          <div className="mt-1 text-[11px] text-amber-800 font-medium">
-            {combinedDirectoryVenues.filter((v) => v.curatedState === 'NJ' || v.state === 'NJ').length} in NJ •{' '}
-            {combinedDirectoryVenues.filter((v) => v.curatedState === 'PA' || v.state === 'PA').length} in PA
+          <div className="mt-0.5 text-[10px] sm:text-[11px] text-amber-800 font-medium truncate">
+            {combinedDirectoryVenues.filter((v) => v.curatedState === 'NJ' || v.state === 'NJ').length} NJ •{' '}
+            {combinedDirectoryVenues.filter((v) => v.curatedState === 'PA' || v.state === 'PA').length} PA
           </div>
         </div>
 
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-2xs interactive-card">
-          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-stone-500 block">
+        <div className="bg-white p-3 sm:p-5 rounded-xl sm:rounded-2xl border border-stone-200 shadow-2xs interactive-card">
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-stone-400 block truncate">
             My Shortlist
           </span>
-          <div className="mt-1.5 text-xl sm:text-2xl font-extrabold text-stone-900">
+          <div className="mt-1 text-lg sm:text-2xl font-extrabold text-stone-900">
             {venues.length} <span className="text-xs font-medium text-stone-400">candidates</span>
           </div>
-          <div className="mt-1 text-[11px] text-rose-800 font-medium">
+          <div className="mt-0.5 text-[10px] sm:text-[11px] text-rose-800 font-medium truncate">
             {shortlistedCount} ready for site visits
           </div>
         </div>
 
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-2xs interactive-card">
-          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-stone-500 block">
-            Site Tour Day Stops
+        <div className="bg-white p-3 sm:p-5 rounded-xl sm:rounded-2xl border border-stone-200 shadow-2xs interactive-card">
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-stone-400 block truncate">
+            Site Tour Stops
           </span>
-          <div className="mt-1.5 text-xl sm:text-2xl font-extrabold text-stone-900">
+          <div className="mt-1 text-lg sm:text-2xl font-extrabold text-stone-900">
             {tourPlan ? tourPlan.optimizedStops.length : tourScheduledCount}{' '}
             <span className="text-xs font-medium text-stone-400">stops</span>
           </div>
-          <div className="mt-1 text-[11px] text-emerald-800 font-medium">
+          <div className="mt-0.5 text-[10px] sm:text-[11px] text-emerald-800 font-medium truncate">
             {tourPlan ? `~${tourPlan.totalEstDrivingMinutes}m total drive` : 'Select stops to schedule'}
           </div>
         </div>
 
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-2xs interactive-card">
-          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-stone-500 block">
-            Official Selected Venue
+        <div className="bg-white p-3 sm:p-5 rounded-xl sm:rounded-2xl border border-stone-200 shadow-2xs interactive-card">
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-stone-400 block truncate">
+            Selected Venue
           </span>
-          <div className="mt-1.5 text-base sm:text-lg font-extrabold text-stone-900 truncate">
-            {officialVenue ? officialVenue.name : wedding?.venueName || 'Not finalized yet'}
+          <div className="mt-1 text-sm sm:text-lg font-extrabold text-stone-900 truncate">
+            {officialVenue ? officialVenue.name.split('&')[0] : wedding?.venueName || 'Not finalized yet'}
           </div>
-          <div className="mt-1 text-[11px] text-stone-500 truncate">
+          <div className="mt-0.5 text-[10px] sm:text-[11px] text-stone-500 truncate">
             {officialVenue ? `${officialVenue.city}, ${officialVenue.state}` : 'Scouting prospective venues'}
           </div>
         </div>
       </div>
 
-      {/* Main Tab Switcher */}
-      <div className="flex border-b border-stone-200 text-xs sm:text-sm font-semibold">
-        <button
-          type="button"
-          onClick={() => setActiveTab('curated')}
-          className={`py-3 px-4 sm:px-6 border-b-2 transition-all duration-150 tap-button active:scale-95 flex items-center gap-2 ${
-            activeTab === 'curated'
-              ? 'border-rose-700 text-rose-800 font-bold'
-              : 'border-transparent text-stone-500 hover:text-stone-800'
-          }`}
-        >
-          <Compass className="w-4 h-4" />
-          <span>Explore Curated Venues (NJ & PA)</span>
-          <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-bold">
-            {combinedDirectoryVenues.length}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('my-venues')}
-          className={`py-3 px-4 sm:px-6 border-b-2 transition-all duration-150 tap-button active:scale-95 flex items-center gap-2 ${
-            activeTab === 'my-venues'
-              ? 'border-rose-700 text-rose-800 font-bold'
-              : 'border-transparent text-stone-500 hover:text-stone-800'
-          }`}
-        >
-          <Building2 className="w-4 h-4" />
-          <span>My Shortlist ({venues.length})</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('tour-planner')}
-          className={`py-3 px-4 sm:px-6 border-b-2 transition-all duration-150 tap-button active:scale-95 flex items-center gap-2 ${
-            activeTab === 'tour-planner'
-              ? 'border-rose-700 text-rose-800 font-bold'
-              : 'border-transparent text-stone-500 hover:text-stone-800'
-          }`}
-        >
-          <Car className="w-4 h-4" />
-          <span>Site Tour Route & Day Schedule</span>
-          {tourPlan && (
-            <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold">
-              Active Plan
+      {/* Main Tab Switcher with Smooth Touch Scrolling */}
+      <div className="border-b border-stone-200 overflow-x-auto no-scrollbar -mx-3 sm:mx-0 px-3 sm:px-0">
+        <div className="flex text-xs sm:text-sm font-semibold min-w-max space-x-1 sm:space-x-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('curated')}
+            className={`py-3 px-3 sm:px-5 border-b-2 transition-all duration-150 tap-button active:scale-95 flex items-center gap-1.5 sm:gap-2 shrink-0 ${
+              activeTab === 'curated'
+                ? 'border-rose-700 text-rose-800 font-bold'
+                : 'border-transparent text-stone-500 hover:text-stone-800'
+            }`}
+          >
+            <Compass className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>Explore Curated Venues (NJ & PA)</span>
+            <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-bold">
+              {combinedDirectoryVenues.length}
             </span>
-          )}
-        </button>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('sangeet')}
-          className={`py-3 px-4 sm:px-6 border-b-2 transition-all duration-150 tap-button active:scale-95 flex items-center gap-2 ${
-            activeTab === 'sangeet'
-              ? 'border-purple-600 text-purple-900 font-bold'
-              : 'border-transparent text-stone-500 hover:text-stone-800'
-          }`}
-        >
-          <Music className="w-4 h-4" />
-          <span>Sangeet & Garba Halls (Triangulated)</span>
-          <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 text-[10px] font-bold">
-            NJ & PA
-          </span>
-          {officialSangeetVenue && (
-            <span className="px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-              ✓ Locked
+          <button
+            type="button"
+            onClick={() => setActiveTab('my-venues')}
+            className={`py-3 px-3 sm:px-5 border-b-2 transition-all duration-150 tap-button active:scale-95 flex items-center gap-1.5 sm:gap-2 shrink-0 ${
+              activeTab === 'my-venues'
+                ? 'border-rose-700 text-rose-800 font-bold'
+                : 'border-transparent text-stone-500 hover:text-stone-800'
+            }`}
+          >
+            <Building2 className="w-4 h-4 text-rose-700 shrink-0" />
+            <span>My Shortlist ({venues.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('tour-planner')}
+            className={`py-3 px-3 sm:px-5 border-b-2 transition-all duration-150 tap-button active:scale-95 flex items-center gap-1.5 sm:gap-2 shrink-0 ${
+              activeTab === 'tour-planner'
+                ? 'border-rose-700 text-rose-800 font-bold'
+                : 'border-transparent text-stone-500 hover:text-stone-800'
+            }`}
+          >
+            <Car className="w-4 h-4 text-blue-600 shrink-0" />
+            <span>Site Tour Day Schedule</span>
+            {tourPlan && (
+              <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold">
+                Active
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('sangeet')}
+            className={`py-3 px-3 sm:px-5 border-b-2 transition-all duration-150 tap-button active:scale-95 flex items-center gap-1.5 sm:gap-2 shrink-0 ${
+              activeTab === 'sangeet'
+                ? 'border-purple-600 text-purple-900 font-bold'
+                : 'border-transparent text-stone-500 hover:text-stone-800'
+            }`}
+          >
+            <Music className="w-4 h-4 text-purple-600 shrink-0" />
+            <span>Sangeet & Garba Halls</span>
+            <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 text-[10px] font-bold">
+              Triangulated
             </span>
-          )}
-        </button>
+            {officialSangeetVenue && (
+              <span className="px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                ✓ Locked
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Official Wedding Venue Confirmed Banner: Step 2 Callout */}
@@ -1193,78 +1196,84 @@ export default function VenuesPage() {
             </div>
 
             {/* Event Format Selector, Inputs & Presets */}
-            <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 w-full lg:w-auto">
               {/* Event Format Toggle */}
-              <div className="flex items-center gap-1 bg-white p-1 rounded-2xl border border-stone-300 shadow-2xs">
+              <div className="grid grid-cols-3 sm:flex items-center gap-1 bg-white p-1 rounded-2xl border border-stone-300 shadow-2xs w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setEventFormat('all_day')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
+                  className={`px-2 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 tap-button active:scale-95 ${
                     eventFormat === 'all_day'
                       ? 'bg-rose-950 text-white shadow-2xs'
                       : 'text-stone-700 hover:bg-stone-100'
                   }`}
                   title="Full All-Day Event: Morning Baraat/Ceremony/Lunch + Evening Reception/Bar"
                 >
-                  <span>☀️🌙 Full All-Day Wedding</span>
+                  <span className="sm:hidden">☀️ All-Day</span>
+                  <span className="hidden sm:inline">☀️🌙 Full All-Day Wedding</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setEventFormat('reception_only')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
+                  className={`px-2 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 tap-button active:scale-95 ${
                     eventFormat === 'reception_only'
                       ? 'bg-rose-950 text-white shadow-2xs'
                       : 'text-stone-700 hover:bg-stone-100'
                   }`}
                   title="Evening Reception Only: Cocktail Hour + Dinner & Dancing + Open Bar"
                 >
-                  <span>🌙 Reception Only</span>
+                  <span className="sm:hidden">🌙 Reception</span>
+                  <span className="hidden sm:inline">🌙 Reception Only</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setEventFormat('ceremony_only')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
+                  className={`px-2 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 tap-button active:scale-95 ${
                     eventFormat === 'ceremony_only'
                       ? 'bg-rose-950 text-white shadow-2xs'
                       : 'text-stone-700 hover:bg-stone-100'
                   }`}
                   title="Morning Ceremony Only: Baraat + Mandap Pheras + Luncheon"
                 >
-                  <span>☀️ Ceremony Only</span>
+                  <span className="sm:hidden">☀️ Ceremony</span>
+                  <span className="hidden sm:inline">☀️ Ceremony Only</span>
                 </button>
               </div>
 
-              {/* Guests Input */}
-              <div className="flex items-center gap-2 bg-white px-3.5 py-2 rounded-2xl border border-stone-300 shadow-2xs">
-                <Users className="w-4 h-4 text-rose-700 shrink-0" />
-                <label className="text-xs font-bold text-stone-700">Guests:</label>
-                <input
-                  type="number"
-                  min={50}
-                  max={1500}
-                  step={25}
-                  value={planningGuestCount}
-                  onChange={(e) => setPlanningGuestCount(Math.max(1, Number(e.target.value)))}
-                  className="w-20 px-1 py-0.5 text-center font-extrabold text-stone-900 text-base sm:text-sm bg-transparent border-b-2 border-rose-500 focus:outline-none"
-                />
-              </div>
+              {/* Guest Count & Presets Row */}
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                {/* Guests Input */}
+                <div className="flex items-center gap-2 bg-white px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl border border-stone-300 shadow-2xs shrink-0">
+                  <Users className="w-4 h-4 text-rose-700 shrink-0" />
+                  <label className="text-xs font-bold text-stone-700">Guests:</label>
+                  <input
+                    type="number"
+                    min={50}
+                    max={1500}
+                    step={25}
+                    value={planningGuestCount}
+                    onChange={(e) => setPlanningGuestCount(Math.max(1, Number(e.target.value)))}
+                    className="w-16 sm:w-20 px-1 py-0.5 text-center font-extrabold text-stone-900 text-base sm:text-sm bg-transparent border-b-2 border-rose-500 focus:outline-none"
+                  />
+                </div>
 
-              {/* Quick Presets */}
-              <div className="flex items-center gap-1 bg-white/80 p-1 rounded-2xl border border-stone-200">
-                {[200, 300, 350, 450, 600].map((count) => (
-                  <button
-                    key={count}
-                    type="button"
-                    onClick={() => setPlanningGuestCount(count)}
-                    className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                      planningGuestCount === count
-                        ? 'bg-rose-950 text-white shadow-2xs scale-105'
-                        : 'hover:bg-stone-100 text-stone-700'
-                    }`}
-                  >
-                    {count}
-                  </button>
-                ))}
+                {/* Quick Presets */}
+                <div className="flex items-center gap-1 bg-white/80 p-1 rounded-2xl border border-stone-200 overflow-x-auto no-scrollbar max-w-full">
+                  {[200, 300, 350, 450, 600].map((count) => (
+                    <button
+                      key={count}
+                      type="button"
+                      onClick={() => setPlanningGuestCount(count)}
+                      className={`px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 tap-button active:scale-95 ${
+                        planningGuestCount === count
+                          ? 'bg-rose-950 text-white shadow-2xs scale-105'
+                          : 'hover:bg-stone-100 text-stone-700'
+                      }`}
+                    >
+                      {count}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -1280,53 +1289,58 @@ export default function VenuesPage() {
           <div className="bg-white p-4 sm:p-5 rounded-3xl border border-stone-200 shadow-2xs space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               {/* State Pills */}
-              <div className="flex items-center gap-2 text-xs font-semibold">
-                <span className="text-stone-500">State:</span>
-                <div className="flex flex-wrap gap-1.5">
+              <div className="flex items-center gap-1.5 sm:gap-2 text-xs font-semibold overflow-x-auto no-scrollbar">
+                <span className="text-stone-500 shrink-0">State:</span>
+                <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     type="button"
                     onClick={() => setCuratedStateFilter('ALL')}
-                    className={`px-3 py-1.5 rounded-xl font-bold transition-colors ${
+                    className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-bold transition-colors tap-button active:scale-95 ${
                       curatedStateFilter === 'ALL'
                         ? 'bg-rose-950 text-white shadow-2xs'
                         : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
                     }`}
                   >
-                    All States ({combinedDirectoryVenues.length})
+                    <span className="sm:hidden">All ({combinedDirectoryVenues.length})</span>
+                    <span className="hidden sm:inline">All States ({combinedDirectoryVenues.length})</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setCuratedStateFilter('NJ')}
-                    className={`px-3 py-1.5 rounded-xl font-bold transition-colors ${
+                    className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-bold transition-colors tap-button active:scale-95 ${
                       curatedStateFilter === 'NJ'
                         ? 'bg-rose-950 text-white shadow-2xs'
                         : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
                     }`}
                   >
-                    New Jersey ({combinedDirectoryVenues.filter((v) => v.curatedState === 'NJ' || v.state === 'NJ').length})
+                    <span className="sm:hidden">NJ ({combinedDirectoryVenues.filter((v) => v.curatedState === 'NJ' || v.state === 'NJ').length})</span>
+                    <span className="hidden sm:inline">New Jersey ({combinedDirectoryVenues.filter((v) => v.curatedState === 'NJ' || v.state === 'NJ').length})</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setCuratedStateFilter('PA')}
-                    className={`px-3 py-1.5 rounded-xl font-bold transition-colors ${
+                    className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-bold transition-colors tap-button active:scale-95 ${
                       curatedStateFilter === 'PA'
                         ? 'bg-rose-950 text-white shadow-2xs'
                         : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
                     }`}
                   >
-                    Pennsylvania ({combinedDirectoryVenues.filter((v) => v.curatedState === 'PA' || v.state === 'PA').length})
+                    <span className="sm:hidden">PA ({combinedDirectoryVenues.filter((v) => v.curatedState === 'PA' || v.state === 'PA').length})</span>
+                    <span className="hidden sm:inline">Pennsylvania ({combinedDirectoryVenues.filter((v) => v.curatedState === 'PA' || v.state === 'PA').length})</span>
                   </button>
                 </div>
               </div>
 
               {/* Sorting Dropdown */}
-              <div className="flex items-center gap-2 text-xs font-semibold text-stone-700">
-                <ArrowUpDown className="w-3.5 h-3.5 text-stone-500" />
-                <span>Sort By:</span>
+              <div className="flex items-center justify-between sm:justify-start gap-2 text-xs font-semibold text-stone-700 w-full sm:w-auto">
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <ArrowUpDown className="w-3.5 h-3.5 text-stone-500" />
+                  <span>Sort By:</span>
+                </div>
                 <select
                   value={curatedSortBy}
                   onChange={(e) => setCuratedSortBy(e.target.value as CuratedSortOption)}
-                  className="px-3 py-1.5 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs focus:ring-2 focus:ring-rose-500"
+                  className="flex-1 sm:flex-initial px-3 py-1.5 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs focus:ring-2 focus:ring-rose-500"
                 >
                   <option value="best">⭐ Best Overall (Desi Rank)</option>
                   <option value="service_desc">👑 Highest Service &amp; Hospitality Rating</option>

@@ -314,7 +314,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                     placeholder="e.g. 5000"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="w-full pl-7 pr-3 py-2 rounded-xl bg-white border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-amber-500 font-mono font-bold text-stone-900 text-xs"
+                    className="w-full pl-7 pr-3 py-2 rounded-xl bg-white border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-amber-500 font-mono font-bold text-stone-900 text-base sm:text-xs"
                   />
                 </div>
                 {balanceDue > 0 && (
@@ -339,7 +339,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                     required
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-amber-500 text-stone-900 text-xs"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-amber-500 text-stone-900 text-base sm:text-xs"
                   />
                 </div>
               </div>
@@ -354,7 +354,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                 <select
                   value={paidBy}
                   onChange={(e) => setPaidBy(e.target.value as PaymentPayer)}
-                  className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-amber-500 font-semibold text-stone-800 text-xs"
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-amber-500 font-semibold text-stone-800 text-base sm:text-xs"
                 >
                   {PAYER_OPTIONS.map((opt) => (
                     <option key={opt.id} value={opt.id}>
@@ -372,7 +372,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                  className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-amber-500 text-stone-800 text-xs"
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-amber-500 text-stone-800 text-base sm:text-xs"
                 >
                   {PAYMENT_METHODS.map((method) => (
                     <option key={method} value={method}>
@@ -393,7 +393,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                 placeholder="e.g. Check #1042, 25% Booking Deposit, FedWire Ref, Tasting Milestone"
                 value={referenceNote}
                 onChange={(e) => setReferenceNote(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-amber-500 text-stone-900 text-xs"
+                className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-amber-500 text-stone-900 text-base sm:text-xs"
               />
             </div>
 

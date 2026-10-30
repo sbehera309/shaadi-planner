@@ -328,32 +328,34 @@ export default function VendorsPage() {
       <div className="flex border-b border-stone-200 bg-white rounded-2xl p-1.5 shadow-xs">
         <button
           onClick={() => setActiveTab('directory')}
-          className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold transition-all duration-150 tap-button active:scale-95 flex items-center justify-center gap-2 ${
+          className={`flex-1 py-2.5 sm:py-3 px-2 sm:px-4 rounded-xl text-xs font-bold transition-all duration-150 tap-button active:scale-95 flex items-center justify-center gap-1.5 sm:gap-2 ${
             activeTab === 'directory'
               ? 'bg-amber-600 text-white shadow-sm'
               : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
           }`}
         >
-          <Sparkles className="w-4 h-4" />
-          <span>Explore Curated Vendors Directory ({PRELOADED_CURATED_VENDORS.length})</span>
+          <Sparkles className="w-4 h-4 shrink-0" />
+          <span className="sm:hidden">Directory ({PRELOADED_CURATED_VENDORS.length})</span>
+          <span className="hidden sm:inline">Explore Curated Vendors Directory ({PRELOADED_CURATED_VENDORS.length})</span>
           {shortlistedCount > 0 && (
-            <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-bold">
-              {shortlistedCount} Shortlisted
+            <span className="px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-bold">
+              {shortlistedCount}
             </span>
           )}
         </button>
         <button
           onClick={() => setActiveTab('my_vendors')}
-          className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold transition-all duration-150 tap-button active:scale-95 flex items-center justify-center gap-2 ${
+          className={`flex-1 py-2.5 sm:py-3 px-2 sm:px-4 rounded-xl text-xs font-bold transition-all duration-150 tap-button active:scale-95 flex items-center justify-center gap-1.5 sm:gap-2 ${
             activeTab === 'my_vendors'
               ? 'bg-amber-600 text-white shadow-sm'
               : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
           }`}
         >
-          <Briefcase className="w-4 h-4" />
-          <span>My Shortlist & Booked Vendors ({vendors.length})</span>
+          <Briefcase className="w-4 h-4 shrink-0" />
+          <span className="sm:hidden">My Vendors ({vendors.length})</span>
+          <span className="hidden sm:inline">My Shortlist & Booked Vendors ({vendors.length})</span>
           {committedVendors.length > 0 && (
-            <span className={`px-2 py-0.5 rounded-full text-[10px] ${
+            <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] ${
               activeTab === 'my_vendors' ? 'bg-amber-700 text-white' : 'bg-stone-200 text-stone-700'
             }`}>
               {formatCurr(totalAgreed)}
@@ -385,15 +387,15 @@ export default function VendorsPage() {
           </div>
 
           {/* Filter Controls Bar */}
-          <div className="bg-white rounded-2xl border border-stone-200 p-4 shadow-xs space-y-4">
+          <div className="bg-white rounded-2xl border border-stone-200 p-3.5 sm:p-4 shadow-xs space-y-3 sm:space-y-4">
             {/* Category Pills & Shortlisted Quick Toggle */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 sm:mx-0 sm:px-0 py-0.5">
                 {CATEGORY_TABS.map((tab) => (
                   <button
                     key={tab.value}
                     onClick={() => setSelectedCategory(tab.value)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors tap-button active:scale-95 cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors tap-button active:scale-95 cursor-pointer shrink-0 ${
                       selectedCategory === tab.value
                         ? 'bg-amber-700 text-white shadow-xs'
                         : 'bg-stone-100 hover:bg-stone-200 text-stone-600'
@@ -408,7 +410,7 @@ export default function VendorsPage() {
               <button
                 type="button"
                 onClick={() => setShowShortlistedOnly(!showShortlistedOnly)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 tap-button active:scale-95 cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 tap-button active:scale-95 cursor-pointer self-start sm:self-auto ${
                   showShortlistedOnly
                     ? 'bg-amber-500 text-stone-950 shadow-sm ring-2 ring-amber-400/50'
                     : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300'
@@ -420,7 +422,7 @@ export default function VendorsPage() {
             </div>
 
             {/* Second row: Search & Region & Sort */}
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-2 border-t border-stone-100">
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 sm:gap-3 pt-2 border-t border-stone-100">
               {/* Search input */}
               <div className="sm:col-span-6 relative">
                 <Search className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
@@ -428,18 +430,18 @@ export default function VendorsPage() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search vendor name, specialty (e.g. Tandoor, Drone), or venue (e.g. Rockleigh)..."
-                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-stone-300 text-xs focus:outline-hidden focus:ring-2 focus:ring-amber-500"
+                  placeholder="Search vendor name, specialty, or venue..."
+                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-stone-300 text-stone-900 bg-white font-medium text-base sm:text-xs focus:outline-hidden focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
               {/* Region Selector */}
-              <div className="sm:col-span-3 flex items-center gap-1.5 bg-stone-50 p-1 rounded-xl border border-stone-200">
-                <span className="text-[11px] font-bold text-stone-500 uppercase px-2">Region:</span>
+              <div className="sm:col-span-3 flex items-center gap-1.5 bg-stone-50 p-1.5 rounded-xl border border-stone-200">
+                <span className="text-[11px] font-bold text-stone-500 uppercase px-2 shrink-0">Region:</span>
                 <select
                   value={selectedRegion}
                   onChange={(e) => setSelectedRegion(e.target.value)}
-                  className="w-full bg-transparent text-xs font-semibold text-stone-800 focus:outline-hidden"
+                  className="w-full bg-transparent text-base sm:text-xs font-semibold text-stone-800 focus:outline-hidden"
                 >
                   {REGION_OPTIONS.map((reg) => (
                     <option key={reg} value={reg}>
@@ -450,12 +452,12 @@ export default function VendorsPage() {
               </div>
 
               {/* Sort Selector */}
-              <div className="sm:col-span-3 flex items-center gap-1.5 bg-stone-50 p-1 rounded-xl border border-stone-200">
-                <span className="text-[11px] font-bold text-stone-500 uppercase px-2">Sort:</span>
+              <div className="sm:col-span-3 flex items-center gap-1.5 bg-stone-50 p-1.5 rounded-xl border border-stone-200">
+                <span className="text-[11px] font-bold text-stone-500 uppercase px-2 shrink-0">Sort:</span>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
-                  className="w-full bg-transparent text-xs font-semibold text-stone-800 focus:outline-hidden"
+                  className="w-full bg-transparent text-base sm:text-xs font-semibold text-stone-800 focus:outline-hidden"
                 >
                   <option value="recommended">Featured / Renowned</option>
                   <option value="price_asc">Price: Low to High</option>

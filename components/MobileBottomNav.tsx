@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
+  Building2,
   CalendarDays,
   Users,
   WalletCards,
@@ -20,13 +21,13 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenMore }) 
 
   const navItems = [
     { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-    { label: 'Events', href: '/dashboard/itinerary', icon: CalendarDays },
-    { label: 'Guests', href: '/dashboard/guests', icon: Users },
+    { label: 'Venues', href: '/dashboard/venues', icon: Building2 },
     { label: 'Budget', href: '/dashboard/budget', icon: WalletCards },
+    { label: 'Guests', href: '/dashboard/guests', icon: Users },
   ];
 
   const isMoreActive =
-    pathname === '/dashboard/venues' ||
+    pathname === '/dashboard/itinerary' ||
     pathname === '/dashboard/vendors' ||
     pathname === '/dashboard/shagun' ||
     pathname === '/dashboard/horoscope' ||

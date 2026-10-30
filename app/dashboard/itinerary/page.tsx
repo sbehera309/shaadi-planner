@@ -256,11 +256,11 @@ export default function ItineraryPage() {
               <ArrowUpDown className="w-3.5 h-3.5 text-stone-500" />
               <span>Order Ceremonies By:</span>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 sm:mx-0 sm:px-0">
               <button
                 type="button"
                 onClick={() => setSortOrder('chronological')}
-                className={`px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
+                className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 shrink-0 tap-button active:scale-95 ${
                   sortOrder === 'chronological'
                     ? 'bg-rose-950 text-white shadow-xs ring-1 ring-rose-500/50'
                     : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
@@ -268,12 +268,13 @@ export default function ItineraryPage() {
                 title="Traditional chronological order: Roka -> Sangeet/Garba -> Haldi -> Mehndi -> Pheras -> Reception"
               >
                 <Calendar className="w-3.5 h-3.5 text-amber-400" />
-                <span>Weekend Timeline (Chronological)</span>
+                <span className="sm:hidden">Timeline</span>
+                <span className="hidden sm:inline">Weekend Timeline (Chronological)</span>
               </button>
               <button
                 type="button"
                 onClick={() => setSortOrder('priority')}
-                className={`px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
+                className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 shrink-0 tap-button active:scale-95 ${
                   sortOrder === 'priority'
                     ? 'bg-rose-950 text-white shadow-xs ring-1 ring-rose-500/50'
                     : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
@@ -281,12 +282,13 @@ export default function ItineraryPage() {
                 title="Prioritize high-lead-time ceremonies first (e.g. Baraat/Pheras fire permits & Sangeet sound curfew)"
               >
                 <Flame className="w-3.5 h-3.5 text-amber-400" />
-                <span>Planning Priority (High Lead Time)</span>
+                <span className="sm:hidden">Priority</span>
+                <span className="hidden sm:inline">Planning Priority (High Lead Time)</span>
               </button>
               <button
                 type="button"
                 onClick={() => setSortOrder('needs_planning')}
-                className={`px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
+                className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 shrink-0 tap-button active:scale-95 ${
                   sortOrder === 'needs_planning'
                     ? 'bg-rose-950 text-white shadow-xs ring-1 ring-rose-500/50'
                     : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
@@ -294,7 +296,8 @@ export default function ItineraryPage() {
                 title="Show ceremonies with 0 decisions arranged at the top"
               >
                 <Zap className="w-3.5 h-3.5 text-amber-400" />
-                <span>Needs Planning First</span>
+                <span className="sm:hidden">Unplanned</span>
+                <span className="hidden sm:inline">Needs Planning First</span>
               </button>
             </div>
           </div>

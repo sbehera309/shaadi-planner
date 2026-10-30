@@ -43,13 +43,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
 
   return (
     <>
-      <header className="h-16 bg-white border-b border-stone-200 px-3 sm:px-6 flex items-center justify-between gap-2 shrink-0 sticky top-0 z-20 shadow-xs">
+      <header className="h-16 bg-white border-b border-stone-200 px-2.5 sm:px-6 flex items-center justify-between gap-1.5 sm:gap-2 shrink-0 sticky top-0 z-20 shadow-xs w-full max-w-full overflow-hidden">
         {/* Left: Mobile hamburger + Venue/Dates */}
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
+        <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 shrink">
           <button
             type="button"
             onClick={onOpenMobileMenu}
-            className="w-10 h-10 -ml-1 rounded-xl text-stone-700 hover:text-stone-900 hover:bg-stone-100 active:bg-stone-200 flex items-center justify-center lg:hidden transition-colors shrink-0"
+            className="w-9 h-9 sm:w-10 sm:h-10 -ml-1 rounded-xl text-stone-700 hover:text-stone-900 hover:bg-stone-100 active:bg-stone-200 flex items-center justify-center lg:hidden transition-colors shrink-0"
             aria-label="Open mobile navigation menu"
           >
             <Menu className="w-5 h-5" />
@@ -76,7 +76,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
           ) : (
             <div className="flex items-center gap-1.5 text-stone-500 text-xs truncate">
               <Calendar className="w-3.5 h-3.5 text-stone-400 shrink-0" />
-              <span className="truncate font-medium">Vivaah Planner</span>
+              <span className="truncate font-semibold text-stone-800">Vivaah</span>
             </div>
           )}
         </div>
@@ -87,13 +87,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
         </div>
 
         {/* Right: Countdown, Cloud Sync badge, Auth button & Actions */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          {/* Countdown Pill */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+          {/* Countdown Pill: visible on tablet/desktop to preserve mobile space */}
           {wedding && wedding.isConfigured && wedding.startDate && (
-            <div className="flex items-center gap-1 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-full text-[11px] sm:text-xs font-semibold text-amber-900 shrink-0">
+            <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-900 shrink-0">
               <span>⏳</span>
-              <span className="hidden sm:inline">{daysLeft} Days to Shubh Vivah</span>
-              <span className="sm:hidden">{daysLeft}d left</span>
+              <span>{daysLeft} Days to Shubh Vivah</span>
             </div>
           )}
 
@@ -199,7 +198,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
             </button>
           )}
 
-          {/* Reset Clean State button */}
+          {/* Reset Clean State button: visible on tablet/desktop */}
           <button
             onClick={() => {
               if (confirm('Reset planner back to clean minimal start?')) {
@@ -207,7 +206,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
               }
             }}
             title="Reset to clean state"
-            className="p-2 text-stone-500 hover:text-rose-600 hover:bg-stone-100 rounded-xl transition-colors text-xs flex items-center gap-1 shrink-0"
+            className="hidden sm:flex p-2 text-stone-500 hover:text-rose-600 hover:bg-stone-100 rounded-xl transition-colors text-xs items-center gap-1 shrink-0"
           >
             <RefreshCw className="w-4 h-4" />
             <span className="hidden lg:inline">Reset</span>

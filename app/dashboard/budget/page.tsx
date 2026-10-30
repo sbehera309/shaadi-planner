@@ -668,30 +668,32 @@ export default function BudgetPage() {
 
       {/* View Switcher: Expense Contracts vs Milestone Payment Ledger */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-200 pb-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setActiveBudgetTab('expenses')}
-            className={`px-4 py-2 rounded-xl font-bold text-xs transition-all tap-button active:scale-95 cursor-pointer flex items-center gap-2 ${
+            className={`flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-xl font-bold text-xs transition-all tap-button active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 sm:gap-2 ${
               activeBudgetTab === 'expenses'
                 ? 'bg-stone-900 text-white shadow-xs'
                 : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
             }`}
           >
-            <WalletCards className="w-3.5 h-3.5" />
-            <span>Budget & Expense Items ({budgetItems.length})</span>
+            <WalletCards className="w-3.5 h-3.5 shrink-0" />
+            <span className="sm:hidden">Expenses ({budgetItems.length})</span>
+            <span className="hidden sm:inline">Budget & Expense Items ({budgetItems.length})</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveBudgetTab('payment_log')}
-            className={`px-4 py-2 rounded-xl font-bold text-xs transition-all tap-button active:scale-95 cursor-pointer flex items-center gap-2 ${
+            className={`flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-xl font-bold text-xs transition-all tap-button active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 sm:gap-2 ${
               activeBudgetTab === 'payment_log'
                 ? 'bg-amber-600 text-white shadow-xs'
                 : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
             }`}
           >
-            <History className="w-3.5 h-3.5" />
-            <span>Milestone Payment Ledger ({allRecordedInstallments.length})</span>
+            <History className="w-3.5 h-3.5 shrink-0" />
+            <span className="sm:hidden">Ledger ({allRecordedInstallments.length})</span>
+            <span className="hidden sm:inline">Milestone Payment Ledger ({allRecordedInstallments.length})</span>
             {allRecordedInstallments.length > 0 && (
               <span
                 className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
@@ -712,7 +714,7 @@ export default function BudgetPage() {
               placeholder="Search payer, check #, vendor..."
               value={paymentLogSearch}
               onChange={(e) => setPaymentLogSearch(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-white border border-stone-200 text-stone-800 text-xs focus:outline-hidden focus:ring-2 focus:ring-amber-500 shadow-2xs"
+              className="w-full pl-8 pr-3 py-2 sm:py-1.5 rounded-xl bg-white border border-stone-200 text-stone-800 text-base sm:text-xs focus:outline-hidden focus:ring-2 focus:ring-amber-500 shadow-2xs"
             />
           </div>
         )}
@@ -724,13 +726,13 @@ export default function BudgetPage() {
       {activeBudgetTab === 'expenses' && (
         <div className="space-y-4 animate-in fade-in duration-150">
           {/* Filter Tabs */}
-          <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs flex flex-wrap gap-4 items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-stone-600">Category:</span>
+          <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-stone-200 shadow-xs flex flex-wrap gap-2.5 sm:gap-4 items-center justify-between text-xs">
+            <div className="flex items-center gap-2 flex-1 sm:flex-initial min-w-[140px]">
+              <span className="font-semibold text-stone-600 shrink-0">Category:</span>
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="px-3 py-1.5 rounded-xl border border-stone-200 bg-white text-stone-800 focus:outline-hidden focus:ring-2 focus:ring-amber-500"
+                className="w-full sm:w-auto px-3 py-1.5 rounded-xl border border-stone-200 bg-white text-stone-800 text-base sm:text-xs focus:outline-hidden focus:ring-2 focus:ring-amber-500"
               >
                 <option value="all">All Categories</option>
                 <option value="Venue & Catering">Venue & Catering</option>
@@ -744,12 +746,12 @@ export default function BudgetPage() {
               </select>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-stone-600">Paid By:</span>
+            <div className="flex items-center gap-2 flex-1 sm:flex-initial min-w-[130px]">
+              <span className="font-semibold text-stone-600 shrink-0">Paid By:</span>
               <select
                 value={selectedSplit}
                 onChange={(e) => setSelectedSplit(e.target.value)}
-                className="px-3 py-1.5 rounded-xl border border-stone-200 bg-white text-stone-800 focus:outline-hidden focus:ring-2 focus:ring-amber-500"
+                className="w-full sm:w-auto px-3 py-1.5 rounded-xl border border-stone-200 bg-white text-stone-800 text-base sm:text-xs focus:outline-hidden focus:ring-2 focus:ring-amber-500"
               >
                 <option value="all">All Splits</option>
                 <option value="bride_side">Bride Side</option>
@@ -1020,90 +1022,165 @@ export default function BudgetPage() {
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-stone-100/90 border-b border-stone-200 text-stone-700 font-bold uppercase tracking-wider">
-                      <th className="py-3 px-4">Payment Date</th>
-                      <th className="py-3 px-4">Expense Item</th>
-                      <th className="py-3 px-4">Amount Paid</th>
-                      <th className="py-3 px-4">Who Paid</th>
-                      <th className="py-3 px-4">Method</th>
-                      <th className="py-3 px-4">Reference Note / Milestone</th>
-                      <th className="py-3 px-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-stone-100">
-                    {filteredInstallments.map((inst) => {
-                      const parentItem = budgetItems.find((b) => b.id === inst.budgetItemId);
-                      const formattedDate = new Date(inst.date + 'T00:00:00').toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      });
-                      return (
-                        <tr key={inst.id} className="hover:bg-stone-50/70 transition-colors">
-                          <td className="py-3.5 px-4 font-medium text-stone-700 whitespace-nowrap">
-                            <div className="flex items-center gap-1.5">
-                              <Calendar className="w-3.5 h-3.5 text-stone-400" />
-                              <span>{formattedDate}</span>
-                            </div>
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <div className="font-semibold text-stone-900">{inst.budgetItemTitle}</div>
-                            <div className="text-[11px] text-stone-400">{inst.budgetItemCategory}</div>
-                          </td>
-                          <td className="py-3.5 px-4 font-bold font-mono text-emerald-800 text-sm">
-                            {formatCurr(inst.amount)}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <span
-                              className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                                inst.paidBy === 'bride_side'
-                                  ? 'bg-rose-100 text-rose-800 border-rose-300'
-                                  : inst.paidBy === 'groom_side'
-                                  ? 'bg-blue-100 text-blue-800 border-blue-300'
-                                  : inst.paidBy === 'split_50_50'
-                                  ? 'bg-amber-100 text-amber-800 border-amber-300'
-                                  : 'bg-purple-100 text-purple-800 border-purple-300'
-                              }`}
-                            >
-                              {inst.paidBy === 'bride_side'
-                                ? "Bride's Family"
+              <>
+                {/* Mobile Installments Card View */}
+                <div className="sm:hidden divide-y divide-stone-100">
+                  {filteredInstallments.map((inst) => {
+                    const parentItem = budgetItems.find((b) => b.id === inst.budgetItemId);
+                    const formattedDate = new Date(inst.date + 'T00:00:00').toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    });
+
+                    return (
+                      <div key={inst.id} className="p-4 space-y-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 text-xs text-stone-500 font-medium">
+                            <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                            <span>{formattedDate}</span>
+                          </div>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              inst.paidBy === 'bride_side'
+                                ? 'bg-rose-100 text-rose-800 border-rose-300'
                                 : inst.paidBy === 'groom_side'
-                                ? "Groom's Family"
+                                ? 'bg-blue-100 text-blue-800 border-blue-300'
                                 : inst.paidBy === 'split_50_50'
-                                ? '50-50 Split'
-                                : 'Couple'}
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <span className="px-2 py-0.5 rounded-md bg-stone-100 text-stone-700 font-medium text-[11px] border border-stone-200">
+                                ? 'bg-amber-100 text-amber-800 border-amber-300'
+                                : 'bg-purple-100 text-purple-800 border-purple-300'
+                            }`}
+                          >
+                            {inst.paidBy === 'bride_side'
+                              ? "Bride's Family"
+                              : inst.paidBy === 'groom_side'
+                              ? "Groom's Family"
+                              : inst.paidBy === 'split_50_50'
+                              ? '50-50 Split'
+                              : 'Couple'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="font-bold text-stone-900 text-sm">{inst.budgetItemTitle}</div>
+                            <div className="text-[11px] text-stone-400">{inst.budgetItemCategory}</div>
+                          </div>
+                          <div className="font-bold font-mono text-emerald-800 text-base shrink-0">
+                            {formatCurr(inst.amount)}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1.5 text-xs border-t border-stone-50">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-md bg-stone-100 text-stone-700 font-medium text-[10px] border border-stone-200">
                               {inst.paymentMethod || 'Other'}
                             </span>
-                          </td>
-                          <td className="py-3.5 px-4 text-stone-600 max-w-xs truncate">
-                            {inst.referenceNote ? (
-                              <span className="italic text-stone-800 font-medium">"{inst.referenceNote}"</span>
-                            ) : (
-                              <span className="text-stone-400">—</span>
+                            {inst.referenceNote && (
+                              <span className="italic text-stone-600 text-[11px] truncate max-w-[150px]">
+                                &ldquo;{inst.referenceNote}&rdquo;
+                              </span>
                             )}
-                          </td>
-                          <td className="py-3.5 px-4 text-right">
-                            <button
-                              type="button"
-                              onClick={() => parentItem && setPayingItem(parentItem)}
-                              className="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 text-amber-950 font-bold text-xs transition-colors cursor-pointer"
-                            >
-                              Manage →
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => parentItem && setPayingItem(parentItem)}
+                            className="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 text-amber-950 font-bold text-xs transition-colors cursor-pointer tap-button active:scale-95 shrink-0"
+                          >
+                            Manage →
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop Installments Table View */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-stone-100/90 border-b border-stone-200 text-stone-700 font-bold uppercase tracking-wider">
+                        <th className="py-3 px-4">Payment Date</th>
+                        <th className="py-3 px-4">Expense Item</th>
+                        <th className="py-3 px-4">Amount Paid</th>
+                        <th className="py-3 px-4">Who Paid</th>
+                        <th className="py-3 px-4">Method</th>
+                        <th className="py-3 px-4">Reference Note / Milestone</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-stone-100">
+                      {filteredInstallments.map((inst) => {
+                        const parentItem = budgetItems.find((b) => b.id === inst.budgetItemId);
+                        const formattedDate = new Date(inst.date + 'T00:00:00').toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        });
+                        return (
+                          <tr key={inst.id} className="hover:bg-stone-50/70 transition-colors">
+                            <td className="py-3.5 px-4 font-medium text-stone-700 whitespace-nowrap">
+                              <div className="flex items-center gap-1.5">
+                                <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                                <span>{formattedDate}</span>
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <div className="font-semibold text-stone-900">{inst.budgetItemTitle}</div>
+                              <div className="text-[11px] text-stone-400">{inst.budgetItemCategory}</div>
+                            </td>
+                            <td className="py-3.5 px-4 font-bold font-mono text-emerald-800 text-sm">
+                              {formatCurr(inst.amount)}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <span
+                                className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                                  inst.paidBy === 'bride_side'
+                                    ? 'bg-rose-100 text-rose-800 border-rose-300'
+                                    : inst.paidBy === 'groom_side'
+                                    ? 'bg-blue-100 text-blue-800 border-blue-300'
+                                    : inst.paidBy === 'split_50_50'
+                                    ? 'bg-amber-100 text-amber-800 border-amber-300'
+                                    : 'bg-purple-100 text-purple-800 border-purple-300'
+                                }`}
+                              >
+                                {inst.paidBy === 'bride_side'
+                                  ? "Bride's Family"
+                                  : inst.paidBy === 'groom_side'
+                                  ? "Groom's Family"
+                                  : inst.paidBy === 'split_50_50'
+                                  ? '50-50 Split'
+                                  : 'Couple'}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <span className="px-2 py-0.5 rounded-md bg-stone-100 text-stone-700 font-medium text-[11px] border border-stone-200">
+                                {inst.paymentMethod || 'Other'}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-stone-600 max-w-xs truncate">
+                              {inst.referenceNote ? (
+                                <span className="italic text-stone-800 font-medium">"{inst.referenceNote}"</span>
+                              ) : (
+                                <span className="text-stone-400">—</span>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-4 text-right">
+                              <button
+                                type="button"
+                                onClick={() => parentItem && setPayingItem(parentItem)}
+                                className="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 text-amber-950 font-bold text-xs transition-colors cursor-pointer"
+                              >
+                                Manage →
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         </div>
