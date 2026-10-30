@@ -4,6 +4,9 @@ import React, { useState } from 'react';
 import { useWedding } from '@/lib/store';
 import { BudgetItem } from '@/lib/types';
 import { Modal } from '@/components/Modal';
+import { ShortlistBudgetModal } from '@/components/ShortlistBudgetModal';
+import { AnimatedBudgetNumber } from '@/components/AnimatedBudgetNumber';
+import { useShortlistBudget } from '@/lib/useShortlistBudget';
 import {
   WalletCards,
   Plus,
@@ -167,6 +170,17 @@ export default function BudgetPage() {
   const [presetTraditionFilter, setPresetTraditionFilter] = useState<'all' | 'traditional_desi' | 'south_indian'>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<BudgetItem | null>(null);
+
+  // Shortlist Scenario Simulator
+  const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
+  const {
+    totalShortlistCost,
+    remainingBudget,
+    isOverBudget,
+    currencySymbol,
+    selectedVenueItem,
+    includedVendorsCount,
+  } = useShortlistBudget();
 
   // Form State
   const [formData, setFormData] = useState({
@@ -368,6 +382,80 @@ export default function BudgetPage() {
             <Plus className="w-4 h-4" />
             <span>Add Expense Item</span>
           </button>
+        </div>
+      </div>
+
+      {/* Real-Time Shortlist Scenario Impact Card */}
+      <div className="bg-gradient-to-r from-amber-500/15 via-rose-500/10 to-stone-50 border border-amber-300 rounded-3xl p-5 shadow-xs relative overflow-hidden">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="p-1.5 rounded-xl bg-amber-500 text-stone-950 font-bold shadow-2xs">
+                <Sparkles className="w-4 h-4" />
+              </span>
+              <h2 className="text-sm sm:text-base font-bold text-stone-900 font-serif">
+                Live Shortlist Scenario Simulation
+              </h2>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                Real-Time
+              </span>
+            </div>
+            <p className="text-xs text-stone-600 max-w-2xl leading-relaxed">
+              Plan ahead before committing: simulate how candidate venue ({selectedVenueItem?.venue.name.split('&')[0] || 'No venue candidate'})
+              and {includedVendorsCount} shortlisted vendors impact your target budget.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <div className="bg-white/90 backdrop-blur-xs px-3.5 py-2 rounded-xl border border-stone-200/90 shadow-2xs text-right">
+              <div className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                Shortlist Options
+              </div>
+              <div className="text-sm sm:text-base font-bold font-mono text-amber-900 mt-0.5">
+                <AnimatedBudgetNumber
+                  value={totalShortlistCost}
+                  currency={currencySymbol}
+                  highlightDirection="none"
+                />
+              </div>
+            </div>
+
+            <div
+              className={`px-4 py-2 rounded-xl border shadow-2xs text-right ${
+                isOverBudget
+                  ? 'bg-rose-50 border-rose-300 text-rose-950'
+                  : 'bg-emerald-50 border-emerald-300 text-emerald-950'
+              }`}
+            >
+              <div className="text-[10px] font-bold uppercase tracking-wider">
+                Projected Remaining
+              </div>
+              <div
+                className={`text-sm sm:text-base font-extrabold font-mono mt-0.5 ${
+                  isOverBudget ? 'text-rose-700' : 'text-emerald-700'
+                }`}
+              >
+                <AnimatedBudgetNumber
+                  value={remainingBudget}
+                  currency={currencySymbol}
+                  highlightDirection="standard"
+                />
+                <span className="text-[10px] font-sans font-semibold ml-1">
+                  {isOverBudget ? 'over' : 'left'}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsSimulatorOpen(true)}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-rose-700 hover:opacity-95 text-white font-bold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer tap-button active:scale-95 transition-all self-center"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Simulate Scenario</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1069,6 +1157,12 @@ export default function BudgetPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Shortlist Budget Scenario Simulator */}
+      <ShortlistBudgetModal
+        isOpen={isSimulatorOpen}
+        onClose={() => setIsSimulatorOpen(false)}
+      />
     </div>
   );
 }

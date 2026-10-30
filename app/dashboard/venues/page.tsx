@@ -38,6 +38,8 @@ import { useProfileAddresses } from '@/lib/useProfileAddresses';
 import { useUserVenueQuotes } from '@/lib/useUserVenueQuotes';
 import { VenueCustomQuoteModal } from '@/components/VenueCustomQuoteModal';
 import SangeetTriangulationSection from '@/components/SangeetTriangulationSection';
+import { ShortlistBudgetModal } from '@/components/ShortlistBudgetModal';
+import { useShortlistBudget } from '@/lib/useShortlistBudget';
 import {
   Building2,
   Plus,
@@ -358,6 +360,18 @@ export default function VenuesPage() {
   const shortlistedCount = venues.filter((v) => v.tourStatus === 'shortlisted').length;
   const tourScheduledCount = venues.filter((v) => v.tourStatus === 'tour_scheduled').length;
   const officialVenue = venues.find((v) => v.isSelectedOfficialVenue) || venues.find((v) => v.name === wedding?.venueName);
+
+  // Shortlist Scenario Simulator
+  const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
+  const {
+    targetBudget,
+    shortlistVenueCost,
+    totalShortlistCost,
+    remainingBudget,
+    isOverBudget,
+    currencySymbol,
+    selectedVenueItem,
+  } = useShortlistBudget();
 
   const formatCurr = (val: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -2014,6 +2028,52 @@ export default function VenuesPage() {
               <span>+ Add Custom Venue</span>
             </button>
           </div>
+
+          {/* Real-Time Shortlist Budget Impact Banner */}
+          {shortlistedCount > 0 && (
+            <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-300/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-500 text-stone-950 flex items-center justify-center font-bold shrink-0 shadow-2xs">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="font-bold text-stone-900 text-sm flex items-center gap-2 flex-wrap">
+                    <span>Venue Shortlist Budget Impact:</span>
+                    <span className="font-mono text-amber-900 font-extrabold text-base">
+                      {selectedVenueItem ? `~${currencySymbol}${selectedVenueItem.estimatedCost.toLocaleString()}` : 'Select venue to simulate'}
+                    </span>
+                    {selectedVenueItem && (
+                      <span className="text-[11px] font-normal text-stone-500">
+                        ({selectedVenueItem.venue.name.split('&')[0]})
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-stone-600 mt-0.5">
+                    {targetBudget > 0 ? (
+                      <>
+                        Combined with your shortlisted vendors & commitments, your projected remaining budget is{' '}
+                        <span className={`font-mono font-bold ${isOverBudget ? 'text-rose-700' : 'text-emerald-700'}`}>
+                          {currencySymbol}{remainingBudget.toLocaleString()} {isOverBudget ? 'over cap' : 'left'}
+                        </span>
+                        .
+                      </>
+                    ) : (
+                      'Simulate candidate venue costs against your overall wedding budget.'
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsSimulatorOpen(true)}
+                className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 shadow-xs flex items-center gap-1.5 cursor-pointer tap-button active:scale-95 transition-all"
+              >
+                <span>Simulate Venue Budget Impact</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
 
           {/* Venues Grid */}
           {filteredMyVenues.length === 0 ? (
@@ -4656,6 +4716,12 @@ export default function VenuesPage() {
           </div>
         </Modal>
       )}
+
+      {/* Shortlist Budget Scenario Simulator */}
+      <ShortlistBudgetModal
+        isOpen={isSimulatorOpen}
+        onClose={() => setIsSimulatorOpen(false)}
+      />
     </div>
   );
 }

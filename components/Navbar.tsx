@@ -5,6 +5,7 @@ import { useWedding } from '@/lib/store';
 import { useAuth } from '@/lib/authContext';
 import { EditWeddingModal } from './EditWeddingModal';
 import { AuthModal } from './AuthModal';
+import { BudgetHeaderWidget } from './BudgetHeaderWidget';
 import { Calendar, Share2, Check, RefreshCw, Database, Menu, LogIn, LogOut, User as UserIcon, Cloud, CloudOff } from 'lucide-react';
 
 interface NavbarProps {
@@ -42,9 +43,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
 
   return (
     <>
-      <header className="h-16 bg-white border-b border-stone-200 px-3 sm:px-6 flex items-center justify-between shrink-0 sticky top-0 z-20 shadow-xs">
+      <header className="h-16 bg-white border-b border-stone-200 px-3 sm:px-6 flex items-center justify-between gap-2 shrink-0 sticky top-0 z-20 shadow-xs">
         {/* Left: Mobile hamburger + Venue/Dates */}
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
           <button
             type="button"
             onClick={onOpenMobileMenu}
@@ -78,6 +79,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
               <span className="truncate font-medium">Vivaah Planner</span>
             </div>
           )}
+        </div>
+
+        {/* Center: Live Shortlist & Budget Tracker Widget */}
+        <div className="flex items-center justify-center shrink-0">
+          <BudgetHeaderWidget />
         </div>
 
         {/* Right: Countdown, Cloud Sync badge, Auth button & Actions */}

@@ -5,6 +5,8 @@ import { useWedding } from '@/lib/store';
 import { Vendor, CuratedVendor } from '@/lib/types';
 import { PRELOADED_CURATED_VENDORS } from '@/lib/preloadedVendors';
 import { Modal } from '@/components/Modal';
+import { ShortlistBudgetModal } from '@/components/ShortlistBudgetModal';
+import { useShortlistBudget } from '@/lib/useShortlistBudget';
 import {
   Briefcase,
   Plus,
@@ -61,6 +63,15 @@ export default function VendorsPage() {
 
   // Tab 2 Status Filter
   const [statusFilter, setStatusFilter] = useState<'all' | 'shortlisted' | 'negotiating' | 'contacted' | 'confirmed' | 'completed'>('all');
+  const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
+
+  // Shortlist Budget Scenario
+  const {
+    shortlistVendorsCost,
+    remainingBudget,
+    isOverBudget,
+    currencySymbol,
+  } = useShortlistBudget();
 
   // Inspection Drawer / Modal
   const [inspectingVendor, setInspectingVendor] = useState<CuratedVendor | null>(null);
@@ -737,6 +748,44 @@ export default function VendorsPage() {
             </div>
           </div>
 
+          {/* Real-Time Shortlist Budget Impact Banner */}
+          {shortlistedCount > 0 && (
+            <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-300/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-500 text-stone-950 flex items-center justify-center font-bold shrink-0 shadow-2xs">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="font-bold text-stone-900 text-sm flex items-center gap-2 flex-wrap">
+                    <span>Shortlist Financial Impact:</span>
+                    <span className="font-mono text-amber-900 font-extrabold text-base">
+                      ~{currencySymbol}{shortlistVendorsCost.toLocaleString()}
+                    </span>
+                    <span className="text-[11px] font-normal text-stone-500">
+                      ({shortlistedCount} candidate{shortlistedCount === 1 ? '' : 's'} evaluating)
+                    </span>
+                  </div>
+                  <p className="text-stone-600 mt-0.5">
+                    Combined with your venue and booked expenses, your projected remaining budget is{' '}
+                    <span className={`font-mono font-bold ${isOverBudget ? 'text-rose-700' : 'text-emerald-700'}`}>
+                      {currencySymbol}{remainingBudget.toLocaleString()} {isOverBudget ? 'over cap' : 'left'}
+                    </span>
+                    .
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsSimulatorOpen(true)}
+                className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 shadow-xs flex items-center gap-1.5 cursor-pointer tap-button active:scale-95 transition-all"
+              >
+                <span>Simulate Full Budget</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           {/* Status Filter Bar & Add Custom Button */}
           <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-stone-200 shadow-2xs flex flex-wrap items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-2 font-semibold text-stone-600 flex-wrap">
@@ -1379,6 +1428,12 @@ export default function VendorsPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Real-time Shortlist Budget Scenario Simulator */}
+      <ShortlistBudgetModal
+        isOpen={isSimulatorOpen}
+        onClose={() => setIsSimulatorOpen(false)}
+      />
     </div>
   );
 }
