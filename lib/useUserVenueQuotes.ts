@@ -24,6 +24,139 @@ import {
 const STORAGE_KEY_PREFIX = 'shaadi_venue_quotes_';
 
 /**
+ * Preloaded verified negotiated quotes for real couple scenarios:
+ * - The Rockleigh: Flat total lump sum of $85,000 for whole day
+ * - The Grove: 1 price per person of $250/person for whole day
+ * - The Legacy Castle: $125/person ceremony + $175/person reception
+ * - Crystal Plaza: Date-specific overrides ($75k summer June/July vs $85k peak September)
+ */
+export const DEFAULT_USER_VENUE_QUOTES: Record<string, UserVenueCustomQuote> = {
+  'curated-nj-the-rockleigh': {
+    venueId: 'curated-nj-the-rockleigh',
+    updatedAt: '2026-10-29T18:00:00Z',
+    pricingType: 'flat_total',
+    flatTotalAmount: 85000,
+    isTaxAndServiceIncluded: true,
+    coordinatorName: 'Sunny Patel (Banquet Sales)',
+    callNotes: 'Quoted $85,000 flat total package for whole day event.',
+    availableDates: [
+      { id: 'rockleigh-date-1', date: '2026-10-17', dayOfWeek: 'Saturday', isPreferred: true, notes: 'Grand Pavilion' },
+      { id: 'rockleigh-date-2', date: '2026-10-24', dayOfWeek: 'Saturday', isHold: true, notes: 'Hold until Friday 5pm' },
+      { id: 'rockleigh-date-3', date: '2026-11-07', dayOfWeek: 'Saturday' },
+    ],
+  },
+  'curated-nj-the-grove': {
+    venueId: 'curated-nj-the-grove',
+    updatedAt: '2026-10-29T18:00:00Z',
+    pricingType: 'per_person_whole_day',
+    perPersonWholeDayRate: 250,
+    isTaxAndServiceIncluded: false,
+    serviceChargePercent: 22,
+    taxPercent: 6.625,
+    coordinatorName: 'Catering Office',
+    callNotes: 'Gave 1 flat price of $250/person for the whole day event including ceremony through reception.',
+    availableDates: [
+      { id: 'grove-date-1', date: '2026-10-24', dayOfWeek: 'Saturday', isPreferred: true },
+      { id: 'grove-date-2', date: '2026-11-14', dayOfWeek: 'Saturday' },
+    ],
+  },
+  'curated-nj-legacy-castle': {
+    venueId: 'curated-nj-legacy-castle',
+    updatedAt: '2026-10-29T18:00:00Z',
+    pricingType: 'per_person_per_event',
+    perPersonWeddingRate: 125,
+    perPersonReceptionRate: 175,
+    isTaxAndServiceIncluded: false,
+    serviceChargePercent: 22,
+    taxPercent: 6.625,
+    coordinatorName: 'Legacy Banquet Sales',
+    callNotes: 'Legacy gave price per person for each event: $125/pp for morning wedding ceremony and $175/pp for evening reception dinner.',
+    availableDates: [
+      { id: 'legacy-date-1', date: '2026-10-17', dayOfWeek: 'Saturday', isPreferred: true, notes: 'Grand Ballroom' },
+      { id: 'legacy-date-2', date: '2026-10-24', dayOfWeek: 'Saturday', isHold: true },
+      { id: 'legacy-date-3', date: '2026-11-07', dayOfWeek: 'Saturday' },
+    ],
+  },
+  'curated-nj-crystal-plaza': {
+    venueId: 'curated-nj-crystal-plaza',
+    updatedAt: '2026-10-29T18:00:00Z',
+    pricingType: 'flat_total',
+    flatTotalAmount: 85000,
+    isTaxAndServiceIncluded: true,
+    coordinatorName: 'Sales Director',
+    callNotes: 'Crystal Plaza does pricing based on dates: $75k for June/July summer dates but $85k for September peak fall dates.',
+    selectedDateId: 'cp-date-summer-1',
+    availableDates: [
+      {
+        id: 'cp-date-summer-1',
+        date: '2026-06-27',
+        dayOfWeek: 'Saturday',
+        customPriceOverride: 75000,
+        pricingOverrideType: 'flat_total',
+        seasonLabel: 'Summer ($75k)',
+        isPreferred: true,
+      },
+      {
+        id: 'cp-date-summer-2',
+        date: '2026-07-18',
+        dayOfWeek: 'Saturday',
+        customPriceOverride: 75000,
+        pricingOverrideType: 'flat_total',
+        seasonLabel: 'Summer ($75k)',
+      },
+      {
+        id: 'cp-date-fall-1',
+        date: '2026-09-19',
+        dayOfWeek: 'Saturday',
+        customPriceOverride: 85000,
+        pricingOverrideType: 'flat_total',
+        seasonLabel: 'Peak Fall ($85k)',
+        isHold: true,
+      },
+      {
+        id: 'cp-date-fall-2',
+        date: '2026-09-26',
+        dayOfWeek: 'Saturday',
+        customPriceOverride: 85000,
+        pricingOverrideType: 'flat_total',
+        seasonLabel: 'Peak Fall ($85k)',
+      },
+    ],
+  },
+};
+
+/**
+ * Robust resolver that matches a venue by its ID or normalized name
+ * to guarantee pre-seeded user quotes & negotiated dates are never lost.
+ */
+export function findDefaultVenueQuote(
+  venueOrId: string | { id: string; name?: string }
+): UserVenueCustomQuote | undefined {
+  const venueId = typeof venueOrId === 'string' ? venueOrId : venueOrId.id;
+  if (DEFAULT_USER_VENUE_QUOTES[venueId]) {
+    return DEFAULT_USER_VENUE_QUOTES[venueId];
+  }
+
+  const venueName = typeof venueOrId === 'object' ? (venueOrId.name || '').toLowerCase() : '';
+  const idLower = (venueId || '').toLowerCase();
+
+  if (idLower.includes('rockleigh') || venueName.includes('rockleigh')) {
+    return { ...DEFAULT_USER_VENUE_QUOTES['curated-nj-the-rockleigh'], venueId };
+  }
+  if (idLower.includes('grove') || venueName.includes('grove')) {
+    return { ...DEFAULT_USER_VENUE_QUOTES['curated-nj-the-grove'], venueId };
+  }
+  if (idLower.includes('legacy') || venueName.includes('legacy')) {
+    return { ...DEFAULT_USER_VENUE_QUOTES['curated-nj-legacy-castle'], venueId };
+  }
+  if (idLower.includes('crystal') || venueName.includes('crystal')) {
+    return { ...DEFAULT_USER_VENUE_QUOTES['curated-nj-crystal-plaza'], venueId };
+  }
+
+  return undefined;
+}
+
+/**
  * Calculates effective pricing for a venue, preferring the user's custom negotiated
  * vendor quote (if present) over generic directory estimates.
  */
@@ -35,28 +168,29 @@ export function calculateEffectiveVenuePricing(
   targetDateId?: string
 ): EffectiveVenuePricingResult {
   const safeGuests = Math.max(1, guestCount || 350);
+  const effectiveQuote = quote || findDefaultVenueQuote(venue);
 
-  // If the user has logged a custom quote for this venue, calculate using their negotiated terms
-  if (quote) {
-    const ceremonyFee = Number(quote.ceremonyFee) || 0;
-    const isAllInclusive = Boolean(quote.isTaxAndServiceIncluded);
-    const servicePercent = quote.serviceChargePercent ?? (venue.pricing?.serviceChargePercent || 22);
-    const taxPercent = quote.taxPercent ?? (venue.state === 'PA' ? 8.0 : 6.625);
+  // If the user has logged a custom quote for this venue (or default verified quote applies), calculate using negotiated terms
+  if (effectiveQuote) {
+    const ceremonyFee = Number(effectiveQuote.ceremonyFee) || 0;
+    const isAllInclusive = Boolean(effectiveQuote.isTaxAndServiceIncluded);
+    const servicePercent = effectiveQuote.serviceChargePercent ?? (venue.pricing?.serviceChargePercent || 22);
+    const taxPercent = effectiveQuote.taxPercent ?? (venue.state === 'PA' ? 8.0 : 6.625);
     const svcPct = servicePercent / 100;
     const taxPct = taxPercent / 100;
     const feeMultiplier = 1 + svcPct + taxPct;
 
     // Check for date-specific pricing overrides (e.g. 75k for June/July vs 85k for Sept)
-    const availableDates = quote.availableDates || [];
+    const availableDates = effectiveQuote.availableDates || [];
     const datesWithPricing = availableDates.filter((d) => Number(d.customPriceOverride) > 0);
     const hasDateSpecificPricing = datesWithPricing.length > 0;
 
-    // Resolve active date: explicit param > quote.selectedDateId > preferred date > first date with price override
+    // Resolve active date: explicit param > effectiveQuote.selectedDateId > preferred date > first date with price override
     let activeDate: AvailableVenueDateEntry | undefined;
     if (targetDateId) {
       activeDate = availableDates.find((d) => d.id === targetDateId);
-    } else if (quote.selectedDateId) {
-      activeDate = availableDates.find((d) => d.id === quote.selectedDateId);
+    } else if (effectiveQuote.selectedDateId) {
+      activeDate = availableDates.find((d) => d.id === effectiveQuote.selectedDateId);
     }
     if (!activeDate && datesWithPricing.length > 0) {
       activeDate = availableDates.find((d) => d.isPreferred && Number(d.customPriceOverride) > 0) || datesWithPricing[0];
@@ -96,10 +230,10 @@ export function calculateEffectiveVenuePricing(
       }
     } else {
       // 2. Otherwise calculate based on the venue's overall pricing model
-      switch (quote.pricingType) {
+      switch (effectiveQuote.pricingType) {
         case 'flat_total': {
           // Scenario A (e.g. Rockleigh): 1 Flat package price for the whole day
-          const flatAmount = Number(quote.flatTotalAmount) || 0;
+          const flatAmount = Number(effectiveQuote.flatTotalAmount) || 0;
           if (isAllInclusive) {
             estimatedTotal = flatAmount + ceremonyFee;
           } else {
@@ -111,7 +245,7 @@ export function calculateEffectiveVenuePricing(
 
         case 'per_person_whole_day': {
           // Scenario B (e.g. The Grove): 1 Single rate per person across all events
-          const perPersonRate = Number(quote.perPersonWholeDayRate) || 0;
+          const perPersonRate = Number(effectiveQuote.perPersonWholeDayRate) || 0;
           const subtotal = perPersonRate * safeGuests;
           if (isAllInclusive) {
             estimatedTotal = subtotal + ceremonyFee;
@@ -126,10 +260,10 @@ export function calculateEffectiveVenuePricing(
 
         case 'per_person_per_event': {
           // Scenario C (e.g. The Legacy Castle): Itemized rate per person for wedding & reception
-          const weddingRate = Number(quote.perPersonWeddingRate) || 0;
-          const receptionRate = Number(quote.perPersonReceptionRate) || 0;
-          const weddingGuests = Number(quote.weddingGuestCountOverride) || safeGuests;
-          const receptionGuests = Number(quote.receptionGuestCountOverride) || safeGuests;
+          const weddingRate = Number(effectiveQuote.perPersonWeddingRate) || 0;
+          const receptionRate = Number(effectiveQuote.perPersonReceptionRate) || 0;
+          const weddingGuests = Number(effectiveQuote.weddingGuestCountOverride) || safeGuests;
+          const receptionGuests = Number(effectiveQuote.receptionGuestCountOverride) || safeGuests;
 
           let activeWeddingCost = weddingRate * weddingGuests;
           let activeReceptionCost = receptionRate * receptionGuests;
@@ -161,7 +295,7 @@ export function calculateEffectiveVenuePricing(
 
     return {
       isCustomUserQuote: true,
-      pricingType: quote.pricingType,
+      pricingType: effectiveQuote.pricingType,
       estimatedTotalCost: estimatedTotal,
       costPerGuest,
       breakdownSummary,
@@ -169,12 +303,12 @@ export function calculateEffectiveVenuePricing(
       availableDates: availableDates,
       activeDate,
       hasDateSpecificPricing,
-      coordinatorName: quote.coordinatorName,
-      coordinatorPhone: quote.coordinatorPhone,
-      coordinatorEmail: quote.coordinatorEmail,
-      callNotes: quote.callNotes,
-      depositRequiredAmount: quote.depositRequiredAmount,
-      depositDueNotes: quote.depositDueNotes,
+      coordinatorName: effectiveQuote.coordinatorName,
+      coordinatorPhone: effectiveQuote.coordinatorPhone,
+      coordinatorEmail: effectiveQuote.coordinatorEmail,
+      callNotes: effectiveQuote.callNotes,
+      depositRequiredAmount: effectiveQuote.depositRequiredAmount,
+      depositDueNotes: effectiveQuote.depositDueNotes,
       isTaxAndServiceIncluded: isAllInclusive,
       serviceChargePercent: servicePercent,
       taxPercent,
@@ -208,22 +342,24 @@ export function calculateEffectiveVenuePricing(
 
 export function useUserVenueQuotes() {
   const { user } = useAuth();
-  const [quotes, setQuotes] = useState<Record<string, UserVenueCustomQuote>>({});
+  // Initialize with preloaded negotiated quotes so they are active by default
+  const [quotes, setQuotes] = useState<Record<string, UserVenueCustomQuote>>(DEFAULT_USER_VENUE_QUOTES);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Load quotes from user-scoped localStorage and Firestore
+  // Load quotes from user-scoped localStorage and Firestore, ensuring default quotes are preserved
   useEffect(() => {
     const storageKey = `${STORAGE_KEY_PREFIX}${user?.uid || 'guest'}`;
-    let cachedMap: Record<string, UserVenueCustomQuote> = {};
+    let cachedMap: Record<string, UserVenueCustomQuote> = { ...DEFAULT_USER_VENUE_QUOTES };
 
     try {
       const stored = localStorage.getItem(storageKey);
       if (stored) {
-        cachedMap = JSON.parse(stored);
-        if (typeof cachedMap === 'object' && cachedMap !== null) {
-          setQuotes(cachedMap);
+        const parsed = JSON.parse(stored);
+        if (typeof parsed === 'object' && parsed !== null) {
+          cachedMap = { ...DEFAULT_USER_VENUE_QUOTES, ...parsed };
         }
       }
+      setQuotes(cachedMap);
     } catch (e) {
       console.warn('Failed to parse cached venue quotes:', e);
     }
@@ -242,8 +378,8 @@ export function useUserVenueQuotes() {
             };
           });
 
-          // Merge: remote takes precedence, supplemented by any local unsaved quotes
-          const merged = { ...cachedMap, ...remoteMap };
+          // Merge: remote takes precedence, supplemented by local unsaved & baseline verified quotes
+          const merged = { ...DEFAULT_USER_VENUE_QUOTES, ...cachedMap, ...remoteMap };
           setQuotes(merged);
           try {
             localStorage.setItem(storageKey, JSON.stringify(merged));
@@ -317,18 +453,19 @@ export function useUserVenueQuotes() {
   );
 
   const getQuote = useCallback(
-    (venueId: string): UserVenueCustomQuote | undefined => {
-      return quotes[venueId];
+    (venueId: string, venueName?: string): UserVenueCustomQuote | undefined => {
+      return quotes[venueId] || findDefaultVenueQuote({ id: venueId, name: venueName });
     },
     [quotes]
   );
 
   const selectActiveDate = useCallback(
     async (venueId: string, dateId: string) => {
-      const existing = quotes[venueId];
+      const existing = quotes[venueId] || findDefaultVenueQuote(venueId);
       if (!existing) return;
       const updated: UserVenueCustomQuote = {
         ...existing,
+        venueId,
         selectedDateId: dateId,
         updatedAt: new Date().toISOString(),
       };
@@ -344,7 +481,7 @@ export function useUserVenueQuotes() {
       eventFormat: EventPackageFormat = 'all_day',
       targetDateId?: string
     ): EffectiveVenuePricingResult => {
-      const userQuote = quotes[venue.id];
+      const userQuote = quotes[venue.id] || findDefaultVenueQuote(venue);
       return calculateEffectiveVenuePricing(venue, userQuote, guestCount, eventFormat, targetDateId);
     },
     [quotes]

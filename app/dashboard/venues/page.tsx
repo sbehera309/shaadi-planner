@@ -558,6 +558,7 @@ export default function VenuesPage() {
       cons: curated.cons,
       rating: curated.rating,
       notes: curated.notes,
+      historicalPricingIntelligence: curated.historicalPricingIntelligence,
       isFavorite: true,
     });
 
@@ -1529,7 +1530,7 @@ export default function VenuesPage() {
                                 <div className="flex items-center justify-between pb-1.5 border-b border-amber-200 text-[10px]">
                                   <span className="font-extrabold text-amber-950 flex items-center gap-1">
                                     <span>⭐</span>
-                                    <span>My Negotiated Vendor Quote (User Override)</span>
+                                    <span>My Negotiated Vendor Quote (User Override Active)</span>
                                   </span>
                                   <button
                                     type="button"
@@ -1623,11 +1624,7 @@ export default function VenuesPage() {
                                           key={d.id}
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            if (getUserVenueQuote(venue.id)) {
-                                              selectActiveVenueDate(venue.id, d.id);
-                                            } else {
-                                              handleOpenQuoteModal(venue);
-                                            }
+                                            selectActiveVenueDate(venue.id, d.id);
                                           }}
                                           title={hasPrice ? `Click to calculate estimate for ${d.seasonLabel || d.date}` : undefined}
                                           className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 cursor-pointer transition-all ${
@@ -1699,6 +1696,37 @@ export default function VenuesPage() {
                                   </span>
                                 </div>
                               </div>
+
+                              {/* Historical Day-of-Week Variance & Reddit Intel Quick Bar */}
+                              {venue.historicalPricingIntelligence && (
+                                <div className="pt-2 border-t border-amber-200/60 flex flex-wrap items-center justify-between gap-1 text-[10px]">
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    <span className="px-1.5 py-0.5 rounded bg-amber-200/70 text-amber-950 font-bold text-[9px] uppercase tracking-wider">
+                                      Market Benchmark
+                                    </span>
+                                    <span className="font-semibold text-stone-700">
+                                      <span className="font-bold text-amber-950">Sat:</span> {venue.historicalPricingIntelligence.peakSaturdayRate.split('(')[0].trim()}
+                                    </span>
+                                    <span className="text-stone-300">•</span>
+                                    <span className="font-semibold text-emerald-800">
+                                      <span className="font-bold text-emerald-950">Fri:</span> {venue.historicalPricingIntelligence.fridayRate.split('(')[0].trim()}
+                                    </span>
+                                    {effective.isCustomUserQuote && (
+                                      <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 font-bold text-[9px] border border-amber-300">
+                                        Your quote active
+                                      </span>
+                                    )}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setInspectingPricingVenue(venue)}
+                                    className="text-amber-900 font-bold hover:underline flex items-center gap-0.5 cursor-pointer"
+                                  >
+                                    <span>💬 {venue.historicalPricingIntelligence.realCouplesRedditQuotes.length} Reddit Reports &amp; Intel</span>
+                                    <ChevronRight className="w-3 h-3 text-amber-700" />
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </div>
                         );
@@ -2083,7 +2111,7 @@ export default function VenuesPage() {
                                 <div className="flex items-center justify-between pb-1.5 border-b border-amber-200 text-[10px]">
                                   <span className="font-extrabold text-amber-950 flex items-center gap-1">
                                     <span>⭐</span>
-                                    <span>My Negotiated Vendor Quote (User Override)</span>
+                                    <span>My Negotiated Vendor Quote (User Override Active)</span>
                                   </span>
                                   <button
                                     type="button"
@@ -2177,11 +2205,7 @@ export default function VenuesPage() {
                                           key={d.id}
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            if (getUserVenueQuote(venue.id)) {
-                                              selectActiveVenueDate(venue.id, d.id);
-                                            } else {
-                                              handleOpenQuoteModal(venue);
-                                            }
+                                            selectActiveVenueDate(venue.id, d.id);
                                           }}
                                           title={hasPrice ? `Click to calculate estimate for ${d.seasonLabel || d.date}` : undefined}
                                           className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 cursor-pointer transition-all ${
@@ -2257,14 +2281,22 @@ export default function VenuesPage() {
                               {/* Historical Day-of-Week Variance & Reddit Intel Quick Bar */}
                               {venue.historicalPricingIntelligence && (
                                 <div className="pt-2 border-t border-amber-200/60 flex flex-wrap items-center justify-between gap-1 text-[10px]">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <span className="font-semibold text-stone-800">
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    <span className="px-1.5 py-0.5 rounded bg-amber-200/70 text-amber-950 font-bold text-[9px] uppercase tracking-wider">
+                                      Market Benchmark
+                                    </span>
+                                    <span className="font-semibold text-stone-700">
                                       <span className="font-bold text-amber-950">Sat:</span> {venue.historicalPricingIntelligence.peakSaturdayRate.split('(')[0].trim()}
                                     </span>
                                     <span className="text-stone-300">•</span>
                                     <span className="font-semibold text-emerald-800">
                                       <span className="font-bold text-emerald-950">Fri:</span> {venue.historicalPricingIntelligence.fridayRate.split('(')[0].trim()}
                                     </span>
+                                    {effective.isCustomUserQuote && (
+                                      <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 font-bold text-[9px] border border-amber-300">
+                                        Your quote active
+                                      </span>
+                                    )}
                                   </div>
                                   <button
                                     type="button"
