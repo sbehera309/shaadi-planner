@@ -11,6 +11,8 @@ import {
 } from './venueRouteOptimizer';
 import { PRELOADED_SANGEET_VENUES } from './preloadedSangeetVenues';
 
+export type SangeetAnchorMode = 'groom_bride_only' | 'three_way';
+
 export interface TriangulationAnchorInput {
   groomLocation: {
     city?: string;
@@ -38,6 +40,7 @@ export interface TriangulationAnchorInput {
   } | null;
   guestCount?: number;
   sangeetVenues?: SangeetVenueOption[];
+  anchorMode?: SangeetAnchorMode;
 }
 
 export type SangeetSortOption =
@@ -50,18 +53,20 @@ export type SangeetSortOption =
   | 'capacity_desc';
 
 /**
- * Calculates 3-way driving triangulation metrics from:
- * 1. Groom's Home
- * 2. Bride's Home
- * 3. Confirmed Main Wedding Venue (where out-of-town guests stay in room blocks)
+ * Calculates driving triangulation metrics from:
+ * Mode A ('three_way'): Groom's Home + Bride's Home + Confirmed Main Wedding Venue
+ * Mode B ('groom_bride_only'): Groom's Home + Bride's Home (family 2-way midpoint only)
  */
 export function calculateSangeetTriangulationMetrics(
   venue: SangeetVenueOption,
   groomCoords: { lat: number; lon: number },
   brideCoords: { lat: number; lon: number },
-  mainCoords: { lat: number; lon: number },
-  mainVenueName?: string
+  mainCoords?: { lat: number; lon: number } | null,
+  mainVenueName?: string,
+  anchorMode: SangeetAnchorMode = 'three_way'
 ): SangeetTriangulationMetrics {
+  const isGroomBrideOnly = anchorMode === 'groom_bride_only';
+
   const groomDrive = estimateDrivingDistanceAndMinutes(
     groomCoords.lat,
     groomCoords.lon,
@@ -76,35 +81,54 @@ export function calculateSangeetTriangulationMetrics(
     venue.longitude
   );
 
-  const mainVenueDrive = estimateDrivingDistanceAndMinutes(
-    mainCoords.lat,
-    mainCoords.lon,
-    venue.latitude,
-    venue.longitude
-  );
+  const mainVenueDrive = mainCoords
+    ? estimateDrivingDistanceAndMinutes(
+        mainCoords.lat,
+        mainCoords.lon,
+        venue.latitude,
+        venue.longitude
+      )
+    : { distanceMiles: 0, durationMinutes: 0 };
 
   const travelDeltaMinutes = Math.abs(groomDrive.durationMinutes - brideDrive.durationMinutes);
 
   // Fairness Score (0 to 100): 100 is identical drive time from both family homes
-  let fairnessScore = Math.max(20, Math.round(100 - travelDeltaMinutes * 1.25));
-  if (travelDeltaMinutes <= 8) fairnessScore = 98;
-  else if (travelDeltaMinutes <= 15) fairnessScore = 92;
-  else if (travelDeltaMinutes <= 25) fairnessScore = 85;
+  let fairnessScore = Math.max(20, Math.round(100 - travelDeltaMinutes * 1.35));
+  if (travelDeltaMinutes <= 5) fairnessScore = 99;
+  else if (travelDeltaMinutes <= 10) fairnessScore = 95;
+  else if (travelDeltaMinutes <= 18) fairnessScore = 90;
+  else if (travelDeltaMinutes <= 28) fairnessScore = 82;
 
-  // Convenience Score (0 to 100): based on travel time from the confirmed Main Venue's hotel block
+  // Convenience Score (0 to 100):
   let convenienceScore = 50;
-  if (mainVenueDrive.durationMinutes <= 20) {
-    convenienceScore = 98;
-  } else if (mainVenueDrive.durationMinutes <= 35) {
-    convenienceScore = 88;
-  } else if (mainVenueDrive.durationMinutes <= 50) {
-    convenienceScore = 76;
-  } else if (mainVenueDrive.durationMinutes <= 75) {
-    convenienceScore = 64;
+  if (isGroomBrideOnly) {
+    // In Groom & Bride Only mode, convenience reflects low average drive time for both families
+    const avgDrive = (groomDrive.durationMinutes + brideDrive.durationMinutes) / 2;
+    if (avgDrive <= 30) {
+      convenienceScore = 98;
+    } else if (avgDrive <= 45) {
+      convenienceScore = 90;
+    } else if (avgDrive <= 60) {
+      convenienceScore = 80;
+    } else if (avgDrive <= 80) {
+      convenienceScore = 68;
+    } else {
+      convenienceScore = 52;
+    }
+  } else {
+    // In 3-way mode, based on travel time from the confirmed Main Venue's hotel block
+    if (mainVenueDrive.durationMinutes <= 20) {
+      convenienceScore = 98;
+    } else if (mainVenueDrive.durationMinutes <= 35) {
+      convenienceScore = 88;
+    } else if (mainVenueDrive.durationMinutes <= 50) {
+      convenienceScore = 76;
+    } else if (mainVenueDrive.durationMinutes <= 75) {
+      convenienceScore = 64;
+    }
   }
 
-  // Composite Triangulation Score:
-  // 42% Groom-Bride Equity + 33% Proximity to Main Venue / Hotel block + 25% Venue Desi Features
+  // Composite Triangulation / Match Score:
   const desiFeatureBonus =
     (venue.desiFeatures.largeDanceFloor ? 5 : 0) +
     (venue.desiFeatures.stageAvLighting ? 5 : 0) +
@@ -112,30 +136,50 @@ export function calculateSangeetTriangulationMetrics(
     (venue.desiFeatures.hotelOnSite ? 5 : 0) +
     (venue.pricePerGuest <= 55 ? 5 : 0);
 
-  const rawTriangulation =
-    fairnessScore * 0.42 + convenienceScore * 0.33 + (70 + desiFeatureBonus) * 0.25;
+  let rawTriangulation = 0;
+  if (isGroomBrideOnly) {
+    // 55% Groom-Bride Equity + 25% Proximity (Low combined drive) + 20% Venue Desi Features & Value
+    rawTriangulation =
+      fairnessScore * 0.55 + convenienceScore * 0.25 + (70 + desiFeatureBonus) * 0.20;
+  } else {
+    // 42% Groom-Bride Equity + 33% Proximity to Main Venue / Hotel block + 25% Venue Desi Features
+    rawTriangulation =
+      fairnessScore * 0.42 + convenienceScore * 0.33 + (70 + desiFeatureBonus) * 0.25;
+  }
   const triangulationScore = Math.min(99, Math.max(35, Math.round(rawTriangulation)));
 
-  const isNearMainVenueHotelBlock = mainVenueDrive.durationMinutes <= 30;
+  const isNearMainVenueHotelBlock = !isGroomBrideOnly && mainVenueDrive.durationMinutes <= 30;
 
   // Generate clear human-friendly verdict
   let fairnessVerdict = '';
   const mainName = mainVenueName || 'Main Wedding Venue';
 
-  if (travelDeltaMinutes <= 15 && isNearMainVenueHotelBlock) {
-    fairnessVerdict = `✨ Optimal Triangulation: Only ${travelDeltaMinutes}m travel difference between families, and ~${mainVenueDrive.durationMinutes}m from ${mainName} hotel block!`;
-  } else if (travelDeltaMinutes <= 15) {
-    fairnessVerdict = `⚖️ High Family Equity: Nearly balanced drive time (${groomDrive.durationMinutes}m for Groom vs ${brideDrive.durationMinutes}m for Bride).`;
-  } else if (isNearMainVenueHotelBlock && groomDrive.durationMinutes < brideDrive.durationMinutes) {
-    fairnessVerdict = `🏛️ Ultra-convenient to ${mainName} (${mainVenueDrive.durationMinutes}m) and closer to Groom side (${groomDrive.durationMinutes}m vs ${brideDrive.durationMinutes}m).`;
-  } else if (isNearMainVenueHotelBlock && brideDrive.durationMinutes < groomDrive.durationMinutes) {
-    fairnessVerdict = `🏛️ Ultra-convenient to ${mainName} (${mainVenueDrive.durationMinutes}m) and closer to Bride side (${brideDrive.durationMinutes}m vs ${groomDrive.durationMinutes}m).`;
-  } else if (brideDrive.durationMinutes < 30) {
-    fairnessVerdict = `👰 Highly accessible for Bride’s local circle (~${brideDrive.durationMinutes}m drive), ~${groomDrive.durationMinutes}m from Groom.`;
-  } else if (groomDrive.durationMinutes < 30) {
-    fairnessVerdict = `🤵 Highly accessible for Groom’s local circle (~${groomDrive.durationMinutes}m drive), ~${brideDrive.durationMinutes}m from Bride.`;
+  if (isGroomBrideOnly) {
+    if (travelDeltaMinutes <= 8) {
+      fairnessVerdict = `⚖️ Ideal Family Midpoint: Only ${travelDeltaMinutes}m drive difference (~${groomDrive.durationMinutes}m for Groom vs ~${brideDrive.durationMinutes}m for Bride). Perfect equity!`;
+    } else if (travelDeltaMinutes <= 18) {
+      fairnessVerdict = `⚖️ Well-Balanced Midpoint: ~${groomDrive.durationMinutes}m for Groom vs ~${brideDrive.durationMinutes}m for Bride (${travelDeltaMinutes}m delta). Great central meeting point.`;
+    } else if (groomDrive.durationMinutes < brideDrive.durationMinutes) {
+      fairnessVerdict = `🤵 Skews closer to Groom’s family (~${groomDrive.durationMinutes}m drive vs ~${brideDrive.durationMinutes}m for Bride side).`;
+    } else {
+      fairnessVerdict = `👰 Skews closer to Bride’s family (~${brideDrive.durationMinutes}m drive vs ~${groomDrive.durationMinutes}m for Groom side).`;
+    }
   } else {
-    fairnessVerdict = `📍 Regional hub: ~${groomDrive.durationMinutes}m from Groom, ~${brideDrive.durationMinutes}m from Bride, ~${mainVenueDrive.durationMinutes}m from ${mainName}.`;
+    if (travelDeltaMinutes <= 15 && isNearMainVenueHotelBlock) {
+      fairnessVerdict = `✨ Optimal Triangulation: Only ${travelDeltaMinutes}m travel difference between families, and ~${mainVenueDrive.durationMinutes}m from ${mainName} hotel block!`;
+    } else if (travelDeltaMinutes <= 15) {
+      fairnessVerdict = `⚖️ High Family Equity: Nearly balanced drive time (${groomDrive.durationMinutes}m for Groom vs ${brideDrive.durationMinutes}m for Bride).`;
+    } else if (isNearMainVenueHotelBlock && groomDrive.durationMinutes < brideDrive.durationMinutes) {
+      fairnessVerdict = `🏛️ Ultra-convenient to ${mainName} (${mainVenueDrive.durationMinutes}m) and closer to Groom side (${groomDrive.durationMinutes}m vs ${brideDrive.durationMinutes}m).`;
+    } else if (isNearMainVenueHotelBlock && brideDrive.durationMinutes < groomDrive.durationMinutes) {
+      fairnessVerdict = `🏛️ Ultra-convenient to ${mainName} (${mainVenueDrive.durationMinutes}m) and closer to Bride side (${brideDrive.durationMinutes}m vs ${groomDrive.durationMinutes}m).`;
+    } else if (brideDrive.durationMinutes < 30) {
+      fairnessVerdict = `👰 Highly accessible for Bride’s local circle (~${brideDrive.durationMinutes}m drive), ~${groomDrive.durationMinutes}m from Groom.`;
+    } else if (groomDrive.durationMinutes < 30) {
+      fairnessVerdict = `🤵 Highly accessible for Groom’s local circle (~${groomDrive.durationMinutes}m drive), ~${brideDrive.durationMinutes}m from Bride.`;
+    } else {
+      fairnessVerdict = `📍 Regional hub: ~${groomDrive.durationMinutes}m from Groom, ~${brideDrive.durationMinutes}m from Bride, ~${mainVenueDrive.durationMinutes}m from ${mainName}.`;
+    }
   }
 
   return {
@@ -170,6 +214,7 @@ export function rankSangeetVenues(
 ): RankedSangeetVenue[] {
   const venues = input.sangeetVenues || PRELOADED_SANGEET_VENUES;
   const guestCount = input.guestCount || 250;
+  const anchorMode = input.anchorMode || 'three_way';
 
   // 1. Resolve Anchor Coordinates
   const groomCoords = getCoordinates(
@@ -188,16 +233,27 @@ export function rankSangeetVenues(
     input.brideLocation.longitude
   );
 
-  // If main venue is not specified, default to Central NJ hub coordinates (Edison)
-  const mainCoords = input.mainVenue
-    ? getCoordinates(
-        input.mainVenue.address || '',
-        input.mainVenue.city || '',
-        input.mainVenue.state || '',
-        input.mainVenue.latitude,
-        input.mainVenue.longitude
-      )
-    : { lat: 40.5187, lon: -74.4121 };
+  // If in 3-way mode and main venue is not specified, default to Central NJ hub coordinates (Edison)
+  const mainCoords =
+    anchorMode === 'groom_bride_only'
+      ? (input.mainVenue
+          ? getCoordinates(
+              input.mainVenue.address || '',
+              input.mainVenue.city || '',
+              input.mainVenue.state || '',
+              input.mainVenue.latitude,
+              input.mainVenue.longitude
+            )
+          : null)
+      : input.mainVenue
+      ? getCoordinates(
+          input.mainVenue.address || '',
+          input.mainVenue.city || '',
+          input.mainVenue.state || '',
+          input.mainVenue.latitude,
+          input.mainVenue.longitude
+        )
+      : { lat: 40.5187, lon: -74.4121 };
 
   // 2. Compute metrics for each venue
   const ranked: RankedSangeetVenue[] = venues.map((v) => {
@@ -206,7 +262,8 @@ export function rankSangeetVenues(
       groomCoords,
       brideCoords,
       mainCoords,
-      input.mainVenue?.name
+      input.mainVenue?.name,
+      anchorMode
     );
 
     const totalCostForGuests = v.hallRentalFee + guestCount * v.pricePerGuest;
@@ -276,21 +333,33 @@ export function formatSangeetBriefForWhatsApp(
   groomLabel = "Groom's Family",
   brideLabel = "Bride's Family",
   mainVenueName = 'Main Wedding Venue',
-  guestCount = 250
+  guestCount = 250,
+  anchorMode: SangeetAnchorMode = 'three_way'
 ): string {
   const topChoices = rankedVenues.slice(0, 4);
+  const isGroomBrideOnly = anchorMode === 'groom_bride_only';
 
   const lines = [
-    `💃 *Sangeet & Garba Venue Triangulation Report* 🪘`,
+    isGroomBrideOnly
+      ? `💃 *Sangeet & Garba Venue Report (Groom & Bride Midpoint)* 🪘`
+      : `💃 *Sangeet & Garba Venue Triangulation Report* 🪘`,
     `------------------------------------------------`,
     `📍 *Anchor Locations Considered:*`,
-    `• 🤵 ${groomLabel}`,
-    `• 👰 ${brideLabel}`,
-    `• 🏛️ Main Wedding Venue: ${mainVenueName}`,
+    `• 🤵 Groom's Side: ${groomLabel}`,
+    `• 👰 Bride's Side: ${brideLabel}`,
+  ];
+
+  if (isGroomBrideOnly) {
+    lines.push(`• ℹ️ Mode: Focused strictly on family midpoint balance between Groom & Bride`);
+  } else {
+    lines.push(`• 🏛️ Main Wedding Venue: ${mainVenueName}`);
+  }
+
+  lines.push(
     `👥 *Guest Count Assumption:* ${guestCount} guests`,
     ``,
-    `⭐ *Top Recommended Venues:*`,
-  ];
+    `⭐ *Top Recommended Venues:*`
+  );
 
   topChoices.forEach((rv, i) => {
     const v = rv.venue;
@@ -301,13 +370,21 @@ export function formatSangeetBriefForWhatsApp(
       maximumFractionDigits: 0,
     }).format(rv.totalCostForGuests);
 
+    const driveLines = [
+      `   • Groom: ~${m.groomDriveMinutes}m (${m.groomDistanceMiles} mi)`,
+      `   • Bride: ~${m.brideDriveMinutes}m (${m.brideDistanceMiles} mi)`,
+    ];
+    if (!isGroomBrideOnly && m.mainVenueDriveMinutes > 0) {
+      driveLines.push(
+        `   • Main Venue Hotel Block: ~${m.mainVenueDriveMinutes}m (${m.mainVenueDistanceMiles} mi)`
+      );
+    }
+
     lines.push(
       `${i + 1}️⃣ *${v.name}* (${v.city}, ${v.state})`,
       `   ${v.highlightTag}`,
       `   ⏱️ *Drive Times:*`,
-      `   • Groom: ~${m.groomDriveMinutes}m (${m.groomDistanceMiles} mi)`,
-      `   • Bride: ~${m.brideDriveMinutes}m (${m.brideDistanceMiles} mi)`,
-      `   • Main Venue Hotel Block: ~${m.mainVenueDriveMinutes}m (${m.mainVenueDistanceMiles} mi)`,
+      ...driveLines,
       `   ⚖️ *Equity Score:* ${m.fairnessScore}% (${m.travelDeltaMinutes}m drive delta)`,
       `   💰 *Cost:* ~$${v.pricePerGuest}/guest • ${estTotalStr} package est.`,
       `   🎵 *Dance Floor & AV:* ${v.desiFeatures.largeDanceFloor ? 'Yes' : 'No'} • Curfew: ${v.desiFeatures.soundCurfew}`,

@@ -13,6 +13,7 @@ import {
   rankSangeetVenues,
   formatSangeetBriefForWhatsApp,
   SangeetSortOption,
+  SangeetAnchorMode,
 } from '@/lib/sangeetRecommender';
 import { PRELOADED_SANGEET_VENUES } from '@/lib/preloadedSangeetVenues';
 import AddressAutocompleteInput from '@/components/AddressAutocompleteInput';
@@ -223,6 +224,9 @@ export default function SangeetTriangulationSection({
     wedding?.guestCount ? Math.min(wedding.guestCount, 350) : 250
   );
 
+  // Anchor Mode: 'groom_bride_only' (midpoint between 2 families) vs 'three_way' (including confirmed main wedding venue)
+  const [anchorMode, setAnchorMode] = useState<SangeetAnchorMode>('groom_bride_only');
+
   // Filter & Sort State
   const [stateFilter, setStateFilter] = useState<'ALL' | 'NJ' | 'PA'>('ALL');
   const [hotelOnlyFilter, setHotelOnlyFilter] = useState<boolean>(false);
@@ -253,6 +257,7 @@ export default function SangeetTriangulationSection({
           : null,
         guestCount: sangeetGuestCount,
         sangeetVenues: PRELOADED_SANGEET_VENUES,
+        anchorMode,
       },
       sortBy,
       {
@@ -267,6 +272,7 @@ export default function SangeetTriangulationSection({
     brideAddress,
     activeMainVenue,
     sangeetGuestCount,
+    anchorMode,
     sortBy,
     stateFilter,
     hotelOnlyFilter,
@@ -298,7 +304,8 @@ export default function SangeetTriangulationSection({
       groomAddress.label || "Groom's Family",
       brideAddress.label || "Bride's Family",
       activeMainVenue?.name || 'Main Wedding Venue',
-      sangeetGuestCount
+      sangeetGuestCount,
+      anchorMode
     );
     navigator.clipboard.writeText(brief);
     setCopiedWhatsApp(true);
@@ -312,66 +319,115 @@ export default function SangeetTriangulationSection({
         <div className="relative z-10 max-w-4xl">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 text-xs font-bold uppercase tracking-wider mb-3">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Workflow Step 2: Sangeet & Garba Venue Triangulation</span>
+            <span>
+              {anchorMode === 'groom_bride_only'
+                ? 'Workflow: Sangeet & Garba Family Midpoint Recommender'
+                : 'Workflow Step 2: Sangeet & Garba Venue Triangulation'}
+            </span>
           </div>
 
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-            Find the Optimal Pre-Wedding Celebration Hall
+            {anchorMode === 'groom_bride_only'
+              ? 'Find Sangeet Halls Balanced Between Groom & Bride'
+              : 'Find the Optimal Pre-Wedding Celebration Hall'}
           </h2>
 
           <p className="mt-2 text-sm sm:text-base text-purple-100 leading-relaxed font-normal">
-            Sangeet and Garba nights typically don’t need the $180–$250/guest expense of a formal
-            estate. Dedicated Indian banquet halls offer vast dance floors, 1:30 AM curfews,
-            in-house live chaat counters, and average <span className="font-bold text-amber-300">$48–$65/guest</span>{' '}
-            (saving $25k–$40k!).
+            {anchorMode === 'groom_bride_only' ? (
+              <>
+                Selecting a Sangeet hall based strictly on drive-time equity between the Groom’s and Bride’s
+                family homes. Dedicated Indian banquet halls offer vast dance floors, 1:30 AM curfews, in-house
+                live chaat counters, and average <span className="font-bold text-amber-300">$48–$65/guest</span>{' '}
+                (saving $25k–$40k!).
+              </>
+            ) : (
+              <>
+                Sangeet and Garba nights typically don’t need the $180–$250/guest expense of a formal
+                estate. Dedicated Indian banquet halls offer vast dance floors, 1:30 AM curfews,
+                in-house live chaat counters, and average <span className="font-bold text-amber-300">$48–$65/guest</span>{' '}
+                (saving $25k–$40k!).
+              </>
+            )}
           </p>
 
-          {/* Confirmed Wedding Venue Status Callout */}
-          <div className="mt-4 p-3.5 sm:p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center shrink-0">
-                <Building2 className="w-5 h-5 text-amber-300" />
-              </div>
-              <div>
-                <div className="text-[11px] font-semibold text-purple-200 uppercase tracking-wider">
-                  Anchor 3: Confirmed Wedding & Reception Venue
+          {/* Active Anchor Mode Callout Banner */}
+          {anchorMode === 'groom_bride_only' ? (
+            <div className="mt-4 p-3.5 sm:p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-400/20 border border-blue-400/40 flex items-center justify-center shrink-0 text-lg">
+                  ⚖️
                 </div>
-                <div className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-                  <span>{activeMainVenue?.name || 'The Rockleigh (or choose below)'}</span>
-                  {officialWeddingVenue && (
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-bold">
-                      Locked
+                <div>
+                  <div className="text-[11px] font-semibold text-blue-200 uppercase tracking-wider">
+                    Calculation Strategy: Groom & Bride Family Midpoint Only
+                  </div>
+                  <div className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                    <span>Balanced directly between {groomAddress.city} & {brideAddress.city}</span>
+                    <span className="px-2 py-0.5 rounded-md bg-blue-500/20 border border-blue-400/40 text-blue-200 text-[10px] font-bold">
+                      2 Anchors Active
                     </span>
-                  )}
-                </div>
-                <div className="text-xs text-purple-200">
-                  {activeMainVenue
-                    ? `${activeMainVenue.city}, ${activeMainVenue.state}`
-                    : 'Rockleigh, NJ'}
-                  {' • '}
-                  <span className="text-amber-200">Out-of-town guests stay near this hotel block</span>
+                  </div>
+                  <div className="text-xs text-purple-200">
+                    Main wedding venue is excluded from scores so you can pick purely for family balance.
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Quick Switcher if user has multiple shortlisted venues */}
-            {venues.length > 1 && (
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-purple-200 shrink-0">Test with:</label>
-                <select
-                  value={selectedMainVenueId}
-                  onChange={(e) => setSelectedMainVenueId(e.target.value)}
-                  className="bg-purple-900/90 border border-purple-400/50 text-white rounded-xl text-xs py-1.5 px-3 focus:outline-hidden focus:ring-2 focus:ring-amber-400 font-semibold"
-                >
-                  {venues.map((v) => (
-                    <option key={v.id} value={v.id} className="bg-stone-900 text-white">
-                      {v.name} ({v.city}, {v.state})
-                    </option>
-                  ))}
-                </select>
+              <button
+                type="button"
+                onClick={() => setAnchorMode('three_way')}
+                className="px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 border border-white/30 text-white text-xs font-bold transition-all shrink-0 cursor-pointer text-center"
+              >
+                Switch to 3-Way Triangulation (+ Main Venue) →
+              </button>
+            </div>
+          ) : (
+            <div className="mt-4 p-3.5 sm:p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center shrink-0">
+                  <Building2 className="w-5 h-5 text-amber-300" />
+                </div>
+                <div>
+                  <div className="text-[11px] font-semibold text-purple-200 uppercase tracking-wider">
+                    Anchor 3: Confirmed Wedding & Reception Venue
+                  </div>
+                  <div className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                    <span>{activeMainVenue?.name || 'The Rockleigh (or choose below)'}</span>
+                    {officialWeddingVenue && (
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-bold">
+                        Locked
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-purple-200">
+                    {activeMainVenue
+                      ? `${activeMainVenue.city}, ${activeMainVenue.state}`
+                      : 'Rockleigh, NJ'}
+                    {' • '}
+                    <span className="text-amber-200">Out-of-town guests stay near this hotel block</span>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
+
+              {/* Quick Switcher if user has multiple shortlisted venues */}
+              {venues.length > 1 && (
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-purple-200 shrink-0">Test with:</label>
+                  <select
+                    value={selectedMainVenueId}
+                    onChange={(e) => setSelectedMainVenueId(e.target.value)}
+                    className="bg-purple-900/90 border border-purple-400/50 text-white rounded-xl text-xs py-1.5 px-3 focus:outline-hidden focus:ring-2 focus:ring-amber-400 font-semibold"
+                  >
+                    {venues.map((v) => (
+                      <option key={v.id} value={v.id} className="bg-stone-900 text-white">
+                        {v.name} ({v.city}, {v.state})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Ambient glow decoration */}
@@ -428,16 +484,22 @@ export default function SangeetTriangulationSection({
         </div>
       )}
 
-      {/* 3. The 3 Anchors Control Bar */}
+      {/* 3. The Anchors Control Bar */}
       <div className="bg-white p-5 sm:p-6 rounded-2xl border border-stone-200 shadow-2xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-base font-extrabold text-stone-900 flex items-center gap-2">
               <Scale className="w-5 h-5 text-purple-700" />
-              <span>3-Way Geographic Triangulation Anchors</span>
+              <span>
+                {anchorMode === 'groom_bride_only'
+                  ? 'Groom & Bride Family Midpoint Anchors'
+                  : '3-Way Geographic Triangulation Anchors'}
+              </span>
             </h3>
             <p className="text-xs text-stone-500 mt-0.5">
-              Calculating drive times & balance between Groom family, Bride family, and the Main Venue hotel hub.
+              {anchorMode === 'groom_bride_only'
+                ? "Calculating drive times & balance directly between Groom's family and Bride's family (main venue excluded)."
+                : 'Calculating drive times & balance between Groom family, Bride family, and the Main Venue hotel hub.'}
             </p>
           </div>
 
@@ -445,7 +507,7 @@ export default function SangeetTriangulationSection({
             <button
               type="button"
               onClick={() => setIsEditingAnchors(!isEditingAnchors)}
-              className="px-3.5 py-1.5 rounded-xl border border-stone-300 text-stone-700 hover:bg-stone-50 text-xs font-semibold transition-all"
+              className="px-3.5 py-1.5 rounded-xl border border-stone-300 text-stone-700 hover:bg-stone-50 text-xs font-semibold transition-all cursor-pointer"
             >
               {isEditingAnchors ? 'Collapse Address Inputs' : 'Edit Addresses / GPS'}
             </button>
@@ -453,7 +515,7 @@ export default function SangeetTriangulationSection({
             <button
               type="button"
               onClick={handleCopyWhatsAppBrief}
-              className={`px-3.5 py-1.5 rounded-xl font-bold text-xs border transition-all flex items-center gap-1.5 ${
+              className={`px-3.5 py-1.5 rounded-xl font-bold text-xs border transition-all flex items-center gap-1.5 cursor-pointer ${
                 copiedWhatsApp
                   ? 'bg-emerald-600 text-white border-emerald-600'
                   : 'bg-purple-50 text-purple-900 hover:bg-purple-100 border-purple-200'
@@ -470,6 +532,61 @@ export default function SangeetTriangulationSection({
                   <span>Share WhatsApp Brief</span>
                 </>
               )}
+            </button>
+          </div>
+        </div>
+
+        {/* Calculation Preference Toggle Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-3.5 rounded-2xl bg-purple-50/60 border border-purple-200/70">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-stone-800">Anchor Calculation Preference:</span>
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  anchorMode === 'groom_bride_only'
+                    ? 'bg-blue-100 text-blue-900 border border-blue-200'
+                    : 'bg-purple-100 text-purple-900 border border-purple-200'
+                }`}
+              >
+                {anchorMode === 'groom_bride_only'
+                  ? '2 Anchors (Families Only)'
+                  : '3 Anchors (+ Main Venue)'}
+              </span>
+            </div>
+            <p className="text-[11px] text-stone-500 mt-0.5">
+              {anchorMode === 'groom_bride_only'
+                ? "Select a Sangeet hall based purely on convenience between the two family homes."
+                : "Triangulate between both family homes and the confirmed wedding venue's hotel hub."}
+            </p>
+          </div>
+
+          <div className="inline-flex rounded-xl bg-white p-1 border border-stone-200/90 shadow-2xs shrink-0 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => {
+                setAnchorMode('groom_bride_only');
+                if (sortBy === 'main_venue_closest') setSortBy('triangulation');
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                anchorMode === 'groom_bride_only'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
+              }`}
+            >
+              <span>🤵👰</span>
+              <span>Groom & Bride Only</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setAnchorMode('three_way')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                anchorMode === 'three_way'
+                  ? 'bg-purple-900 text-white shadow-xs'
+                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
+              }`}
+            >
+              <span>🏛️</span>
+              <span>3-Way (+ Main Venue)</span>
             </button>
           </div>
         </div>
@@ -520,8 +637,14 @@ export default function SangeetTriangulationSection({
           </div>
         )}
 
-        {/* 3 Anchor Cards Display */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {/* Anchor Cards Display (Dynamic 2-card or 3-card layout) */}
+        <div
+          className={`grid gap-3 ${
+            anchorMode === 'groom_bride_only'
+              ? 'grid-cols-1 md:grid-cols-2'
+              : 'grid-cols-1 md:grid-cols-3'
+          }`}
+        >
           {/* Anchor 1: Groom */}
           <div className="p-3.5 rounded-xl border border-blue-200 bg-blue-50/50">
             <div className="flex items-center justify-between">
@@ -568,27 +691,48 @@ export default function SangeetTriangulationSection({
             <div className="text-[11px] text-stone-500 truncate">{brideAddress.address}</div>
           </div>
 
-          {/* Anchor 3: Main Venue Hotel Block */}
-          <div className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/50">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5 text-amber-700" />
-                <span>Confirmed Wedding Venue</span>
-              </span>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-200 text-amber-900">
-                Hotel Block
-              </span>
+          {/* Anchor 3: Main Venue Hotel Block (Shown in 3-Way Mode) */}
+          {anchorMode === 'three_way' && (
+            <div className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/50">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-amber-700" />
+                  <span>Confirmed Wedding Venue</span>
+                </span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-200 text-amber-900">
+                  Hotel Block
+                </span>
+              </div>
+              <div className="mt-1 text-sm font-extrabold text-stone-900 truncate">
+                {activeMainVenue ? activeMainVenue.name : 'The Rockleigh'}
+              </div>
+              <div className="text-[11px] text-stone-500 truncate">
+                {activeMainVenue
+                  ? `${activeMainVenue.city}, ${activeMainVenue.state}`
+                  : 'Rockleigh, NJ'}
+              </div>
             </div>
-            <div className="mt-1 text-sm font-extrabold text-stone-900 truncate">
-              {activeMainVenue ? activeMainVenue.name : 'The Rockleigh'}
-            </div>
-            <div className="text-[11px] text-stone-500 truncate">
-              {activeMainVenue
-                ? `${activeMainVenue.city}, ${activeMainVenue.state}`
-                : 'Rockleigh, NJ'}
-            </div>
-          </div>
+          )}
         </div>
+
+        {/* Info banner when 2-Way Mode is active */}
+        {anchorMode === 'groom_bride_only' && (
+          <div className="p-3 rounded-xl bg-stone-50 border border-stone-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2 text-stone-600">
+              <Building2 className="w-4 h-4 text-stone-400 shrink-0" />
+              <span>
+                Main Wedding Venue ({activeMainVenue ? activeMainVenue.name : 'The Rockleigh'}) is currently <strong>excluded</strong> from ranking scores.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAnchorMode('three_way')}
+              className="text-purple-700 hover:text-purple-900 font-bold underline shrink-0 cursor-pointer"
+            >
+              Switch to 3-Way Triangulation →
+            </button>
+          </div>
+        )}
 
         {/* Optional Expandable Address Edit Form */}
         {isEditingAnchors && (
@@ -710,12 +854,18 @@ export default function SangeetTriangulationSection({
               onChange={(e) => setSortBy(e.target.value as SangeetSortOption)}
               className="bg-stone-50 border border-stone-300 text-stone-800 rounded-xl text-xs py-1.5 px-3 font-semibold focus:outline-hidden focus:ring-2 focus:ring-purple-600"
             >
-              <option value="triangulation">✨ Triangulation Sweetspot (Best Balance)</option>
+              <option value="triangulation">
+                {anchorMode === 'groom_bride_only'
+                  ? '⚖️ Family Midpoint Sweetspot (Best Balance)'
+                  : '✨ Triangulation Sweetspot (Best Balance)'}
+              </option>
               <option value="fairness">⚖️ 50/50 Family Equity (Lowest Delta)</option>
               <option value="cost_asc">💰 Lowest Package Cost ($/Guest)</option>
               <option value="groom_closest">🤵 Closest to Groom's Side</option>
               <option value="bride_closest">👰 Closest to Bride's Side</option>
-              <option value="main_venue_closest">🏛️ Closest to Main Venue Hotel Block</option>
+              {anchorMode === 'three_way' && (
+                <option value="main_venue_closest">🏛️ Closest to Main Venue Hotel Block</option>
+              )}
               <option value="capacity_desc">👥 Largest Capacity (Big Dance Floor)</option>
             </select>
           </div>
@@ -796,7 +946,11 @@ export default function SangeetTriangulationSection({
                     {isTopMatch && (
                       <span className="px-2.5 py-1 rounded-xl bg-amber-400/20 text-amber-900 font-bold text-xs border border-amber-400/30 flex items-center gap-1">
                         <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                        <span>#1 Triangulated Sweetspot</span>
+                        <span>
+                          {anchorMode === 'groom_bride_only'
+                            ? '#1 Family Midpoint Sweetspot'
+                            : '#1 Triangulated Sweetspot'}
+                        </span>
                       </span>
                     )}
                     {isOfficial && (
@@ -807,11 +961,11 @@ export default function SangeetTriangulationSection({
                     )}
                   </div>
 
-                  {/* Triangulation Equity Gauge */}
+                  {/* Triangulation / Midpoint Equity Gauge */}
                   <div className="flex items-center gap-3">
                     <div className="text-right">
                       <div className="text-[10px] font-bold uppercase tracking-wider text-stone-500">
-                        Triangulation Fit
+                        {anchorMode === 'groom_bride_only' ? 'Midpoint Fit' : 'Triangulation Fit'}
                       </div>
                       <div className="text-lg font-black text-purple-900">
                         {m.triangulationScore}% <span className="text-xs text-stone-500">match</span>
@@ -839,19 +993,29 @@ export default function SangeetTriangulationSection({
                   </p>
                 </div>
 
-                {/* 3-WAY TRAVEL TIME COMPARISON BAR (Core Value Proposition) */}
+                {/* DRIVING TIME COMPARISON BAR */}
                 <div className="p-4 rounded-2xl bg-gradient-to-r from-stone-50 via-purple-50/40 to-stone-50 border border-stone-200 space-y-2.5">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-bold text-stone-800 flex items-center gap-1.5">
                       <Navigation className="w-3.5 h-3.5 text-purple-700" />
-                      <span>3-Way Driving Triangulation:</span>
+                      <span>
+                        {anchorMode === 'groom_bride_only'
+                          ? '2-Way Family Driving Midpoint:'
+                          : '3-Way Driving Triangulation:'}
+                      </span>
                     </span>
                     <span className="font-semibold text-purple-900 bg-purple-100/80 px-2 py-0.5 rounded-md text-[11px]">
                       ⚖️ {m.travelDeltaMinutes}m family drive difference ({m.fairnessScore}% equity)
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div
+                    className={`grid gap-2.5 ${
+                      anchorMode === 'groom_bride_only'
+                        ? 'grid-cols-1 sm:grid-cols-2'
+                        : 'grid-cols-1 sm:grid-cols-3'
+                    }`}
+                  >
                     {/* Groom Travel Time */}
                     <div className="p-2.5 rounded-xl bg-white border border-blue-200">
                       <div className="text-[10px] font-bold text-blue-900 uppercase tracking-wider flex items-center justify-between">
@@ -880,22 +1044,34 @@ export default function SangeetTriangulationSection({
                       </div>
                     </div>
 
-                    {/* Main Venue Hotel Block Travel Time */}
-                    <div className="p-2.5 rounded-xl bg-white border border-amber-200">
-                      <div className="text-[10px] font-bold text-amber-900 uppercase tracking-wider flex items-center justify-between">
-                        <span>🏛️ Main Venue Hotel Hub</span>
-                        <span className="text-stone-400 truncate max-w-[90px]">
-                          {activeMainVenue ? activeMainVenue.city : 'Rockleigh'}
-                        </span>
+                    {/* Main Venue Hotel Block Travel Time (Shown in 3-Way Mode) */}
+                    {anchorMode === 'three_way' && (
+                      <div className="p-2.5 rounded-xl bg-white border border-amber-200">
+                        <div className="text-[10px] font-bold text-amber-900 uppercase tracking-wider flex items-center justify-between">
+                          <span>🏛️ Main Venue Hotel Hub</span>
+                          <span className="text-stone-400 truncate max-w-[90px]">
+                            {activeMainVenue ? activeMainVenue.city : 'Rockleigh'}
+                          </span>
+                        </div>
+                        <div className="mt-1 flex items-baseline gap-1.5">
+                          <span className="text-base font-extrabold text-stone-900">
+                            ~{m.mainVenueDriveMinutes} min
+                          </span>
+                          <span className="text-xs text-stone-500">({m.mainVenueDistanceMiles} mi)</span>
+                        </div>
                       </div>
-                      <div className="mt-1 flex items-baseline gap-1.5">
-                        <span className="text-base font-extrabold text-stone-900">
-                          ~{m.mainVenueDriveMinutes} min
-                        </span>
-                        <span className="text-xs text-stone-500">({m.mainVenueDistanceMiles} mi)</span>
-                      </div>
-                    </div>
+                    )}
                   </div>
+
+                  {/* Secondary note if 2-Way mode but user wants to know main venue drive */}
+                  {anchorMode === 'groom_bride_only' && activeMainVenue && m.mainVenueDriveMinutes > 0 && (
+                    <div className="text-[11px] text-stone-500 flex items-center justify-between px-1 pt-0.5">
+                      <span>
+                        🏛️ Travel to {activeMainVenue.name} hotel block: ~{m.mainVenueDriveMinutes} min ({m.mainVenueDistanceMiles} mi)
+                      </span>
+                      <span className="text-[10px] text-stone-400 italic">Excluded from 2-way score</span>
+                    </div>
+                  )}
 
                   {/* Human-friendly verdict banner */}
                   <div className="text-xs text-stone-700 font-medium flex items-center gap-1.5 pt-1">
