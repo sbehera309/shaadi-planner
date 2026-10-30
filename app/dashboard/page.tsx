@@ -224,7 +224,7 @@ export default function DashboardOverviewPage() {
             </div>
           </div>
           {/* Subtle gold background aura */}
-          <div className="absolute right-0 top-0 bottom-0 w-96 bg-radial from-amber-500/10 to-transparent pointer-events-none opacity-50" />
+          <div className="absolute right-0 top-0 bottom-0 w-96 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-500/10 to-transparent pointer-events-none opacity-50" />
         </div>
       ) : (
         /* Brand New / Unconfigured State: Simple 2-Step Getting Started Intro */

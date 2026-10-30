@@ -865,7 +865,7 @@ export default function VenuesPage() {
         </div>
 
         {/* Subtle background glow */}
-        <div className="absolute right-0 top-0 bottom-0 w-80 bg-radial from-amber-500/10 to-transparent pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-80 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-500/10 to-transparent pointer-events-none" />
       </div>
 
       {/* 4 Summary Metric Cards */}
@@ -994,7 +994,7 @@ export default function VenuesPage() {
 
       {/* Official Wedding Venue Confirmed Banner: Step 2 Callout */}
       {officialVenue && activeTab !== 'sangeet' && (
-        <div className="p-4 sm:p-5 rounded-2xl bg-linear-to-r from-purple-950 via-fuchsia-900 to-rose-950 text-white shadow-md border border-purple-400/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="p-4 sm:p-5 rounded-2xl bg-purple-950 bg-gradient-to-r from-purple-950 via-fuchsia-900 to-rose-950 text-white shadow-md border border-purple-400/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
             <div className="w-11 h-11 rounded-2xl bg-amber-400 text-stone-950 flex items-center justify-center shrink-0 font-bold text-lg shadow-sm">
               🏛️

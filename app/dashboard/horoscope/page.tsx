@@ -454,7 +454,7 @@ export default function HoroscopePage() {
             </div>
 
             {/* Celestial stars background ambient flair */}
-            <div className="absolute right-0 top-0 bottom-0 w-96 bg-radial from-purple-500/20 to-transparent pointer-events-none opacity-60" />
+            <div className="absolute right-0 top-0 bottom-0 w-96 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-500/20 to-transparent pointer-events-none opacity-60" />
           </div>
 
           {/* Detailed Astrology Tabs (Ashta Koota vs Dasa Porutham vs Lucky Elements) */}

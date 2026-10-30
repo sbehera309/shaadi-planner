@@ -193,18 +193,18 @@ export default function SangeetTriangulationSection({
   return (
     <div className="space-y-6">
       {/* 1. Header Banner & Context Workflow */}
-      <div className="relative overflow-hidden rounded-3xl bg-linear-to-r from-purple-950 via-fuchsia-900 to-rose-950 text-white p-6 sm:p-8 shadow-xl border border-purple-500/30">
+      <div className="relative overflow-hidden rounded-3xl bg-purple-950 bg-gradient-to-r from-purple-950 via-fuchsia-950 to-rose-950 text-white p-6 sm:p-8 shadow-xl border border-purple-500/30">
         <div className="relative z-10 max-w-4xl">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 text-xs font-bold uppercase tracking-wider mb-3">
             <Sparkles className="w-3.5 h-3.5" />
             <span>Workflow Step 2: Sangeet & Garba Venue Triangulation</span>
           </div>
 
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
             Find the Optimal Pre-Wedding Celebration Hall
           </h2>
 
-          <p className="mt-2 text-sm sm:text-base text-purple-100 leading-relaxed">
+          <p className="mt-2 text-sm sm:text-base text-purple-100 leading-relaxed font-normal">
             Sangeet and Garba nights typically don’t need the $180–$250/guest expense of a formal
             estate. Dedicated Indian banquet halls offer vast dance floors, 1:30 AM curfews,
             in-house live chaat counters, and average <span className="font-bold text-amber-300">$48–$65/guest</span>{' '}
@@ -246,7 +246,7 @@ export default function SangeetTriangulationSection({
                 <select
                   value={selectedMainVenueId}
                   onChange={(e) => setSelectedMainVenueId(e.target.value)}
-                  className="bg-purple-900/80 border border-purple-400/40 text-white rounded-xl text-xs py-1.5 px-3 focus:outline-hidden focus:ring-2 focus:ring-amber-400"
+                  className="bg-purple-900/90 border border-purple-400/50 text-white rounded-xl text-xs py-1.5 px-3 focus:outline-hidden focus:ring-2 focus:ring-amber-400 font-semibold"
                 >
                   {venues.map((v) => (
                     <option key={v.id} value={v.id} className="bg-stone-900 text-white">
@@ -260,12 +260,12 @@ export default function SangeetTriangulationSection({
         </div>
 
         {/* Ambient glow decoration */}
-        <div className="absolute right-0 top-0 bottom-0 w-96 bg-radial from-amber-400/20 to-transparent pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-96 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-400/20 to-transparent pointer-events-none" />
       </div>
 
       {/* 2. Official Sangeet Venue Confirmed Card (If selected) */}
       {officialSangeetVenue && (
-        <div className="p-5 sm:p-6 rounded-2xl bg-linear-to-r from-emerald-50 via-teal-50 to-emerald-100 border-2 border-emerald-400 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-100 border-2 border-emerald-400 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
             <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-md">
               <BookmarkCheck className="w-7 h-7" />
@@ -681,7 +681,7 @@ export default function SangeetTriangulationSection({
                 </div>
 
                 {/* 3-WAY TRAVEL TIME COMPARISON BAR (Core Value Proposition) */}
-                <div className="p-4 rounded-2xl bg-linear-to-r from-stone-50 via-purple-50/40 to-stone-50 border border-stone-200 space-y-2.5">
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-stone-50 via-purple-50/40 to-stone-50 border border-stone-200 space-y-2.5">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-bold text-stone-800 flex items-center gap-1.5">
                       <Navigation className="w-3.5 h-3.5 text-purple-700" />

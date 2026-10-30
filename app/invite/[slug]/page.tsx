@@ -103,7 +103,7 @@ export default function PublicWeddingInvitePage({
       </div>
 
       {/* Hero Banner Section */}
-      <section className="relative overflow-hidden py-20 px-6 sm:px-12 text-center bg-radial from-rose-950 via-stone-950 to-stone-900 text-white border-b-4 border-amber-500/60 shadow-2xl">
+      <section className="relative overflow-hidden py-20 px-6 sm:px-12 text-center bg-stone-950 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-rose-950 via-stone-950 to-stone-900 text-white border-b-4 border-amber-500/60 shadow-2xl">
         <div className="relative z-10 max-w-3xl mx-auto space-y-6">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold border border-amber-500/40 backdrop-blur-md">
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
