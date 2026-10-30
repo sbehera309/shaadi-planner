@@ -924,7 +924,7 @@ export default function VenuesPage() {
             <button
               type="button"
               onClick={() => setActiveTab('curated')}
-              className={`px-4 py-2.5 rounded-xl font-bold text-xs border transition-all flex items-center gap-1.5 ${
+              className={`px-4 py-2.5 rounded-xl font-bold text-xs border transition-all duration-150 tap-button active:scale-95 flex items-center gap-1.5 ${
                 activeTab === 'curated'
                   ? 'bg-amber-400 text-stone-950 border-amber-400 shadow-xs'
                   : 'bg-white/10 hover:bg-white/20 text-amber-200 border-white/20'
@@ -937,7 +937,7 @@ export default function VenuesPage() {
             <button
               type="button"
               onClick={() => setActiveTab('my-venues')}
-              className={`px-4 py-2.5 rounded-xl font-bold text-xs border transition-all flex items-center gap-1.5 ${
+              className={`px-4 py-2.5 rounded-xl font-bold text-xs border transition-all duration-150 tap-button active:scale-95 flex items-center gap-1.5 ${
                 activeTab === 'my-venues'
                   ? 'bg-amber-400 text-stone-950 border-amber-400 shadow-xs'
                   : 'bg-white/10 hover:bg-white/20 text-amber-200 border-white/20'
@@ -950,7 +950,7 @@ export default function VenuesPage() {
             <button
               type="button"
               onClick={() => setActiveTab('tour-planner')}
-              className={`px-4 py-2.5 rounded-xl font-bold text-xs border transition-all flex items-center gap-1.5 ${
+              className={`px-4 py-2.5 rounded-xl font-bold text-xs border transition-all duration-150 tap-button active:scale-95 flex items-center gap-1.5 ${
                 activeTab === 'tour-planner'
                   ? 'bg-amber-400 text-stone-950 border-amber-400 shadow-xs'
                   : 'bg-white/10 hover:bg-white/20 text-amber-200 border-white/20'
@@ -963,7 +963,7 @@ export default function VenuesPage() {
             <button
               type="button"
               onClick={() => setActiveTab('sangeet')}
-              className={`px-4 py-2.5 rounded-xl font-bold text-xs border transition-all flex items-center gap-1.5 ${
+              className={`px-4 py-2.5 rounded-xl font-bold text-xs border transition-all duration-150 tap-button active:scale-95 flex items-center gap-1.5 ${
                 activeTab === 'sangeet'
                   ? 'bg-amber-400 text-stone-950 border-amber-400 shadow-xs'
                   : 'bg-white/10 hover:bg-white/20 text-amber-200 border-white/20'
@@ -984,7 +984,7 @@ export default function VenuesPage() {
 
       {/* 4 Summary Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-2xs">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-2xs interactive-card">
           <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-stone-500 block">
             Preloaded &amp; Shortlisted Venues
           </span>
@@ -997,7 +997,7 @@ export default function VenuesPage() {
           </div>
         </div>
 
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-2xs">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-2xs interactive-card">
           <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-stone-500 block">
             My Shortlist
           </span>
@@ -1009,7 +1009,7 @@ export default function VenuesPage() {
           </div>
         </div>
 
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-2xs">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-2xs interactive-card">
           <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-stone-500 block">
             Site Tour Day Stops
           </span>
@@ -1022,7 +1022,7 @@ export default function VenuesPage() {
           </div>
         </div>
 
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-2xs">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-2xs interactive-card">
           <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-stone-500 block">
             Official Selected Venue
           </span>
@@ -1040,7 +1040,7 @@ export default function VenuesPage() {
         <button
           type="button"
           onClick={() => setActiveTab('curated')}
-          className={`py-3 px-4 sm:px-6 border-b-2 transition-all flex items-center gap-2 ${
+          className={`py-3 px-4 sm:px-6 border-b-2 transition-all duration-150 tap-button active:scale-95 flex items-center gap-2 ${
             activeTab === 'curated'
               ? 'border-rose-700 text-rose-800 font-bold'
               : 'border-transparent text-stone-500 hover:text-stone-800'
@@ -1056,7 +1056,7 @@ export default function VenuesPage() {
         <button
           type="button"
           onClick={() => setActiveTab('my-venues')}
-          className={`py-3 px-4 sm:px-6 border-b-2 transition-all flex items-center gap-2 ${
+          className={`py-3 px-4 sm:px-6 border-b-2 transition-all duration-150 tap-button active:scale-95 flex items-center gap-2 ${
             activeTab === 'my-venues'
               ? 'border-rose-700 text-rose-800 font-bold'
               : 'border-transparent text-stone-500 hover:text-stone-800'
@@ -1069,7 +1069,7 @@ export default function VenuesPage() {
         <button
           type="button"
           onClick={() => setActiveTab('tour-planner')}
-          className={`py-3 px-4 sm:px-6 border-b-2 transition-all flex items-center gap-2 ${
+          className={`py-3 px-4 sm:px-6 border-b-2 transition-all duration-150 tap-button active:scale-95 flex items-center gap-2 ${
             activeTab === 'tour-planner'
               ? 'border-rose-700 text-rose-800 font-bold'
               : 'border-transparent text-stone-500 hover:text-stone-800'
@@ -1087,7 +1087,7 @@ export default function VenuesPage() {
         <button
           type="button"
           onClick={() => setActiveTab('sangeet')}
-          className={`py-3 px-4 sm:px-6 border-b-2 transition-all flex items-center gap-2 ${
+          className={`py-3 px-4 sm:px-6 border-b-2 transition-all duration-150 tap-button active:scale-95 flex items-center gap-2 ${
             activeTab === 'sangeet'
               ? 'border-purple-600 text-purple-900 font-bold'
               : 'border-transparent text-stone-500 hover:text-stone-800'
@@ -1108,7 +1108,7 @@ export default function VenuesPage() {
 
       {/* Official Wedding Venue Confirmed Banner: Step 2 Callout */}
       {officialVenue && activeTab !== 'sangeet' && (
-        <div className="p-4 sm:p-5 rounded-2xl bg-purple-950 bg-gradient-to-r from-purple-950 via-fuchsia-900 to-rose-950 text-white shadow-md border border-purple-400/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="p-4 sm:p-5 rounded-2xl bg-purple-950 bg-gradient-to-r from-purple-950 via-fuchsia-900 to-rose-950 text-white shadow-md border border-purple-400/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 interactive-card">
           <div className="flex items-center gap-3.5">
             <div className="w-11 h-11 rounded-2xl bg-amber-400 text-stone-950 flex items-center justify-center shrink-0 font-bold text-lg shadow-sm">
               🏛️
@@ -1242,7 +1242,7 @@ export default function VenuesPage() {
       {/* TAB 1: CURATED VENUES DIRECTORY (NJ & PA)                     */}
       {/* ============================================================= */}
       {activeTab === 'curated' && (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-200">
           {/* Controls Bar: State Switcher + Search + Sorting */}
           <div className="bg-white p-4 sm:p-5 rounded-3xl border border-stone-200 shadow-2xs space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1383,7 +1383,7 @@ export default function VenuesPage() {
                 return (
                   <div
                     key={venue.id}
-                    className="bg-white rounded-3xl border border-stone-200 hover:border-amber-400/90 shadow-2xs hover:shadow-md transition-all p-5 sm:p-6 flex flex-col justify-between space-y-4"
+                    className="bg-white rounded-3xl border border-stone-200 hover:border-amber-400/90 shadow-2xs hover:shadow-md transition-all p-5 sm:p-6 flex flex-col justify-between space-y-4 interactive-card"
                   >
                     <div className="space-y-4">
                       {/* Header row */}
@@ -1979,7 +1979,7 @@ export default function VenuesPage() {
       {/* TAB 2: MY SHORTLIST & COMPARISON MATRIX                       */}
       {/* ============================================================= */}
       {activeTab === 'my-venues' && (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-200">
           {/* Header row with Add Custom button */}
           <div className="bg-white p-4 sm:p-5 rounded-3xl border border-stone-200 shadow-2xs flex flex-wrap items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-2 font-semibold text-stone-600">
@@ -2049,7 +2049,7 @@ export default function VenuesPage() {
                 return (
                   <div
                     key={venue.id}
-                    className={`bg-white rounded-3xl border transition-all hover:shadow-md p-5 sm:p-6 flex flex-col justify-between space-y-4 ${
+                    className={`bg-white rounded-3xl border transition-all hover:shadow-md p-5 sm:p-6 flex flex-col justify-between space-y-4 interactive-card ${
                       isSelected
                         ? 'border-2 border-emerald-500 ring-2 ring-emerald-500/20 shadow-sm'
                         : 'border-stone-200'
@@ -2585,7 +2585,7 @@ export default function VenuesPage() {
       {/* TAB 3: SITE TOUR ROUTE & SCHEDULE OPTIMIZER                   */}
       {/* ============================================================= */}
       {activeTab === 'tour-planner' && (
-        <div className="space-y-8">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-200">
           {/* Settings & Route Parameters Form */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200 shadow-xs space-y-6">
             <div className="max-w-3xl space-y-2">
@@ -3915,29 +3915,31 @@ export default function VenuesPage() {
       {/* TAB 4: SANGEET & PRE-WEDDING VENUES TRIANGULATION             */}
       {/* ============================================================= */}
       {activeTab === 'sangeet' && (
-        <SangeetTriangulationSection
-          initialGroomAddress={tourForm.groomAddress}
-          initialBrideAddress={tourForm.brideAddress}
-          savedAddresses={savedAddresses}
-          onSelectSavedAddress={handleSelectAddressForSide}
-          onOpenAddressBook={(side) => {
-            setAddressBookTargetSide(side);
-            setIsAddressBookModalOpen(true);
-          }}
-          onAddressesChange={(groom, bride) => {
-            const updatedForm = {
-              ...tourForm,
-              groomAddress: groom,
-              brideAddress: bride,
-            };
-            setTourForm(updatedForm);
-            if (tourPlan && tourPlan.optimizedStops.length > 0) {
-              recalculateTourPlan(updatedForm);
-            }
-          }}
-          isLoggedIn={isLoggedIn}
-          onOpenAuthModal={() => setIsAuthModalOpen(true)}
-        />
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <SangeetTriangulationSection
+            initialGroomAddress={tourForm.groomAddress}
+            initialBrideAddress={tourForm.brideAddress}
+            savedAddresses={savedAddresses}
+            onSelectSavedAddress={handleSelectAddressForSide}
+            onOpenAddressBook={(side) => {
+              setAddressBookTargetSide(side);
+              setIsAddressBookModalOpen(true);
+            }}
+            onAddressesChange={(groom, bride) => {
+              const updatedForm = {
+                ...tourForm,
+                groomAddress: groom,
+                brideAddress: bride,
+              };
+              setTourForm(updatedForm);
+              if (tourPlan && tourPlan.optimizedStops.length > 0) {
+                recalculateTourPlan(updatedForm);
+              }
+            }}
+            isLoggedIn={isLoggedIn}
+            onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          />
+        </div>
       )}
 
       {/* ============================================================= */}

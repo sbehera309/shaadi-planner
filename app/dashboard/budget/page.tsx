@@ -356,14 +356,14 @@ export default function BudgetPage() {
         <div className="flex items-center gap-2.5 self-start sm:self-auto">
           <button
             onClick={() => setIsCalculatorOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-amber-300 hover:border-amber-500 text-stone-800 font-semibold text-xs shadow-xs hover:bg-amber-50/50 transition-all"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-amber-300 hover:border-amber-500 text-stone-800 font-semibold text-xs shadow-xs hover:bg-amber-50/50 transition-all duration-150 tap-button active:scale-95"
           >
             <Calculator className="w-4 h-4 text-amber-700" />
             <span>Catering & Per-Plate Calculator</span>
           </button>
           <button
             onClick={handleOpenAdd}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-rose-700 text-white font-semibold text-xs shadow-md shadow-rose-900/20 hover:opacity-95"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-rose-700 text-white font-semibold text-xs shadow-md shadow-rose-900/20 hover:opacity-95 transition-all duration-150 tap-button active:scale-95"
           >
             <Plus className="w-4 h-4" />
             <span>Add Expense Item</span>
@@ -430,7 +430,7 @@ export default function BudgetPage() {
 
       {/* Top 3 Split Cards: Bride vs Groom vs Shared */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="bg-white p-5 rounded-2xl border border-rose-200/80 shadow-xs relative overflow-hidden">
+        <div className="bg-white p-5 rounded-2xl border border-rose-200/80 shadow-xs relative overflow-hidden interactive-card">
           <div className="text-xs font-bold text-rose-800 uppercase tracking-wider">
             Bride's Family (Ladkiwale)
           </div>
@@ -461,7 +461,7 @@ export default function BudgetPage() {
           <div className="absolute top-0 right-0 w-2 h-full bg-rose-500" />
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-blue-200/80 shadow-xs relative overflow-hidden">
+        <div className="bg-white p-5 rounded-2xl border border-blue-200/80 shadow-xs relative overflow-hidden interactive-card">
           <div className="text-xs font-bold text-blue-800 uppercase tracking-wider">
             Groom's Family (Ladkewale)
           </div>
@@ -492,7 +492,7 @@ export default function BudgetPage() {
           <div className="absolute top-0 right-0 w-2 h-full bg-blue-500" />
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-amber-200/80 shadow-xs relative overflow-hidden">
+        <div className="bg-white p-5 rounded-2xl border border-amber-200/80 shadow-xs relative overflow-hidden interactive-card">
           <div className="text-xs font-bold text-amber-800 uppercase tracking-wider">
             Shared 50-50 Split
           </div>

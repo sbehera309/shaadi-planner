@@ -126,7 +126,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose })
               key={item.href}
               href={item.href}
               onClick={() => isMobile && onMobileClose?.()}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 active:scale-[0.98] ${
                 isActive
                   ? 'bg-gradient-to-r from-amber-500/20 to-rose-600/20 text-amber-300 border-l-4 border-amber-400 pl-2'
                   : 'text-stone-300 hover:bg-stone-800/80 hover:text-white'
@@ -187,7 +187,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose })
       {isMobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
             onClick={onMobileClose}
           />
           <aside className="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-stone-900 text-stone-100 flex flex-col h-full shadow-2xl z-50 animate-in slide-in-from-left duration-200">

@@ -240,7 +240,7 @@ export default function VendorsPage() {
       <div className="flex border-b border-stone-200 bg-white rounded-2xl p-1.5 shadow-xs">
         <button
           onClick={() => setActiveTab('directory')}
-          className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+          className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold transition-all duration-150 tap-button active:scale-95 flex items-center justify-center gap-2 ${
             activeTab === 'directory'
               ? 'bg-amber-600 text-white shadow-sm'
               : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
@@ -251,7 +251,7 @@ export default function VendorsPage() {
         </button>
         <button
           onClick={() => setActiveTab('my_vendors')}
-          className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+          className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold transition-all duration-150 tap-button active:scale-95 flex items-center justify-center gap-2 ${
             activeTab === 'my_vendors'
               ? 'bg-amber-600 text-white shadow-sm'
               : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
@@ -273,7 +273,7 @@ export default function VendorsPage() {
       {/* TAB 1: CURATED VENDORS DIRECTORY */}
       {/* ========================================================================= */}
       {activeTab === 'directory' && (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-200">
           {/* Intelligence Highlights Box */}
           <div className="bg-gradient-to-r from-amber-50 via-rose-50 to-orange-50 border border-amber-200/80 rounded-2xl p-4 sm:p-5">
             <div className="flex items-start gap-3">
@@ -380,7 +380,7 @@ export default function VendorsPage() {
               {filteredVendors.map((vendor) => (
                 <div
                   key={vendor.id}
-                  className="bg-white rounded-2xl border border-stone-200 hover:border-amber-400 shadow-xs hover:shadow-md transition-all p-5 flex flex-col justify-between"
+                  className="bg-white rounded-2xl border border-stone-200 hover:border-amber-400 shadow-xs hover:shadow-md transition-all p-5 flex flex-col justify-between interactive-card"
                 >
                   <div>
                     {/* Top Badges */}
@@ -490,10 +490,10 @@ export default function VendorsPage() {
       {/* TAB 2: MY BOOKED & SHORTLISTED VENDORS */}
       {/* ========================================================================= */}
       {activeTab === 'my_vendors' && (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-200">
           {/* Summary Stat Bar */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs">
+            <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs interactive-card">
               <div className="text-[11px] font-bold text-stone-400 uppercase tracking-wider">
                 Total Committed Contracts
               </div>
@@ -503,7 +503,7 @@ export default function VendorsPage() {
               <div className="text-[11px] text-stone-500 mt-0.5">Across {vendors.length} vendors</div>
             </div>
 
-            <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs">
+            <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs interactive-card">
               <div className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">
                 Deposits Paid
               </div>
@@ -515,7 +515,7 @@ export default function VendorsPage() {
               </div>
             </div>
 
-            <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs">
+            <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs interactive-card">
               <div className="text-[11px] font-bold text-rose-700 uppercase tracking-wider">
                 Remaining Balance Due
               </div>
@@ -565,7 +565,7 @@ export default function VendorsPage() {
                 return (
                   <div
                     key={vendor.id}
-                    className="bg-white rounded-2xl border border-stone-200 shadow-xs hover:shadow-md transition-all p-6 flex flex-col justify-between"
+                    className="bg-white rounded-2xl border border-stone-200 shadow-xs hover:shadow-md transition-all p-6 flex flex-col justify-between interactive-card"
                   >
                     <div>
                       {/* Header row */}

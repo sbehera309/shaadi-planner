@@ -567,7 +567,7 @@ export default function SangeetTriangulationSection({
                 setAnchorMode('groom_bride_only');
                 if (sortBy === 'main_venue_closest') setSortBy('triangulation');
               }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-150 tap-button active:scale-95 cursor-pointer flex items-center gap-1.5 ${
                 anchorMode === 'groom_bride_only'
                   ? 'bg-blue-600 text-white shadow-xs'
                   : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
@@ -579,7 +579,7 @@ export default function SangeetTriangulationSection({
             <button
               type="button"
               onClick={() => setAnchorMode('three_way')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-150 tap-button active:scale-95 cursor-pointer flex items-center gap-1.5 ${
                 anchorMode === 'three_way'
                   ? 'bg-purple-900 text-white shadow-xs'
                   : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
@@ -646,7 +646,7 @@ export default function SangeetTriangulationSection({
           }`}
         >
           {/* Anchor 1: Groom */}
-          <div className="p-3.5 rounded-xl border border-blue-200 bg-blue-50/50">
+          <div className="p-3.5 rounded-xl border border-blue-200 bg-blue-50/50 interactive-card">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
                 <span>🤵</span>
@@ -669,7 +669,7 @@ export default function SangeetTriangulationSection({
           </div>
 
           {/* Anchor 2: Bride */}
-          <div className="p-3.5 rounded-xl border border-rose-200 bg-rose-50/50">
+          <div className="p-3.5 rounded-xl border border-rose-200 bg-rose-50/50 interactive-card">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-rose-900 flex items-center gap-1.5">
                 <span>👰</span>
@@ -693,7 +693,7 @@ export default function SangeetTriangulationSection({
 
           {/* Anchor 3: Main Venue Hotel Block (Shown in 3-Way Mode) */}
           {anchorMode === 'three_way' && (
-            <div className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/50">
+            <div className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/50 interactive-card">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
                   <Building2 className="w-3.5 h-3.5 text-amber-700" />
@@ -925,7 +925,7 @@ export default function SangeetTriangulationSection({
           return (
             <div
               key={v.id}
-              className={`bg-white rounded-3xl border transition-all duration-200 shadow-sm overflow-hidden ${
+              className={`bg-white rounded-3xl border transition-all duration-200 shadow-sm overflow-hidden interactive-card ${
                 isOfficial
                   ? 'border-2 border-emerald-500 ring-4 ring-emerald-500/10'
                   : isTopMatch

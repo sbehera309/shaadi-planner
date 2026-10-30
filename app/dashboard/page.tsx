@@ -450,7 +450,7 @@ export default function DashboardOverviewPage() {
                   return (
                     <div
                       key={event.id}
-                      className="rounded-2xl border border-stone-200 hover:border-amber-400/80 bg-stone-50/40 p-5 flex flex-col justify-between space-y-4 transition-all hover:shadow-md"
+                      className="rounded-2xl border border-stone-200 hover:border-amber-400/80 bg-stone-50/40 p-5 flex flex-col justify-between space-y-4 transition-all hover:shadow-md interactive-card"
                     >
                       <div className="space-y-3">
                         {/* Event Header with Priority Badge */}
@@ -623,7 +623,7 @@ export default function DashboardOverviewPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {/* Metric 1: Budget */}
-          <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs hover:shadow-md transition-shadow">
+          <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs hover:shadow-md transition-shadow interactive-card">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-stone-600">
                 Budget Committed
@@ -658,7 +658,7 @@ export default function DashboardOverviewPage() {
           </div>
 
           {/* Metric 2: Guests */}
-          <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs hover:shadow-md transition-shadow">
+          <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs hover:shadow-md transition-shadow interactive-card">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-stone-600">
                 Invited Guests
@@ -691,7 +691,7 @@ export default function DashboardOverviewPage() {
           </div>
 
           {/* Metric 3: Gifts (Renamed from Shagun Lifafas) */}
-          <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs hover:shadow-md transition-shadow">
+          <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs hover:shadow-md transition-shadow interactive-card">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-stone-600">
                 Wedding Gifts
@@ -717,7 +717,7 @@ export default function DashboardOverviewPage() {
           </div>
 
           {/* Metric 4: Vendors & Hotel Rooms */}
-          <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs hover:shadow-md transition-shadow">
+          <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs hover:shadow-md transition-shadow interactive-card">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-stone-600">
                 Vendors & Hotel Blocks
