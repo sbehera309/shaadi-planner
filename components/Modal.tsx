@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -18,6 +19,12 @@ export const Modal: React.FC<ModalProps> = ({
   children,
   maxWidth = 'lg',
 }) => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -27,12 +34,12 @@ export const Modal: React.FC<ModalProps> = ({
       window.addEventListener('keydown', handleKeyDown);
     }
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = '';
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const maxWidthClass = {
     sm: 'max-w-sm',
@@ -42,15 +49,15 @@ export const Modal: React.FC<ModalProps> = ({
     '2xl': 'max-w-2xl',
   }[maxWidth];
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center p-0 sm:p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center p-0 sm:p-4 bg-black/65 backdrop-blur-xs animate-in fade-in duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
-        className={`bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl border-t sm:border border-stone-200 w-full ${maxWidthClass} max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200`}
+        className={`bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl border-t sm:border border-stone-200 w-full ${maxWidthClass} max-h-[90dvh] sm:max-h-[86vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200`}
       >
         {/* Header */}
         <div className="px-5 py-4 pt-[max(1.25rem,env(safe-area-inset-top))] sm:pt-4 sm:px-6 border-b border-stone-100 flex items-center justify-between bg-stone-50/90 shrink-0 z-10">
@@ -67,10 +74,11 @@ export const Modal: React.FC<ModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 overscroll-contain pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-6">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0 overscroll-contain pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-6">
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

@@ -25,7 +25,7 @@ export const QuickVenuePickerModal: React.FC<QuickVenuePickerModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { wedding, venues, events, applyVenueSelection } = useWedding();
+  const { wedding, venues, events, applyVenueSelection, addEvent } = useWedding();
 
   const [sourceTab, setSourceTab] = useState<'shortlist' | 'directory' | 'custom'>('shortlist');
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,8 +40,15 @@ export const QuickVenuePickerModal: React.FC<QuickVenuePickerModalProps> = ({
     state: 'NJ',
   });
 
-  // Which events to apply this venue to (defaults to Wedding Ceremony & Reception)
+  // Which existing events to apply this venue to (defaults to Wedding Ceremony & Reception)
   const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
+  // Starter ceremonies to auto-create when user has 0 events yet
+  const [starterCeremonies, setStarterCeremonies] = useState<string[]>([
+    'pheras',
+    'reception',
+    'sangeet',
+    'haldi',
+  ]);
   const [weddingDayDate, setWeddingDayDate] = useState<string>('');
 
   useEffect(() => {
@@ -106,6 +113,12 @@ export const QuickVenuePickerModal: React.FC<QuickVenuePickerModalProps> = ({
     );
   };
 
+  const toggleStarterCeremony = (typeKey: string) => {
+    setStarterCeremonies((prev) =>
+      prev.includes(typeKey) ? prev.filter((item) => item !== typeKey) : [...prev, typeKey]
+    );
+  };
+
   const canSave =
     (sourceTab === 'shortlist' && Boolean(selectedShortlistId)) ||
     (sourceTab === 'directory' && Boolean(selectedCuratedVenue)) ||
@@ -114,7 +127,15 @@ export const QuickVenuePickerModal: React.FC<QuickVenuePickerModalProps> = ({
   const handleSave = () => {
     if (!canSave) return;
 
+    // Resolve chosen venue details so we can also seed starter events if events.length === 0
+    let resolvedVenueName = '';
+    let resolvedVenueAddress = '';
     if (sourceTab === 'shortlist' && selectedShortlistId) {
+      const v = venues.find((item) => item.id === selectedShortlistId);
+      if (v) {
+        resolvedVenueName = v.name;
+        resolvedVenueAddress = [v.address, v.city, v.state, v.zipCode].filter(Boolean).join(', ');
+      }
       applyVenueSelection({
         venueId: selectedShortlistId,
         eventIds: selectedEventIds,
@@ -122,6 +143,15 @@ export const QuickVenuePickerModal: React.FC<QuickVenuePickerModalProps> = ({
         isPrimaryWeddingVenue: true,
       });
     } else if (sourceTab === 'directory' && selectedCuratedVenue) {
+      resolvedVenueName = selectedCuratedVenue.name;
+      resolvedVenueAddress = [
+        selectedCuratedVenue.address,
+        selectedCuratedVenue.city,
+        selectedCuratedVenue.state,
+        selectedCuratedVenue.zipCode,
+      ]
+        .filter(Boolean)
+        .join(', ');
       applyVenueSelection({
         curatedVenue: selectedCuratedVenue,
         eventIds: selectedEventIds,
@@ -129,6 +159,10 @@ export const QuickVenuePickerModal: React.FC<QuickVenuePickerModalProps> = ({
         isPrimaryWeddingVenue: true,
       });
     } else if (sourceTab === 'custom' && customVenue.name.trim()) {
+      resolvedVenueName = customVenue.name.trim();
+      resolvedVenueAddress = [customVenue.address, customVenue.city, customVenue.state]
+        .filter(Boolean)
+        .join(', ');
       applyVenueSelection({
         customVenue: {
           name: customVenue.name.trim(),
@@ -139,6 +173,83 @@ export const QuickVenuePickerModal: React.FC<QuickVenuePickerModalProps> = ({
         eventIds: selectedEventIds,
         eventDate: weddingDayDate || undefined,
         isPrimaryWeddingVenue: true,
+      });
+    }
+
+    // If user had 0 events yet, auto-create their selected starter ceremonies so the calendar is immediately populated!
+    if (events.length === 0 && starterCeremonies.length > 0) {
+      const templates: Record<
+        string,
+        {
+          name: string;
+          type: 'pheras' | 'reception' | 'sangeet' | 'haldi' | 'mehendi';
+          startTime: string;
+          endTime: string;
+          dressCode: string;
+          usesMainVenue: boolean;
+        }
+      > = {
+        sangeet: {
+          name: 'Sangeet & Garba Night',
+          type: 'sangeet',
+          startTime: '18:30',
+          endTime: '23:30',
+          dressCode: 'Indo-Western / Lehengas & Kurtas',
+          usesMainVenue: false,
+        },
+        haldi: {
+          name: 'Haldi Ceremony',
+          type: 'haldi',
+          startTime: '10:30',
+          endTime: '13:30',
+          dressCode: 'Shades of Yellow & Marigold',
+          usesMainVenue: false,
+        },
+        mehendi: {
+          name: 'Mehendi & Chai',
+          type: 'mehendi',
+          startTime: '14:00',
+          endTime: '18:00',
+          dressCode: 'Pastels / Floral Festive',
+          usesMainVenue: false,
+        },
+        pheras: {
+          name: 'Baraat & Wedding Ceremony',
+          type: 'pheras',
+          startTime: '09:00',
+          endTime: '13:30',
+          dressCode: 'Traditional Indian Formal',
+          usesMainVenue: true,
+        },
+        reception: {
+          name: 'Cocktail Hour & Reception',
+          type: 'reception',
+          startTime: '18:30',
+          endTime: '23:30',
+          dressCode: 'Black Tie / Indian Evening Glam',
+          usesMainVenue: true,
+        },
+      };
+
+      starterCeremonies.forEach((key) => {
+        const tpl = templates[key];
+        if (!tpl) return;
+        addEvent({
+          name: tpl.name,
+          type: tpl.type,
+          date: tpl.usesMainVenue ? weddingDayDate || '' : '',
+          startTime: tpl.startTime,
+          endTime: tpl.endTime,
+          venueName: tpl.usesMainVenue ? resolvedVenueName || 'Venue TBD' : 'Venue TBD',
+          venueAddress: tpl.usesMainVenue ? resolvedVenueAddress : '',
+          dressCode: tpl.dressCode,
+          colorTheme: '',
+          bannerGradient: 'from-rose-600 to-amber-600',
+          description: '',
+          coordinatorName: '',
+          coordinatorPhone: '',
+          checklist: [],
+        });
       });
     }
 
@@ -364,43 +475,84 @@ export const QuickVenuePickerModal: React.FC<QuickVenuePickerModalProps> = ({
 
         {/* Ceremonies to apply + Optional Date */}
         <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-200/70 space-y-3.5">
-          <div>
-            <label className="font-bold text-stone-800 block mb-1.5">
-              Apply this venue to which ceremonies?
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {events.map((ev) => {
-                const checked = selectedEventIds.includes(ev.id);
-                return (
-                  <button
-                    key={ev.id}
-                    type="button"
-                    onClick={() => toggleEventId(ev.id)}
-                    className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all inline-flex items-center gap-1.5 ${
-                      checked
-                        ? 'bg-rose-700 text-white border-rose-700 shadow-2xs'
-                        : 'bg-white text-stone-700 border-stone-200 hover:border-stone-300'
-                    }`}
-                  >
-                    {checked ? (
-                      <Check className="w-3.5 h-3.5" />
-                    ) : (
-                      <Plus className="w-3 h-3 text-stone-400" />
-                    )}
-                    <span>{ev.name}</span>
-                  </button>
-                );
-              })}
+          {events.length > 0 ? (
+            <div>
+              <label className="font-bold text-stone-800 block mb-1.5">
+                Apply this venue to which ceremonies?
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {events.map((ev) => {
+                  const checked = selectedEventIds.includes(ev.id);
+                  return (
+                    <button
+                      key={ev.id}
+                      type="button"
+                      onClick={() => toggleEventId(ev.id)}
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all inline-flex items-center gap-1.5 ${
+                        checked
+                          ? 'bg-rose-700 text-white border-rose-700 shadow-2xs'
+                          : 'bg-white text-stone-700 border-stone-200 hover:border-stone-300'
+                      }`}
+                    >
+                      {checked ? (
+                        <Check className="w-3.5 h-3.5" />
+                      ) : (
+                        <Plus className="w-3 h-3 text-stone-400" />
+                      )}
+                      <span>{ev.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-stone-500 mt-1.5">
+                Tip: Leave Sangeet or Haldi unchecked if they are at a different venue or on a different week.
+              </p>
             </div>
-            <p className="text-[11px] text-stone-500 mt-1.5">
-              Tip: Leave Sangeet or Haldi unchecked if they are at a different venue or on a different week.
-            </p>
-          </div>
+          ) : (
+            <div>
+              <label className="font-bold text-stone-800 block mb-1.5">
+                Which ceremonies are you hosting?
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { key: 'pheras', label: 'Wedding Ceremony (at this venue)' },
+                  { key: 'reception', label: 'Reception (at this venue)' },
+                  { key: 'sangeet', label: 'Sangeet / Garba' },
+                  { key: 'haldi', label: 'Haldi' },
+                  { key: 'mehendi', label: 'Mehendi' },
+                ].map((item) => {
+                  const checked = starterCeremonies.includes(item.key);
+                  return (
+                    <button
+                      key={item.key}
+                      type="button"
+                      onClick={() => toggleStarterCeremony(item.key)}
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all inline-flex items-center gap-1.5 ${
+                        checked
+                          ? 'bg-rose-700 text-white border-rose-700 shadow-2xs'
+                          : 'bg-white text-stone-700 border-stone-200 hover:border-stone-300'
+                      }`}
+                    >
+                      {checked ? (
+                        <Check className="w-3.5 h-3.5" />
+                      ) : (
+                        <Plus className="w-3 h-3 text-stone-400" />
+                      )}
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-stone-500 mt-1.5">
+                Wedding & Reception will use this venue; Sangeet, Haldi & Mehendi will appear ready to drag onto any day on your calendar.
+              </p>
+            </div>
+          )}
 
           <div className="pt-2 border-t border-amber-200/60">
             <label className="font-bold text-stone-800 flex items-center gap-1.5 mb-1.5">
               <Calendar className="w-3.5 h-3.5 text-rose-600" />
-              <span>Date for Selected Ceremonies (Optional)</span>
+              <span>Wedding & Reception Date (Optional)</span>
             </label>
             <input
               type="date"

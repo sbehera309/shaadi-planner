@@ -63,6 +63,7 @@ export default function DashboardOverviewPage() {
     shagunRecords,
     rooms,
     venues,
+    officialSangeetVenue,
     tourPlan,
     loadSampleTemplate,
   } = useWedding();
@@ -101,6 +102,20 @@ export default function DashboardOverviewPage() {
         wedding.venueName.trim() !== '')
   );
   const displayVenueName = officialVenue?.name || wedding?.venueName || '';
+
+  // Calendar view unlocks once at least ONE venue is selected for any event (or primary/Sangeet venue)
+  const hasAnyEventVenueSelected = Boolean(
+    hasFinalizedVenue ||
+      officialSangeetVenue ||
+      events.some(
+        (ev) =>
+          ev.venueName &&
+          ev.venueName.trim() !== '' &&
+          !ev.venueName.toLowerCase().includes('tbd') &&
+          !ev.venueName.toLowerCase().includes('not decided') &&
+          !ev.venueName.toLowerCase().includes('scouting')
+      )
+  );
 
   // Compute flexible multi-week schedule span from scheduled events
   const scheduledEventDates = events
@@ -272,14 +287,16 @@ export default function DashboardOverviewPage() {
                     </div>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setOverviewViewMode('calendar')}
-                  className="px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-xs border border-white/15 transition-colors shrink-0 hidden sm:inline-flex items-center gap-1"
-                >
-                  <CalendarDays className="w-3.5 h-3.5" />
-                  <span>Calendar</span>
-                </button>
+                {hasAnyEventVenueSelected && (
+                  <button
+                    type="button"
+                    onClick={() => setOverviewViewMode('calendar')}
+                    className="px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-xs border border-white/15 transition-colors shrink-0 hidden sm:inline-flex items-center gap-1"
+                  >
+                    <CalendarDays className="w-3.5 h-3.5" />
+                    <span>Calendar</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -374,69 +391,106 @@ export default function DashboardOverviewPage() {
       {wedding && wedding.isConfigured && (
         <section className="space-y-4">
           <div className="bg-white p-5 sm:p-7 rounded-3xl border border-stone-200 shadow-xs space-y-5">
-            {/* Header & View Mode Switcher */}
+              {/* Header & View Mode Switcher */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <div>
                 <h2 className="text-xl sm:text-2xl font-bold font-serif text-stone-900">
-                  {overviewViewMode === 'calendar'
+                  {hasAnyEventVenueSelected && overviewViewMode === 'calendar'
                     ? 'Master Wedding Calendar'
-                    : 'All Ceremonies & Decisions'}
+                    : hasAnyEventVenueSelected
+                    ? 'All Ceremonies & Decisions'
+                    : 'Your Wedding Plan'}
                 </h2>
                 <p className="text-xs sm:text-sm text-stone-600 mt-0.5 max-w-2xl">
-                  {overviewViewMode === 'calendar'
+                  {hasAnyEventVenueSelected && overviewViewMode === 'calendar'
                     ? 'Drag ceremonies onto any date (even across multiple weeks) or click any day for times, venues, and detailed checklists.'
-                    : 'Review each celebration’s venue, timing, and planning checklist at a glance.'}
+                    : hasAnyEventVenueSelected
+                    ? 'Review each celebration’s venue, timing, and planning checklist at a glance.'
+                    : 'Select a venue for at least one ceremony to unlock your interactive multi-week wedding calendar.'}
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 shrink-0">
-                {/* Clean View Mode Segmented Switcher */}
-                <div className="inline-flex p-1 rounded-xl bg-stone-100 border border-stone-200/80">
-                  <button
-                    type="button"
-                    onClick={() => setOverviewViewMode('calendar')}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 ${
-                      overviewViewMode === 'calendar'
-                        ? 'bg-white text-stone-900 shadow-xs'
-                        : 'text-stone-600 hover:text-stone-900'
-                    }`}
-                  >
-                    <CalendarDays className="w-3.5 h-3.5 text-rose-600" />
-                    <span>Calendar</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setOverviewViewMode('cards')}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 ${
-                      overviewViewMode === 'cards'
-                        ? 'bg-white text-stone-900 shadow-xs'
-                        : 'text-stone-600 hover:text-stone-900'
-                    }`}
-                  >
-                    <LayoutGrid className="w-3.5 h-3.5 text-amber-600" />
-                    <span>All Ceremonies ({events.length})</span>
-                  </button>
-                </div>
+              {hasAnyEventVenueSelected && (
+                <div className="flex flex-wrap items-center gap-3 shrink-0">
+                  {/* Clean View Mode Segmented Switcher */}
+                  <div className="inline-flex p-1 rounded-xl bg-stone-100 border border-stone-200/80">
+                    <button
+                      type="button"
+                      onClick={() => setOverviewViewMode('calendar')}
+                      className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 ${
+                        overviewViewMode === 'calendar'
+                          ? 'bg-white text-stone-900 shadow-xs'
+                          : 'text-stone-600 hover:text-stone-900'
+                      }`}
+                    >
+                      <CalendarDays className="w-3.5 h-3.5 text-rose-600" />
+                      <span>Calendar</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOverviewViewMode('cards')}
+                      className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 ${
+                        overviewViewMode === 'cards'
+                          ? 'bg-white text-stone-900 shadow-xs'
+                          : 'text-stone-600 hover:text-stone-900'
+                      }`}
+                    >
+                      <LayoutGrid className="w-3.5 h-3.5 text-amber-600" />
+                      <span>All Ceremonies ({events.length})</span>
+                    </button>
+                  </div>
 
-                {/* Compact Progress Pill */}
-                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-stone-50 border border-stone-200 text-xs">
-                  <span className="font-semibold text-stone-700">
-                    {arrangedDecisionsCount}/{totalDecisionsCount} decisions
-                  </span>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                      overallDecisionsPct > 0
-                        ? 'bg-amber-100 text-amber-900'
-                        : 'bg-stone-200 text-stone-700'
-                    }`}
-                  >
-                    {overallDecisionsPct}%
-                  </span>
+                  {/* Compact Progress Pill */}
+                  <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-stone-50 border border-stone-200 text-xs">
+                    <span className="font-semibold text-stone-700">
+                      {arrangedDecisionsCount}/{totalDecisionsCount} decisions
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                        overallDecisionsPct > 0
+                          ? 'bg-amber-100 text-amber-900'
+                          : 'bg-stone-200 text-stone-700'
+                      }`}
+                    >
+                      {overallDecisionsPct}%
+                    </span>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
-            {overviewViewMode === 'calendar' ? (
+            {!hasAnyEventVenueSelected ? (
+              <div className="p-6 sm:p-10 rounded-2xl bg-gradient-to-br from-amber-50/70 via-white to-rose-50/60 border border-amber-200/80 text-center space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto border border-amber-200">
+                  <Building2 className="w-6 h-6" />
+                </div>
+                <div className="max-w-lg mx-auto space-y-1.5">
+                  <h3 className="text-lg font-bold font-serif text-stone-900">
+                    Choose a Venue to Unlock Your Interactive Calendar
+                  </h3>
+                  <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                    Once you select a venue for your Wedding & Reception (or Sangeet/Haldi), your visual calendar will appear right here — letting you place Sangeet, Haldi, and Wedding/Reception on any dates across weeks and click any day for full details.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setIsVenuePickerOpen(true)}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-700 to-amber-700 hover:opacity-95 text-white font-bold text-xs shadow-sm transition-all inline-flex items-center gap-2"
+                  >
+                    <Building2 className="w-4 h-4 text-amber-200" />
+                    <span>Set Wedding & Reception Venue</span>
+                  </button>
+                  <Link
+                    href="/dashboard/venues"
+                    className="px-4 py-2.5 rounded-xl bg-white hover:bg-stone-50 text-stone-800 font-semibold text-xs border border-stone-300 transition-colors inline-flex items-center gap-1.5"
+                  >
+                    <Compass className="w-4 h-4 text-amber-600" />
+                    <span>Explore & Compare Venues</span>
+                  </Link>
+                </div>
+              </div>
+            ) : overviewViewMode === 'calendar' ? (
               <WeddingCalendarView
                 onOpenEventPlanner={(ev) => setSelectedEventToPlan(ev)}
                 onOpenVenuePicker={() => setIsVenuePickerOpen(true)}
