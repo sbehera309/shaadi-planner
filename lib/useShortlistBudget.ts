@@ -9,6 +9,8 @@ import { VenueOption, Vendor, CuratedVendor } from './types';
 
 const STORAGE_KEY_VENUE = 'shaadi_scenario_selected_venue_id';
 const STORAGE_KEY_VENDORS = 'shaadi_scenario_included_vendors';
+const SCENARIO_SYNC_EVENT = 'shaadi_shortlist_scenario_changed';
+const EXCLUDE_VENUE_SENTINEL = '__NONE__';
 
 export interface ShortlistedVenueItem {
   venue: VenueOption;
@@ -33,52 +35,77 @@ export function useShortlistBudget() {
   const targetBudget = wedding?.targetBudget || 0;
   const currencySymbol = wedding?.currency === 'INR' ? '₹' : '$';
 
-  // 1. Identify all shortlisted venues (from store and curated)
+  // 1. Identify all shortlisted venues (deduplicated by ID and normalized name)
   const candidateVenues = useMemo<VenueOption[]>(() => {
     const list: VenueOption[] = [];
     const seenIds = new Set<string>();
+    const seenNames = new Set<string>();
 
     // From user's venues store
     venues.forEach((v) => {
+      const normName = v.name.toLowerCase().trim();
       if (
-        v.tourStatus === 'shortlisted' ||
-        v.isFavorite ||
-        v.tourStatus === 'selected' ||
-        v.isSelectedOfficialVenue
+        (v.tourStatus === 'shortlisted' ||
+          v.isFavorite ||
+          v.tourStatus === 'selected' ||
+          v.isSelectedOfficialVenue) &&
+        !seenIds.has(v.id) &&
+        !seenNames.has(normName)
       ) {
         list.push(v);
         seenIds.add(v.id);
+        seenNames.add(normName);
       }
     });
 
     // Check if official venue name in profile matches a curated venue not yet added
     if (wedding?.venueName) {
       const match = PRELOADED_CURATED_VENUES.find(
-        (cv) => !seenIds.has(cv.id) && wedding.venueName.toLowerCase().includes(cv.name.toLowerCase().split('&')[0].trim())
+        (cv) =>
+          !seenIds.has(cv.id) &&
+          !seenNames.has(cv.name.toLowerCase().trim()) &&
+          wedding.venueName.toLowerCase().includes(cv.name.toLowerCase().split('&')[0].trim())
       );
       if (match) {
         list.push(match);
         seenIds.add(match.id);
+        seenNames.add(match.name.toLowerCase().trim());
       }
     }
 
     return list;
   }, [venues, wedding?.venueName]);
 
+  // Detect whether a venue contract is already committed in the Budget ledger (to avoid double-counting!)
+  const hasCommittedVenueBudget = useMemo(() => {
+    return budgetItems.some(
+      (b) => b.category === 'Venue & Catering' && (b.actualCost > 0 || b.estimatedCost > 0)
+    );
+  }, [budgetItems]);
+
   // Selected venue for scenario
   const [selectedVenueId, setSelectedVenueIdState] = useState<string | null>(null);
 
-  // Initialize selected venue from storage or default
-  useEffect(() => {
+  const readVenueSelectionFromStorage = useCallback(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_VENUE);
+      if (saved === EXCLUDE_VENUE_SENTINEL) {
+        setSelectedVenueIdState(null);
+        return;
+      }
       if (saved && candidateVenues.some((v) => v.id === saved)) {
         setSelectedVenueIdState(saved);
         return;
       }
     } catch {}
 
-    // Default to official venue or first shortlisted
+    // If venue is ALREADY committed in budget ledger, default to excluding it from shortlist estimate (no double-counting!)
+    if (hasCommittedVenueBudget) {
+      setSelectedVenueIdState(null);
+      return;
+    }
+
+    // Otherwise default to official venue or first shortlisted
     const official = candidateVenues.find((v) => v.isSelectedOfficialVenue || v.tourStatus === 'selected');
     if (official) {
       setSelectedVenueIdState(official.id);
@@ -87,29 +114,37 @@ export function useShortlistBudget() {
     } else {
       setSelectedVenueIdState(null);
     }
-  }, [candidateVenues]);
+  }, [candidateVenues, hasCommittedVenueBudget]);
+
+  // Initialize selected venue from storage or smart default
+  useEffect(() => {
+    readVenueSelectionFromStorage();
+  }, [readVenueSelectionFromStorage]);
 
   const setSelectedVenueId = useCallback((id: string | null) => {
     setSelectedVenueIdState(id);
     try {
-      if (id) {
-        localStorage.setItem(STORAGE_KEY_VENUE, id);
-      } else {
-        localStorage.removeItem(STORAGE_KEY_VENUE);
-      }
+      localStorage.setItem(STORAGE_KEY_VENUE, id ? id : EXCLUDE_VENUE_SENTINEL);
+      window.dispatchEvent(new Event(SCENARIO_SYNC_EVENT));
     } catch {}
   }, []);
 
-  // Shortlisted venues with resolved costs
+  // Shortlisted venues with resolved costs (prefer user's agreed contract amount when set)
   const shortlistedVenuesList = useMemo<ShortlistedVenueItem[]>(() => {
     return candidateVenues.map((venue) => {
       const effective = getEffectivePricing(venue, guestCount, 'all_day');
-      const estimatedCost = effective.estimatedTotalCost || venue.pricing.estimatedTotalCost || 0;
+      const estimatedCost =
+        (venue.contractAgreedAmount && venue.contractAgreedAmount > 0
+          ? venue.contractAgreedAmount
+          : effective.estimatedTotalCost || venue.pricing.estimatedTotalCost) || 0;
       return {
         venue,
         estimatedCost,
         isSelected: venue.id === selectedVenueId,
-        pricingLabel: effective.breakdownSummary || `$${estimatedCost.toLocaleString()} estimated`,
+        pricingLabel:
+          venue.contractAgreedAmount && venue.contractAgreedAmount > 0
+            ? `Contract total: $${venue.contractAgreedAmount.toLocaleString()}`
+            : effective.breakdownSummary || `$${estimatedCost.toLocaleString()} estimated`,
       };
     });
   }, [candidateVenues, selectedVenueId, getEffectivePricing, guestCount]);
@@ -130,7 +165,7 @@ export function useShortlistBudget() {
   const [includedVendorIds, setIncludedVendorIds] = useState<string[]>([]);
   const [initializedVendors, setInitializedVendors] = useState(false);
 
-  useEffect(() => {
+  const readVendorSelectionFromStorage = useCallback(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_VENDORS);
       if (saved) {
@@ -148,19 +183,30 @@ export function useShortlistBudget() {
     setInitializedVendors(true);
   }, [shortlistedVendorsRaw]);
 
-  // Keep saved inclusion in sync when shortlisted vendors change
   useEffect(() => {
-    if (!initializedVendors) return;
-    try {
-      localStorage.setItem(STORAGE_KEY_VENDORS, JSON.stringify(includedVendorIds));
-    } catch {}
-  }, [includedVendorIds, initializedVendors]);
+    readVendorSelectionFromStorage();
+  }, [readVendorSelectionFromStorage]);
+
+  // Listen for cross-component scenario updates (so Navbar, Budget page & Modal stay 100% synced in real time)
+  useEffect(() => {
+    const handleSync = () => {
+      readVenueSelectionFromStorage();
+      readVendorSelectionFromStorage();
+    };
+    window.addEventListener(SCENARIO_SYNC_EVENT, handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener(SCENARIO_SYNC_EVENT, handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
+  }, [readVenueSelectionFromStorage, readVendorSelectionFromStorage]);
 
   const toggleVendorInclusion = useCallback((vendorId: string) => {
     setIncludedVendorIds((prev) => {
       const next = prev.includes(vendorId) ? prev.filter((id) => id !== vendorId) : [...prev, vendorId];
       try {
         localStorage.setItem(STORAGE_KEY_VENDORS, JSON.stringify(next));
+        window.dispatchEvent(new Event(SCENARIO_SYNC_EVENT));
       } catch {}
       return next;
     });
@@ -171,6 +217,7 @@ export function useShortlistBudget() {
     setIncludedVendorIds(allIds);
     try {
       localStorage.setItem(STORAGE_KEY_VENDORS, JSON.stringify(allIds));
+      window.dispatchEvent(new Event(SCENARIO_SYNC_EVENT));
     } catch {}
   }, [shortlistedVendorsRaw]);
 
@@ -178,6 +225,7 @@ export function useShortlistBudget() {
     setIncludedVendorIds([]);
     try {
       localStorage.setItem(STORAGE_KEY_VENDORS, JSON.stringify([]));
+      window.dispatchEvent(new Event(SCENARIO_SYNC_EVENT));
     } catch {}
   }, []);
 
