@@ -35,16 +35,31 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose })
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
   const [isExcelModalOpen, setIsExcelModalOpen] = React.useState(false);
 
-  const navItems = [
-    { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-    { label: 'Venues & Site Tours', href: '/dashboard/venues', icon: Building2 },
-    { label: 'Itinerary & Timings', href: '/dashboard/itinerary', icon: CalendarDays },
-    { label: 'Horoscope & Kundali', href: '/dashboard/horoscope', icon: Compass },
-    { label: 'Guests & RSVPs', href: '/dashboard/guests', icon: Users },
-    { label: 'Budget & Splits', href: '/dashboard/budget', icon: WalletCards },
-    { label: 'Vendor Directory', href: '/dashboard/vendors', icon: Briefcase },
-    { label: 'Gifts', href: '/dashboard/shagun', icon: Gift },
-    { label: 'Rooms & Logistics', href: '/dashboard/logistics', icon: Hotel },
+  const navSections = [
+    {
+      heading: 'Plan',
+      items: [
+        { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+        { label: 'Venues & Contracts', href: '/dashboard/venues', icon: Building2 },
+        { label: 'Itinerary & Timings', href: '/dashboard/itinerary', icon: CalendarDays },
+      ],
+    },
+    {
+      heading: 'People & Money',
+      items: [
+        { label: 'Budget & Payments', href: '/dashboard/budget', icon: WalletCards },
+        { label: 'Vendor Directory', href: '/dashboard/vendors', icon: Briefcase },
+        { label: 'Guests & RSVPs', href: '/dashboard/guests', icon: Users },
+      ],
+    },
+    {
+      heading: 'Extras',
+      items: [
+        { label: 'Gifts', href: '/dashboard/shagun', icon: Gift },
+        { label: 'Rooms & Logistics', href: '/dashboard/logistics', icon: Hotel },
+        { label: 'Horoscope & Kundali', href: '/dashboard/horoscope', icon: Compass },
+      ],
+    },
   ];
 
   const renderContent = (isMobile: boolean) => (
@@ -116,27 +131,34 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose })
         </div>
       )}
 
-      {/* Navigation Links */}
-      <nav className="flex-1 px-3 py-2 space-y-1">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => isMobile && onMobileClose?.()}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 active:scale-[0.98] ${
-                isActive
-                  ? 'bg-gradient-to-r from-amber-500/20 to-rose-600/20 text-amber-300 border-l-4 border-amber-400 pl-2'
-                  : 'text-stone-300 hover:bg-stone-800/80 hover:text-white'
-              }`}
-            >
-              <Icon className={`w-4 h-4 ${isActive ? 'text-amber-400' : 'text-stone-400'}`} />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
+      {/* Navigation Links Grouped Cleanly */}
+      <nav className="flex-1 px-3 py-2 space-y-4">
+        {navSections.map((section) => (
+          <div key={section.heading} className="space-y-1">
+            <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-stone-500">
+              {section.heading}
+            </div>
+            {section.items.map((item) => {
+              const isActive = pathname === item.href;
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => isMobile && onMobileClose?.()}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 active:scale-[0.98] ${
+                    isActive
+                      ? 'bg-gradient-to-r from-amber-500/20 to-rose-600/20 text-amber-300 border-l-4 border-amber-400 pl-2'
+                      : 'text-stone-300 hover:bg-stone-800/80 hover:text-white'
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-amber-400' : 'text-stone-400'}`} />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       {/* Excel Sync & Guest Invitation Footer Actions */}

@@ -5,6 +5,11 @@ import { useWedding } from '@/lib/store';
 import { BudgetItem, PaymentInstallment, PaymentPayer } from '@/lib/types';
 import { Modal } from '@/components/Modal';
 import { RecordPaymentModal } from '@/components/RecordPaymentModal';
+import {
+  ContractAndPaymentsModal,
+  ContractTarget,
+} from '@/components/ContractAndPaymentsModal';
+import { UpcomingPaymentsWidget } from '@/components/UpcomingPaymentsWidget';
 import { ShortlistBudgetModal } from '@/components/ShortlistBudgetModal';
 import { AnimatedBudgetNumber } from '@/components/AnimatedBudgetNumber';
 import { useShortlistBudget } from '@/lib/useShortlistBudget';
@@ -215,6 +220,8 @@ export default function BudgetPage() {
     staffTransportFee: 6200,
     salesTaxPercent: 6.625,
   });
+
+  const [contractModalTarget, setContractModalTarget] = useState<ContractTarget | null>(null);
 
   const handleSelectPreset = (preset: typeof DESI_EXPENSE_PRESETS[0]) => {
     setEditingItem(null);
@@ -452,6 +459,12 @@ export default function BudgetPage() {
           </button>
         </div>
       </div>
+
+      {/* Upcoming Payment Milestones & Due-Date Reminders */}
+      <UpcomingPaymentsWidget
+        onOpenContractModal={(target) => setContractModalTarget(target)}
+        maxItems={6}
+      />
 
       {/* Real-Time Shortlist Scenario Impact Card */}
       <div className="bg-gradient-to-r from-amber-500/15 via-rose-500/10 to-stone-50 border border-amber-300 rounded-3xl p-5 shadow-xs relative overflow-hidden">
@@ -1534,6 +1547,12 @@ export default function BudgetPage() {
           />
         );
       })()}
+      {/* Unified Contract Cost & Payment Timeline Modal */}
+      <ContractAndPaymentsModal
+        isOpen={Boolean(contractModalTarget)}
+        onClose={() => setContractModalTarget(null)}
+        target={contractModalTarget}
+      />
     </div>
   );
 }

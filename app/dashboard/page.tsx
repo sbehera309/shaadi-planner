@@ -11,6 +11,11 @@ import { ExcelSyncModal } from '@/components/ExcelSyncModal';
 import { QuickVenuePickerModal } from '@/components/QuickVenuePickerModal';
 import { WeddingCalendarView } from '@/components/WeddingCalendarView';
 import {
+  ContractAndPaymentsModal,
+  ContractTarget,
+} from '@/components/ContractAndPaymentsModal';
+import { UpcomingPaymentsWidget } from '@/components/UpcomingPaymentsWidget';
+import {
   EVENT_BLUEPRINTS,
   EventSortOrder,
   sortEventsBy,
@@ -72,6 +77,7 @@ export default function DashboardOverviewPage() {
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const [isVenuePickerOpen, setIsVenuePickerOpen] = useState(false);
+  const [contractModalTarget, setContractModalTarget] = useState<ContractTarget | null>(null);
   const [selectedEventToPlan, setSelectedEventToPlan] = useState<WeddingEvent | null>(null);
 
   // Overview Primary View Mode: Interactive Calendar (default) vs Detailed Ceremony Cards
@@ -249,20 +255,45 @@ export default function DashboardOverviewPage() {
                     </div>
                     <div className="text-xs text-stone-300 truncate">
                       {hasFinalizedVenue
-                        ? wedding.city || 'Venue confirmed'
+                        ? officialVenue && (officialVenue.contractAgreedAmount || officialVenue.pricing.estimatedTotalCost) > 0
+                          ? `Contract: ${formatCurr(officialVenue.contractAgreedAmount || officialVenue.pricing.estimatedTotalCost)}${wedding.city ? ` • ${wedding.city}` : ''}`
+                          : wedding.city || 'Venue confirmed'
                         : venues.length > 0
                         ? `Comparing ${venues.length} shortlisted venues`
                         : 'Pick from shortlist, directory, or custom'}
                     </div>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIsVenuePickerOpen(true)}
-                  className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs shadow-sm transition-colors shrink-0"
-                >
-                  {hasFinalizedVenue ? 'Change' : 'Set Venue'}
-                </button>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {hasFinalizedVenue && officialVenue && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setContractModalTarget({
+                          type: 'venue',
+                          id: officialVenue.id,
+                          title: officialVenue.name,
+                          initialTotalCost:
+                            officialVenue.contractAgreedAmount ||
+                            officialVenue.pricing.estimatedTotalCost ||
+                            0,
+                          initialNotes: officialVenue.contractNotes || officialVenue.notes,
+                          initialSchedule: officialVenue.paymentSchedule,
+                        })
+                      }
+                      className="px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-amber-200 font-bold text-xs border border-white/15 transition-colors shrink-0"
+                    >
+                      Contract &amp; Pay
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setIsVenuePickerOpen(true)}
+                    className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs shadow-sm transition-colors shrink-0"
+                  >
+                    {hasFinalizedVenue ? 'Change' : 'Set Venue'}
+                  </button>
+                </div>
               </div>
 
               {/* Card 2: Flexible Celebration Schedule */}
@@ -745,6 +776,14 @@ export default function DashboardOverviewPage() {
         </section>
       )}
 
+      {/* UPCOMING PAYMENT REMINDERS (auto-appears when milestones are scheduled) */}
+      {wedding && wedding.isConfigured && (
+        <UpcomingPaymentsWidget
+          onOpenContractModal={(target) => setContractModalTarget(target)}
+          maxItems={4}
+        />
+      )}
+
       {/* SECONDARY SECTION: Overall Wedding Pulse & Financials */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
@@ -1001,6 +1040,13 @@ export default function DashboardOverviewPage() {
       <QuickVenuePickerModal
         isOpen={isVenuePickerOpen}
         onClose={() => setIsVenuePickerOpen(false)}
+      />
+
+      {/* Unified Contract Cost & Payment Timeline Modal */}
+      <ContractAndPaymentsModal
+        isOpen={Boolean(contractModalTarget)}
+        onClose={() => setContractModalTarget(null)}
+        target={contractModalTarget}
       />
     </div>
   );

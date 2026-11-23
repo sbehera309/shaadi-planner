@@ -98,6 +98,18 @@ export interface PaymentInstallment {
   recordedAt?: string; // ISO string timestamp
 }
 
+export interface PaymentMilestone {
+  id: string;
+  label: string; // e.g., "Booking Deposit", "2nd Installment", "Final Balance"
+  amount: number;
+  dueDate: string; // YYYY-MM-DD
+  status: 'scheduled' | 'paid';
+  paidDate?: string; // YYYY-MM-DD
+  paidBy: PaymentPayer;
+  paymentMethod?: PaymentMethod;
+  notes?: string;
+}
+
 export interface BudgetItem {
   id: string;
   weddingId: string;
@@ -122,6 +134,7 @@ export interface BudgetItem {
   vendorId?: string;
   notes?: string;
   installments?: PaymentInstallment[];
+  paymentSchedule?: PaymentMilestone[];
 }
 
 export interface Vendor {
@@ -152,6 +165,7 @@ export interface Vendor {
   deliverables: string[];
   curatedVendorId?: string;
   installments?: PaymentInstallment[];
+  paymentSchedule?: PaymentMilestone[];
 }
 
 export interface VendorPricingTier {
@@ -350,7 +364,9 @@ export interface VenueOption {
   isSelectedOfficialVenue?: boolean;
   isCustomUserAddedVenue?: boolean;
   contractAgreedAmount?: number;
+  contractNotes?: string;
   installments?: PaymentInstallment[];
+  paymentSchedule?: PaymentMilestone[];
 }
 
 export type VenuePricingQuoteType =

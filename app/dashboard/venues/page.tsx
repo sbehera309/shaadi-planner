@@ -89,6 +89,10 @@ import {
   CreditCard,
 } from 'lucide-react';
 import { RecordPaymentModal } from '@/components/RecordPaymentModal';
+import {
+  ContractAndPaymentsModal,
+  ContractTarget,
+} from '@/components/ContractAndPaymentsModal';
 
 type CuratedSortOption = 'best' | 'service_desc' | 'price_asc' | 'price_desc' | 'capacity_desc';
 
@@ -111,6 +115,7 @@ export default function VenuesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVenue, setEditingVenue] = useState<VenueOption | null>(null);
   const [payingVenue, setPayingVenue] = useState<VenueOption | null>(null);
+  const [contractModalTarget, setContractModalTarget] = useState<ContractTarget | null>(null);
   const [copiedWhatsApp, setCopiedWhatsApp] = useState(false);
   const [addedSuccessId, setAddedSuccessId] = useState<string | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
@@ -1052,6 +1057,66 @@ export default function VenuesPage() {
           </div>
         </div>
       </div>
+
+      {/* Selected Venue Contract & Payment Timeline Quick Banner */}
+      {officialVenue && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-50 via-white to-amber-50/70 border border-emerald-200/90 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-800 shrink-0">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                  Finalized Wedding Venue
+                </span>
+                <span className="text-xs text-stone-500">
+                  {officialVenue.city}, {officialVenue.state}
+                </span>
+              </div>
+              <h2 className="text-base sm:text-lg font-bold font-serif text-stone-900 truncate mt-0.5">
+                {officialVenue.name}
+              </h2>
+              <p className="text-xs text-stone-600 mt-0.5">
+                Contract Total:{' '}
+                <strong className="text-stone-900">
+                  ${(officialVenue.contractAgreedAmount || officialVenue.pricing.estimatedTotalCost || 0).toLocaleString()}
+                </strong>
+                {officialVenue.paymentSchedule && officialVenue.paymentSchedule.length > 0 && (
+                  <>
+                    {' '}•{' '}
+                    <strong className="text-emerald-700">
+                      {officialVenue.paymentSchedule.filter((m) => m.status === 'paid').length}/
+                      {officialVenue.paymentSchedule.length} payments paid
+                    </strong>
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              setContractModalTarget({
+                type: 'venue',
+                id: officialVenue.id,
+                title: officialVenue.name,
+                initialTotalCost:
+                  officialVenue.contractAgreedAmount ||
+                  officialVenue.pricing.estimatedTotalCost ||
+                  0,
+                initialNotes: officialVenue.contractNotes || officialVenue.notes,
+                initialSchedule: officialVenue.paymentSchedule,
+              })
+            }
+            className="px-4 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs shadow-xs transition-all inline-flex items-center justify-center gap-2 shrink-0"
+          >
+            <CreditCard className="w-4 h-4 text-amber-400" />
+            <span>Edit Contract Cost &amp; Payment Timeline</span>
+          </button>
+        </div>
+      )}
 
       {/* Main Tab Switcher with Smooth Touch Scrolling */}
       <div className="border-b border-stone-200 overflow-x-auto no-scrollbar -mx-3 sm:mx-0 px-3 sm:px-0">
@@ -4793,6 +4858,12 @@ export default function VenuesPage() {
           />
         );
       })()}
+      {/* Unified Contract Cost & Payment Timeline Modal */}
+      <ContractAndPaymentsModal
+        isOpen={Boolean(contractModalTarget)}
+        onClose={() => setContractModalTarget(null)}
+        target={contractModalTarget}
+      />
     </div>
   );
 }

@@ -16,6 +16,7 @@ import {
   SiteTourDayPlan,
   SangeetVenueOption,
   PaymentInstallment,
+  PaymentMilestone,
 } from './types';
 import {
   initialWeddingProfile,
@@ -122,6 +123,14 @@ interface WeddingContextType {
     isPrimaryWeddingVenue?: boolean;
   }) => void;
   rescheduleEventDate: (eventId: string, newDate: string) => void;
+  saveContractAndSchedule: (params: {
+    targetType: 'venue' | 'budget' | 'vendor';
+    targetId: string;
+    title: string;
+    totalCost: number;
+    contractNotes?: string;
+    paymentSchedule: PaymentMilestone[];
+  }) => void;
   saveTourPlan: (plan: SiteTourDayPlan) => void;
   clearTourPlan: () => void;
   setOfficialSangeetVenue: (venue: SangeetVenueOption | null) => void;
@@ -1319,6 +1328,153 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  const saveContractAndSchedule = (params: {
+    targetType: 'venue' | 'budget' | 'vendor';
+    targetId: string;
+    title: string;
+    totalCost: number;
+    contractNotes?: string;
+    paymentSchedule: PaymentMilestone[];
+  }) => {
+    const { targetType, targetId, title, totalCost, contractNotes, paymentSchedule } = params;
+    const cleanTotal = Math.max(0, Number(totalCost) || 0);
+
+    // Derive paid total, installments list, and next unpaid due date from milestones
+    const paidMilestones = paymentSchedule.filter((m) => m.status === 'paid');
+    const paidTotal = paidMilestones.reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
+    const derivedInstallments: PaymentInstallment[] = paidMilestones.map((m) => ({
+      id: `inst-${m.id}`,
+      amount: Number(m.amount) || 0,
+      date: m.paidDate || m.dueDate || new Date().toISOString().split('T')[0],
+      paidBy: m.paidBy || 'split_50_50',
+      paymentMethod: m.paymentMethod || 'Bank Wire / ACH',
+      referenceNote: m.label,
+    }));
+
+    const nextUnpaid = paymentSchedule
+      .filter((m) => m.status !== 'paid' && m.dueDate)
+      .sort((a, b) => a.dueDate.localeCompare(b.dueDate))[0];
+
+    const computedStatus: BudgetItem['status'] =
+      cleanTotal > 0 && paidTotal >= cleanTotal
+        ? 'paid'
+        : paidTotal > 0
+        ? 'partial'
+        : 'pending';
+
+    if (targetType === 'venue') {
+      // 1. Update venue record
+      setVenues((prev) =>
+        prev.map((v) =>
+          v.id === targetId
+            ? {
+                ...v,
+                contractAgreedAmount: cleanTotal,
+                contractNotes: contractNotes ?? v.contractNotes,
+                paymentSchedule,
+                installments: derivedInstallments,
+                pricing: {
+                  ...v.pricing,
+                  estimatedTotalCost: cleanTotal,
+                },
+              }
+            : v
+        )
+      );
+
+      // 2. Sync Venue & Catering budget line item
+      setBudgetItems((prev) => {
+        const existing = prev.find((b) => b.category === 'Venue & Catering');
+        if (existing) {
+          return prev.map((b) =>
+            b.id === existing.id
+              ? {
+                  ...b,
+                  title: `${title} — Contract & Catering`,
+                  estimatedCost: cleanTotal,
+                  actualCost: cleanTotal,
+                  paidAmount: paidTotal,
+                  dueDate: nextUnpaid?.dueDate || b.dueDate,
+                  status: computedStatus,
+                  notes: contractNotes ?? b.notes,
+                  installments: derivedInstallments,
+                  paymentSchedule,
+                }
+              : b
+          );
+        }
+        return [
+          ...prev,
+          {
+            id: `b-${Date.now()}`,
+            weddingId: wedding?.id || 'w-current',
+            title: `${title} — Contract & Catering`,
+            category: 'Venue & Catering',
+            estimatedCost: cleanTotal,
+            actualCost: cleanTotal,
+            paidAmount: paidTotal,
+            dueDate: nextUnpaid?.dueDate || wedding?.startDate || '2026-10-15',
+            paidBy: 'split_50_50',
+            status: computedStatus,
+            notes: contractNotes,
+            installments: derivedInstallments,
+            paymentSchedule,
+          },
+        ];
+      });
+    } else if (targetType === 'budget') {
+      setBudgetItems((prev) =>
+        prev.map((b) =>
+          b.id === targetId
+            ? {
+                ...b,
+                estimatedCost: cleanTotal,
+                actualCost: cleanTotal,
+                paidAmount: paidTotal,
+                dueDate: nextUnpaid?.dueDate || b.dueDate,
+                status: computedStatus,
+                notes: contractNotes ?? b.notes,
+                installments: derivedInstallments,
+                paymentSchedule,
+              }
+            : b
+        )
+      );
+    } else if (targetType === 'vendor') {
+      setVendors((prev) =>
+        prev.map((v) =>
+          v.id === targetId
+            ? {
+                ...v,
+                agreedAmount: cleanTotal,
+                depositPaid: paidTotal,
+                notes: contractNotes ?? v.notes,
+                installments: derivedInstallments,
+                paymentSchedule,
+              }
+            : v
+        )
+      );
+
+      setBudgetItems((prev) =>
+        prev.map((b) =>
+          b.vendorId === targetId
+            ? {
+                ...b,
+                estimatedCost: cleanTotal,
+                actualCost: cleanTotal,
+                paidAmount: paidTotal,
+                dueDate: nextUnpaid?.dueDate || b.dueDate,
+                status: computedStatus,
+                installments: derivedInstallments,
+                paymentSchedule,
+              }
+            : b
+        )
+      );
+    }
+  };
+
   const saveTourPlan = (plan: SiteTourDayPlan) => {
     setTourPlan(plan);
   };
@@ -1533,6 +1689,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setOfficialVenue,
         applyVenueSelection,
         rescheduleEventDate,
+        saveContractAndSchedule,
         setOfficialSangeetVenue,
         saveTourPlan,
         clearTourPlan,
