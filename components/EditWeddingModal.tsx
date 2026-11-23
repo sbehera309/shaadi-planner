@@ -213,13 +213,13 @@ export const EditWeddingModal: React.FC<EditWeddingModalProps> = ({ isOpen, onCl
 
           {!datesNotFinalized && (
             <div className="space-y-2 pt-1 animate-in fade-in duration-150">
-              <div className="flex items-center gap-2 text-[11px] text-stone-500">
-                <span>Presets:</span>
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-stone-500">
+                <span>Span presets:</span>
                 {[
                   { label: '1 Day', days: 1 },
-                  { label: '2 Days', days: 2 },
-                  { label: '3 Days (Weekend)', days: 3 },
-                  { label: '4 Days', days: 4 },
+                  { label: '3 Days', days: 3 },
+                  { label: '1 Week', days: 7 },
+                  { label: '2 Weeks', days: 14 },
                 ].map((p) => (
                   <button
                     key={p.days}
@@ -231,6 +231,9 @@ export const EditWeddingModal: React.FC<EditWeddingModalProps> = ({ isOpen, onCl
                   </button>
                 ))}
               </div>
+              <p className="text-[11px] text-stone-500">
+                Events do not need to be consecutive — place Sangeet, Haldi, and Wedding/Reception on any individual days from the Overview Calendar.
+              </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>

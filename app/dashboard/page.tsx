@@ -8,6 +8,8 @@ import { EditWeddingModal } from '@/components/EditWeddingModal';
 import { GettingStartedWizard } from '@/components/GettingStartedWizard';
 import { EventPlanningWizard } from '@/components/EventPlanningWizard';
 import { ExcelSyncModal } from '@/components/ExcelSyncModal';
+import { QuickVenuePickerModal } from '@/components/QuickVenuePickerModal';
+import { WeddingCalendarView } from '@/components/WeddingCalendarView';
 import {
   EVENT_BLUEPRINTS,
   EventSortOrder,
@@ -47,6 +49,8 @@ import {
   Download,
   Upload,
   Building2,
+  LayoutGrid,
+  Pencil,
 } from 'lucide-react';
 
 export default function DashboardOverviewPage() {
@@ -66,10 +70,47 @@ export default function DashboardOverviewPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
+  const [isVenuePickerOpen, setIsVenuePickerOpen] = useState(false);
   const [selectedEventToPlan, setSelectedEventToPlan] = useState<WeddingEvent | null>(null);
+
+  // Overview Primary View Mode: Interactive Calendar (default) vs Detailed Ceremony Cards
+  const [overviewViewMode, setOverviewViewMode] = useState<'calendar' | 'cards'>('calendar');
 
   // Event Sorting & Prioritization State (defaults to chronological sequence)
   const [sortOrder, setSortOrder] = useState<EventSortOrder>('chronological');
+
+  // Helper to format YYYY-MM-DD safely in local time (no timezone shift)
+  const formatLocalDate = (dateStr?: string) => {
+    if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr.trim())) return '';
+    const [y, m, d] = dateStr.trim().split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  // Detect finalized Wedding & Reception venue cleanly
+  const officialVenue = venues.find((v) => v.isSelectedOfficialVenue);
+  const hasFinalizedVenue = Boolean(
+    officialVenue ||
+      (wedding?.venueName &&
+        !wedding.venueName.toLowerCase().includes('scouting') &&
+        !wedding.venueName.toLowerCase().includes('decided') &&
+        wedding.venueName.trim() !== '')
+  );
+  const displayVenueName = officialVenue?.name || wedding?.venueName || '';
+
+  // Compute flexible multi-week schedule span from scheduled events
+  const scheduledEventDates = events
+    .map((e) => e.date)
+    .filter((d): d is string => Boolean(d && /^\d{4}-\d{2}-\d{2}$/.test(d.trim())))
+    .sort();
+  const scheduledEventsCount = scheduledEventDates.length;
+  const earliestEventDate = scheduledEventDates[0] || wedding?.startDate || '';
+  const latestEventDate =
+    scheduledEventDates[scheduledEventDates.length - 1] || wedding?.endDate || '';
 
   // Budget calculations in USD
   const totalTargetBudget = wedding?.targetBudget || 0;
@@ -133,94 +174,113 @@ export default function DashboardOverviewPage() {
     <div className="space-y-8 animate-in fade-in duration-300">
       {/* Top Banner / Onboarding Hero */}
       {wedding && wedding.isConfigured && wedding.brideName ? (
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-stone-900 via-rose-950 to-amber-950 p-6 sm:p-8 text-white shadow-xl border border-amber-900/40">
-          <div className="relative z-10 max-w-3xl">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold border border-amber-500/30">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Desi American Wedding Planning HQ</span>
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-stone-900 via-rose-950 to-amber-950 p-5 sm:p-7 text-white shadow-xl border border-amber-900/40">
+          <div className="relative z-10 space-y-5">
+            {/* Top Row: Couple Name + Subtle Profile Actions */}
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[11px] font-semibold border border-amber-500/30 mb-2">
+                  <Sparkles className="w-3 h-3" />
+                  <span>
+                    {wedding.tradition === 'south_indian'
+                      ? 'South Indian Wedding HQ'
+                      : wedding.tradition === 'fusion_mixed'
+                      ? 'Cross-Cultural Wedding HQ'
+                      : 'Wedding Planning HQ'}
+                  </span>
+                  {wedding.hashtag && (
+                    <span className="text-amber-200/90">• {wedding.hashtag}</span>
+                  )}
+                </div>
+                <h1 className="text-2xl sm:text-4xl font-bold font-serif tracking-tight text-amber-50">
+                  {wedding.brideName} & {wedding.groomName}
+                </h1>
               </div>
+
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsWizardOpen(true)}
-                  className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-amber-200 text-xs font-medium border border-white/20 transition-colors"
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-amber-100 text-xs font-semibold border border-white/15 transition-colors inline-flex items-center gap-1.5"
                 >
-                  ✨ Re-run Setup Guide
+                  <Pencil className="w-3.5 h-3.5" />
+                  <span>Edit Profile</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setIsEditModalOpen(true)}
-                  className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-amber-200 text-xs font-medium border border-white/20 transition-colors"
+                  onClick={() => setIsWizardOpen(true)}
+                  className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-amber-200 text-xs font-medium border border-white/15 transition-colors hidden sm:inline-flex items-center gap-1.5"
                 >
-                  ✏️ Edit Profile
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Setup Guide</span>
                 </button>
               </div>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-bold font-serif tracking-tight text-amber-100">
-              {wedding.brideName} & {wedding.groomName}
-            </h1>
+            {/* 2-Card Quick Plan Strip: Direct 1-Click Venue & Flexible Schedule */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              {/* Card 1: Wedding & Reception Venue */}
+              <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/15 flex items-center justify-between gap-3">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="p-2.5 rounded-xl bg-amber-500/20 border border-amber-400/30 text-amber-300 shrink-0">
+                    <Building2 className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300/90 block">
+                      Wedding & Reception Venue
+                    </span>
+                    <div className="text-sm sm:text-base font-bold text-white truncate mt-0.5">
+                      {hasFinalizedVenue ? displayVenueName : 'Not finalized yet'}
+                    </div>
+                    <div className="text-xs text-stone-300 truncate">
+                      {hasFinalizedVenue
+                        ? wedding.city || 'Venue confirmed'
+                        : venues.length > 0
+                        ? `Comparing ${venues.length} shortlisted venues`
+                        : 'Pick from shortlist, directory, or custom'}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsVenuePickerOpen(true)}
+                  className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs shadow-sm transition-colors shrink-0"
+                >
+                  {hasFinalizedVenue ? 'Change' : 'Set Venue'}
+                </button>
+              </div>
 
-            <p className="mt-2 text-stone-300 text-sm leading-relaxed">
-              {wedding.venueName} {wedding.city && `• ${wedding.city}`}
-              {wedding.startDate ? (
-                <span className="text-amber-300/90 font-medium">
-                  {' '}
-                  • {new Date(wedding.startDate).toLocaleDateString('en-US', {
-                    month: 'long',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}
-                  {wedding.endDate && wedding.endDate !== wedding.startDate && (
-                    <> – {new Date(wedding.endDate).toLocaleDateString('en-US', {
-                      month: 'long',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })}</>
-                  )}
-                </span>
-              ) : (
-                <span className="text-amber-300/80 font-medium italic">
-                  {' '}
-                  • Dates to be finalized (Comparing venue availability)
-                </span>
-              )}
-            </p>
-
-            <div className="mt-5 flex flex-wrap gap-2.5 text-xs">
-              {wedding.tradition && (
-                <span className="px-3 py-1.5 rounded-xl bg-amber-900/60 border border-amber-600/60 font-semibold text-amber-200 shadow-2xs">
-                  {wedding.tradition === 'south_indian'
-                    ? '🪔 South Indian Wedding'
-                    : wedding.tradition === 'fusion_mixed'
-                    ? '💫 Cross-Cultural Fusion'
-                    : '🌟 Traditional Desi Wedding'}
-                </span>
-              )}
-              {wedding.hashtag && (
-                <span className="px-3 py-1.5 rounded-xl bg-stone-800/80 border border-stone-700/80 font-medium text-stone-200">
-                  🏷️ <strong className="text-amber-200">{wedding.hashtag}</strong>
-                </span>
-              )}
-              <Link
-                href="/dashboard/venues"
-                className="px-3 py-1.5 rounded-xl bg-amber-900/50 hover:bg-amber-800/60 border border-amber-600/50 font-medium text-amber-200 transition-colors flex items-center gap-1.5"
-              >
-                <Building2 className="w-3.5 h-3.5 text-amber-400" />
-                <span>
-                  {venues.length > 0 ? `🏰 ${venues.length} Venues Scouting` : '🏰 Venue Scouting'}
-                </span>
-              </Link>
-              <span className="px-3 py-1.5 rounded-xl bg-stone-800/80 border border-stone-700/80 font-medium text-stone-200">
-                📅 {events.length} Festive Celebrations
-              </span>
-              <span className="px-3 py-1.5 rounded-xl bg-stone-800/80 border border-stone-700/80 font-medium text-stone-200">
-                👥 {totalHeadcount} Expected Guests
-              </span>
-              <span className="px-3 py-1.5 rounded-xl bg-stone-800/80 border border-stone-700/80 font-medium text-amber-300">
-                🎯 Target Budget: {formatCurr(totalTargetBudget)}
-              </span>
+              {/* Card 2: Flexible Celebration Schedule */}
+              <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/15 flex items-center justify-between gap-3">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="p-2.5 rounded-xl bg-rose-500/25 border border-rose-400/30 text-rose-200 shrink-0">
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-rose-200/90 block">
+                      Celebration Schedule
+                    </span>
+                    <div className="text-sm sm:text-base font-bold text-white truncate mt-0.5">
+                      {earliestEventDate
+                        ? latestEventDate && latestEventDate !== earliestEventDate
+                          ? `${formatLocalDate(earliestEventDate).replace(/,\s*\d{4}$/, '')} – ${formatLocalDate(latestEventDate)}`
+                          : formatLocalDate(earliestEventDate)
+                        : 'Dates flexible — drag events onto calendar'}
+                    </div>
+                    <div className="text-xs text-stone-300 truncate">
+                      {scheduledEventsCount} of {events.length} ceremonies scheduled • {totalHeadcount} guests • {formatCurr(totalTargetBudget)} target
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setOverviewViewMode('calendar')}
+                  className="px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-xs border border-white/15 transition-colors shrink-0 hidden sm:inline-flex items-center gap-1"
+                >
+                  <CalendarDays className="w-3.5 h-3.5" />
+                  <span>Calendar</span>
+                </button>
+              </div>
             </div>
           </div>
           {/* Subtle gold background aura */}
@@ -310,32 +370,58 @@ export default function DashboardOverviewPage() {
         </div>
       )}
 
-      {/* PRIMARY SECTION: Event-by-Event Planning Roadmap */}
+      {/* PRIMARY SECTION: Interactive Wedding Calendar & Event Roadmap */}
       {wedding && wedding.isConfigured && (
         <section className="space-y-4">
-          <div className="bg-white p-6 sm:p-7 rounded-3xl border border-stone-200 shadow-xs space-y-5">
-            {/* Header & Accurate Progress Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="bg-white p-5 sm:p-7 rounded-3xl border border-stone-200 shadow-xs space-y-5">
+            {/* Header & View Mode Switcher */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <div>
-                <div className="inline-flex items-center gap-2 text-rose-800 font-bold text-xs uppercase tracking-wider mb-1">
-                  <Compass className="w-3.5 h-3.5 text-rose-600" />
-                  <span>Step 2 • Event-by-Event Planning Roadmap</span>
-                </div>
                 <h2 className="text-xl sm:text-2xl font-bold font-serif text-stone-900">
-                  Plan Decisions for Each Ceremony
+                  {overviewViewMode === 'calendar'
+                    ? 'Master Wedding Calendar'
+                    : 'All Ceremonies & Decisions'}
                 </h2>
-                <p className="text-xs sm:text-sm text-stone-600 mt-1 max-w-2xl">
-                  Select each celebration below to make decisions on venues & late sound curfews, Indian catering & chaat counters, DJ/music, and essentials checklists.
+                <p className="text-xs sm:text-sm text-stone-600 mt-0.5 max-w-2xl">
+                  {overviewViewMode === 'calendar'
+                    ? 'Drag ceremonies onto any date (even across multiple weeks) or click any day for times, venues, and detailed checklists.'
+                    : 'Review each celebration’s venue, timing, and planning checklist at a glance.'}
                 </p>
               </div>
 
-              {/* Progress Summary: Accurately reflects decisions arranged! */}
-              <div className="flex flex-col items-start sm:items-end gap-1.5 shrink-0 bg-stone-50 sm:bg-transparent p-3 sm:p-0 rounded-2xl border sm:border-0 border-stone-200">
-                <div className="flex items-center gap-2 text-xs font-semibold text-stone-700">
-                  <span className="font-bold text-stone-900">
-                    {arrangedDecisionsCount === 0
-                      ? `0 of ${events.length} Planned`
-                      : `${fullyPlannedEvents.length} of ${events.length} Fully Planned`}
+              <div className="flex flex-wrap items-center gap-3 shrink-0">
+                {/* Clean View Mode Segmented Switcher */}
+                <div className="inline-flex p-1 rounded-xl bg-stone-100 border border-stone-200/80">
+                  <button
+                    type="button"
+                    onClick={() => setOverviewViewMode('calendar')}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 ${
+                      overviewViewMode === 'calendar'
+                        ? 'bg-white text-stone-900 shadow-xs'
+                        : 'text-stone-600 hover:text-stone-900'
+                    }`}
+                  >
+                    <CalendarDays className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Calendar</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOverviewViewMode('cards')}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 ${
+                      overviewViewMode === 'cards'
+                        ? 'bg-white text-stone-900 shadow-xs'
+                        : 'text-stone-600 hover:text-stone-900'
+                    }`}
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5 text-amber-600" />
+                    <span>All Ceremonies ({events.length})</span>
+                  </button>
+                </div>
+
+                {/* Compact Progress Pill */}
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-stone-50 border border-stone-200 text-xs">
+                  <span className="font-semibold text-stone-700">
+                    {arrangedDecisionsCount}/{totalDecisionsCount} decisions
                   </span>
                   <span
                     className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
@@ -344,78 +430,76 @@ export default function DashboardOverviewPage() {
                         : 'bg-stone-200 text-stone-700'
                     }`}
                   >
-                    {overallDecisionsPct}% Complete
+                    {overallDecisionsPct}%
                   </span>
                 </div>
-                <div className="w-48 sm:w-56 bg-stone-200 h-2 rounded-full overflow-hidden">
-                  <div
-                    className="bg-gradient-to-r from-amber-500 to-rose-600 h-full rounded-full transition-all duration-300"
-                    style={{ width: `${Math.max(overallDecisionsPct, 0)}%` }}
-                  />
-                </div>
-                <div className="text-[11px] text-stone-500">
-                  {arrangedDecisionsCount} of {totalDecisionsCount} decisions arranged
-                </div>
               </div>
             </div>
 
-            {/* Event Sorting & Prioritization Controls Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 pb-1 border-t border-stone-100 text-xs">
-              <div className="flex items-center gap-2 text-stone-600 font-semibold">
-                <ArrowUpDown className="w-3.5 h-3.5 text-stone-500" />
-                <span>Order Ceremonies By:</span>
-              </div>
+            {overviewViewMode === 'calendar' ? (
+              <WeddingCalendarView
+                onOpenEventPlanner={(ev) => setSelectedEventToPlan(ev)}
+                onOpenVenuePicker={() => setIsVenuePickerOpen(true)}
+              />
+            ) : (
+              <>
+                {/* Event Sorting & Prioritization Controls Bar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 pb-1 border-t border-stone-100 text-xs">
+                  <div className="flex items-center gap-2 text-stone-600 font-semibold">
+                    <ArrowUpDown className="w-3.5 h-3.5 text-stone-500" />
+                    <span>Order Ceremonies By:</span>
+                  </div>
 
-              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 sm:mx-0 sm:px-0">
-                <button
-                  type="button"
-                  onClick={() => setSortOrder('chronological')}
-                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 shrink-0 tap-button active:scale-95 ${
-                    sortOrder === 'chronological'
-                      ? 'bg-rose-950 text-white shadow-xs ring-1 ring-rose-500/50'
-                      : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
-                  }`}
-                  title="Traditional Desi weekend order: Sangeet/Garba -> Haldi -> Mehndi -> Pheras -> Reception"
-                >
-                  <Calendar className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="sm:hidden">Timeline</span>
-                  <span className="hidden sm:inline">Weekend Timeline (Chronological)</span>
-                </button>
+                  <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 sm:mx-0 sm:px-0">
+                    <button
+                      type="button"
+                      onClick={() => setSortOrder('chronological')}
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 shrink-0 tap-button active:scale-95 ${
+                        sortOrder === 'chronological'
+                          ? 'bg-rose-950 text-white shadow-xs ring-1 ring-rose-500/50'
+                          : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
+                      }`}
+                      title="Chronological celebration order"
+                    >
+                      <Calendar className="w-3.5 h-3.5 text-amber-400" />
+                      <span className="sm:hidden">Timeline</span>
+                      <span className="hidden sm:inline">Chronological Schedule</span>
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={() => setSortOrder('priority')}
-                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 shrink-0 tap-button active:scale-95 ${
-                    sortOrder === 'priority'
-                      ? 'bg-rose-950 text-white shadow-xs ring-1 ring-rose-500/50'
-                      : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
-                  }`}
-                  title="Prioritize high-lead-time ceremonies first (e.g. Baraat/Pheras fire permits & Sangeet sound curfew)"
-                >
-                  <Flame className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="sm:hidden">Priority</span>
-                  <span className="hidden sm:inline">Planning Priority (High Lead Time)</span>
-                </button>
+                    <button
+                      type="button"
+                      onClick={() => setSortOrder('priority')}
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 shrink-0 tap-button active:scale-95 ${
+                        sortOrder === 'priority'
+                          ? 'bg-rose-950 text-white shadow-xs ring-1 ring-rose-500/50'
+                          : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
+                      }`}
+                      title="Prioritize high-lead-time ceremonies first (e.g. Baraat/Pheras fire permits & Sangeet sound curfew)"
+                    >
+                      <Flame className="w-3.5 h-3.5 text-amber-400" />
+                      <span className="sm:hidden">Priority</span>
+                      <span className="hidden sm:inline">Planning Priority (High Lead Time)</span>
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={() => setSortOrder('needs_planning')}
-                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 shrink-0 tap-button active:scale-95 ${
-                    sortOrder === 'needs_planning'
-                      ? 'bg-rose-950 text-white shadow-xs ring-1 ring-rose-500/50'
-                      : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
-                  }`}
-                  title="Show ceremonies with 0 decisions arranged at the top"
-                >
-                  <Zap className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="sm:hidden">Unplanned</span>
-                  <span className="hidden sm:inline">Needs Planning First</span>
-                </button>
-              </div>
-            </div>
+                    <button
+                      type="button"
+                      onClick={() => setSortOrder('needs_planning')}
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 shrink-0 tap-button active:scale-95 ${
+                        sortOrder === 'needs_planning'
+                          ? 'bg-rose-950 text-white shadow-xs ring-1 ring-rose-500/50'
+                          : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
+                      }`}
+                      title="Show ceremonies with 0 decisions arranged at the top"
+                    >
+                      <Zap className="w-3.5 h-3.5 text-amber-400" />
+                      <span className="sm:hidden">Unplanned</span>
+                      <span className="hidden sm:inline">Needs Planning First</span>
+                    </button>
+                  </div>
+                </div>
 
-            {/* Event Cards Grid */}
-            {events.length === 0 ? (
+                {/* Event Cards Grid */}
+                {events.length === 0 ? (
               <div className="p-8 rounded-2xl border border-dashed border-stone-300 text-center space-y-3">
                 <CalendarDays className="w-8 h-8 text-amber-600 mx-auto" />
                 <h3 className="font-bold text-stone-800 text-base">No ceremonies added yet</h3>
@@ -505,15 +589,9 @@ export default function DashboardOverviewPage() {
                         <div className="flex flex-wrap items-center gap-3 text-xs text-stone-600 font-medium">
                           <span className="flex items-center gap-1">
                             <Clock className="w-3.5 h-3.5 text-stone-400" />
-                            {event.date && event.date.trim() !== '' && event.date !== 'TBD' ? (
-                              new Date(event.date).toLocaleDateString('en-US', {
-                                weekday: 'short',
-                                month: 'short',
-                                day: 'numeric',
-                              })
-                            ) : (
-                              'Date to be decided'
-                            )}{' '}
+                            {event.date && event.date.trim() !== '' && event.date !== 'TBD'
+                              ? formatLocalDate(event.date) || event.date
+                              : 'Date to be decided'}{' '}
                             • {event.startTime} - {event.endTime}
                           </span>
                         </div>
@@ -592,6 +670,8 @@ export default function DashboardOverviewPage() {
                   );
                 })}
               </div>
+            )}
+              </>
             )}
 
             {/* Bottom Actions Row */}
@@ -861,6 +941,12 @@ export default function DashboardOverviewPage() {
       <ExcelSyncModal
         isOpen={isExcelModalOpen}
         onClose={() => setIsExcelModalOpen(false)}
+      />
+
+      {/* Quick Wedding & Reception Venue Picker Modal */}
+      <QuickVenuePickerModal
+        isOpen={isVenuePickerOpen}
+        onClose={() => setIsVenuePickerOpen(false)}
       />
     </div>
   );

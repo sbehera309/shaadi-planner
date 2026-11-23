@@ -113,6 +113,15 @@ interface WeddingContextType {
   updateVenue: (id: string, venue: Partial<VenueOption>) => void;
   deleteVenue: (id: string) => void;
   setOfficialVenue: (venueId: string) => void;
+  applyVenueSelection: (params: {
+    venueId?: string;
+    curatedVenue?: VenueOption;
+    customVenue?: { name: string; address?: string; city?: string; state?: string };
+    eventIds: string[];
+    eventDate?: string;
+    isPrimaryWeddingVenue?: boolean;
+  }) => void;
+  rescheduleEventDate: (eventId: string, newDate: string) => void;
   saveTourPlan: (plan: SiteTourDayPlan) => void;
   clearTourPlan: () => void;
   setOfficialSangeetVenue: (venue: SangeetVenueOption | null) => void;
@@ -1089,9 +1098,36 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  // Helper to keep wedding startDate/endDate spanning the earliest and latest scheduled events
+  const syncWeddingDateSpan = (updatedEvents: WeddingEvent[]) => {
+    const validDates = updatedEvents
+      .map((ev) => ev.date)
+      .filter((d): d is string => Boolean(d && d.trim() !== '' && d !== 'TBD' && /^\d{4}-\d{2}-\d{2}$/.test(d)))
+      .sort();
+
+    if (validDates.length > 0) {
+      updateWeddingProfile({
+        startDate: validDates[0],
+        endDate: validDates[validDates.length - 1],
+      });
+    }
+  };
+
+  const rescheduleEventDate = (eventId: string, newDate: string) => {
+    setEvents((prev) => {
+      const next = prev.map((ev) => (ev.id === eventId ? { ...ev, date: newDate } : ev));
+      syncWeddingDateSpan(next);
+      return next;
+    });
+  };
+
   const setOfficialVenue = (venueId: string) => {
     const targetVenue = venues.find((v) => v.id === venueId);
     if (!targetVenue) return;
+
+    const fullAddress = [targetVenue.address, targetVenue.city, targetVenue.state, targetVenue.zipCode]
+      .filter(Boolean)
+      .join(', ');
 
     // 1. Mark only this venue as selected official
     setVenues((prev) =>
@@ -1108,7 +1144,27 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       city: `${targetVenue.city}, ${targetVenue.state}`,
     });
 
-    // 3. Sync or create Budget item for Venue & Catering
+    // 3. Also sync Wedding Ceremony & Reception events to this venue automatically
+    setEvents((prev) =>
+      prev.map((ev) => {
+        if (
+          ev.type === 'pheras' ||
+          ev.type === 'baraat' ||
+          ev.type === 'vidaai' ||
+          ev.type === 'reception'
+        ) {
+          return {
+            ...ev,
+            venueName: targetVenue.name,
+            venueAddress: fullAddress || ev.venueAddress,
+            hotelBlockName: targetVenue.nearestHotel?.hotelName || ev.hotelBlockName,
+          };
+        }
+        return ev;
+      })
+    );
+
+    // 4. Sync or create Budget item for Venue & Catering
     if (targetVenue.pricing.estimatedTotalCost > 0) {
       const existingVenueBudgetItem = budgetItems.find((b) => b.category === 'Venue & Catering');
       if (existingVenueBudgetItem) {
@@ -1125,6 +1181,137 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           actualCost: targetVenue.pricing.estimatedTotalCost,
           paidAmount: 0,
           dueDate: '2026-10-15',
+          paidBy: 'split_50_50',
+          status: 'pending',
+        });
+      }
+    }
+  };
+
+  const applyVenueSelection = (params: {
+    venueId?: string;
+    curatedVenue?: VenueOption;
+    customVenue?: { name: string; address?: string; city?: string; state?: string };
+    eventIds: string[];
+    eventDate?: string;
+    isPrimaryWeddingVenue?: boolean;
+  }) => {
+    const {
+      venueId,
+      curatedVenue,
+      customVenue,
+      eventIds,
+      eventDate,
+      isPrimaryWeddingVenue = true,
+    } = params;
+
+    let venueName = '';
+    let venueAddress = '';
+    let venueCity = '';
+    let hotelBlockName = '';
+    let estimatedTotalCost = 0;
+
+    if (venueId) {
+      const existing = venues.find((v) => v.id === venueId);
+      if (existing) {
+        venueName = existing.name;
+        venueAddress = [existing.address, existing.city, existing.state, existing.zipCode].filter(Boolean).join(', ');
+        venueCity = [existing.city, existing.state].filter(Boolean).join(', ');
+        hotelBlockName = existing.nearestHotel?.hotelName || '';
+        estimatedTotalCost = existing.pricing?.estimatedTotalCost || 0;
+
+        if (isPrimaryWeddingVenue) {
+          setVenues((prev) =>
+            prev.map((v) =>
+              v.id === venueId
+                ? { ...v, isSelectedOfficialVenue: true, tourStatus: 'selected' }
+                : { ...v, isSelectedOfficialVenue: false }
+            )
+          );
+        }
+      }
+    } else if (curatedVenue) {
+      venueName = curatedVenue.name;
+      venueAddress = [curatedVenue.address, curatedVenue.city, curatedVenue.state, curatedVenue.zipCode]
+        .filter(Boolean)
+        .join(', ');
+      venueCity = [curatedVenue.city, curatedVenue.state].filter(Boolean).join(', ');
+      hotelBlockName = curatedVenue.nearestHotel?.hotelName || '';
+      estimatedTotalCost = curatedVenue.pricing?.estimatedTotalCost || 0;
+
+      if (isPrimaryWeddingVenue) {
+        setVenues((prev) => {
+          const alreadyExists = prev.find(
+            (v) => v.id === curatedVenue.id || v.name.toLowerCase() === curatedVenue.name.toLowerCase()
+          );
+          if (alreadyExists) {
+            return prev.map((v) =>
+              v.id === alreadyExists.id
+                ? { ...v, isSelectedOfficialVenue: true, tourStatus: 'selected' }
+                : { ...v, isSelectedOfficialVenue: false }
+            );
+          }
+          const newEntry: VenueOption = {
+            ...curatedVenue,
+            id: `v-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            weddingId: wedding?.id || 'w-user-1',
+            tourStatus: 'selected',
+            isSelectedOfficialVenue: true,
+          };
+          return [...prev.map((v) => ({ ...v, isSelectedOfficialVenue: false })), newEntry];
+        });
+      }
+    } else if (customVenue && customVenue.name.trim()) {
+      venueName = customVenue.name.trim();
+      venueAddress = [customVenue.address, customVenue.city, customVenue.state].filter(Boolean).join(', ');
+      venueCity = [customVenue.city, customVenue.state].filter(Boolean).join(', ');
+    }
+
+    if (!venueName) return;
+
+    // 1. Update Wedding Profile if primary
+    if (isPrimaryWeddingVenue) {
+      updateWeddingProfile({
+        venueName,
+        ...(venueCity ? { city: venueCity } : {}),
+      });
+    }
+
+    // 2. Update selected events with venue & optional date
+    setEvents((prev) => {
+      const next = prev.map((ev) => {
+        if (!eventIds.includes(ev.id)) return ev;
+        return {
+          ...ev,
+          venueName,
+          ...(venueAddress ? { venueAddress } : {}),
+          ...(hotelBlockName ? { hotelBlockName } : {}),
+          ...(eventDate ? { date: eventDate } : {}),
+        };
+      });
+      if (eventDate) {
+        syncWeddingDateSpan(next);
+      }
+      return next;
+    });
+
+    // 3. Sync Venue & Catering budget item if primary & pricing available
+    if (isPrimaryWeddingVenue && estimatedTotalCost > 0) {
+      const existingVenueBudgetItem = budgetItems.find((b) => b.category === 'Venue & Catering');
+      if (existingVenueBudgetItem) {
+        updateBudgetItem(existingVenueBudgetItem.id, {
+          title: `${venueName} — Hall Rental, F&B Minimum & Catering`,
+          estimatedCost: estimatedTotalCost,
+          actualCost: estimatedTotalCost,
+        });
+      } else {
+        addBudgetItem({
+          title: `${venueName} — Hall Rental, F&B Minimum & Catering`,
+          category: 'Venue & Catering',
+          estimatedCost: estimatedTotalCost,
+          actualCost: estimatedTotalCost,
+          paidAmount: 0,
+          dueDate: eventDate || '2026-10-15',
           paidBy: 'split_50_50',
           status: 'pending',
         });
@@ -1344,6 +1531,8 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         updateVenue,
         deleteVenue,
         setOfficialVenue,
+        applyVenueSelection,
+        rescheduleEventDate,
         setOfficialSangeetVenue,
         saveTourPlan,
         clearTourPlan,
