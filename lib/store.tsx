@@ -44,6 +44,14 @@ interface WeddingContextType {
   venues: VenueOption[];
   tourPlan: SiteTourDayPlan | null;
   officialSangeetVenue: SangeetVenueOption | null;
+  scenarioSelection: {
+    selectedVenueId?: string | null; // '__NONE__' means explicitly excluded
+    includedVendorIds?: string[] | null;
+  };
+  updateScenarioSelection: (patch: {
+    selectedVenueId?: string | null;
+    includedVendorIds?: string[] | null;
+  }) => void;
   isDemoMode: boolean;
 
   // Cloud Sync Status
@@ -178,6 +186,10 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [venues, setVenues] = useState<VenueOption[]>(initialVenues);
   const [tourPlan, setTourPlan] = useState<SiteTourDayPlan | null>(initialTourPlan);
   const [officialSangeetVenue, setOfficialSangeetVenueState] = useState<SangeetVenueOption | null>(null);
+  const [scenarioSelection, setScenarioSelection] = useState<{
+    selectedVenueId?: string | null;
+    includedVendorIds?: string[] | null;
+  }>({});
   const [mounted, setMounted] = useState(false);
 
   // Cloud Sync State
@@ -227,6 +239,14 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (savedVenues) setVenues(JSON.parse(savedVenues));
       if (savedTourPlan) setTourPlan(JSON.parse(savedTourPlan));
       if (savedSangeetVenue) setOfficialSangeetVenueState(JSON.parse(savedSangeetVenue));
+      const savedScenarioVenue = localStorage.getItem('shaadi_scenario_selected_venue_id');
+      const savedScenarioVendors = localStorage.getItem('shaadi_scenario_included_vendors');
+      if (savedScenarioVenue !== null || savedScenarioVendors !== null) {
+        setScenarioSelection({
+          ...(savedScenarioVenue !== null ? { selectedVenueId: savedScenarioVenue } : {}),
+          ...(savedScenarioVendors !== null ? { includedVendorIds: JSON.parse(savedScenarioVendors) } : {}),
+        });
+      }
     } catch (e) {
       console.warn('Using default wedding mock data:', e);
     }
@@ -310,11 +330,18 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
             if (remoteData.officialSangeetVenue) localStorage.setItem(STORAGE_KEYS.SANGEET_VENUE, JSON.stringify(remoteData.officialSangeetVenue));
 
             if (remoteData.scenarioSelection) {
+              setScenarioSelection(remoteData.scenarioSelection);
               if (remoteData.scenarioSelection.selectedVenueId !== undefined) {
-                localStorage.setItem('shaadi_scenario_selected_venue_id', remoteData.scenarioSelection.selectedVenueId || '');
+                localStorage.setItem(
+                  'shaadi_scenario_selected_venue_id',
+                  remoteData.scenarioSelection.selectedVenueId || '__NONE__'
+                );
               }
               if (remoteData.scenarioSelection.includedVendorIds) {
-                localStorage.setItem('shaadi_scenario_included_vendors', JSON.stringify(remoteData.scenarioSelection.includedVendorIds));
+                localStorage.setItem(
+                  'shaadi_scenario_included_vendors',
+                  JSON.stringify(remoteData.scenarioSelection.includedVendorIds)
+                );
               }
             }
           } catch {}
@@ -458,6 +485,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           venues,
           tourPlan,
           officialSangeetVenue,
+          scenarioSelection,
           userId: user.uid,
           userEmail: user.email || '',
           updatedAt: new Date().toISOString(),
@@ -506,6 +534,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     venues,
     tourPlan,
     officialSangeetVenue,
+    scenarioSelection,
   ]);
 
   // 4. Force Cloud Sync helper (with verified status and error reporting)
@@ -1633,6 +1662,30 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  const updateScenarioSelection = useCallback(
+    (patch: { selectedVenueId?: string | null; includedVendorIds?: string[] | null }) => {
+      setScenarioSelection((prev) => {
+        const next = { ...prev, ...patch };
+        try {
+          if (patch.selectedVenueId !== undefined) {
+            localStorage.setItem(
+              'shaadi_scenario_selected_venue_id',
+              patch.selectedVenueId || '__NONE__'
+            );
+          }
+          if (patch.includedVendorIds !== undefined && patch.includedVendorIds !== null) {
+            localStorage.setItem(
+              'shaadi_scenario_included_vendors',
+              JSON.stringify(patch.includedVendorIds)
+            );
+          }
+        } catch {}
+        return next;
+      });
+    },
+    []
+  );
+
   return (
     <WeddingContext.Provider
       value={{
@@ -1646,6 +1699,8 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         venues,
         tourPlan,
         officialSangeetVenue,
+        scenarioSelection,
+        updateScenarioSelection,
         isDemoMode: !isFirebaseConfigured,
         isCloudSynced,
         isSyncing,

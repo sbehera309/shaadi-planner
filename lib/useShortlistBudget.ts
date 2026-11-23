@@ -28,7 +28,15 @@ export interface ShortlistedVendorItem {
 }
 
 export function useShortlistBudget() {
-  const { wedding, budgetItems, vendors, venues, updateWeddingProfile } = useWedding();
+  const {
+    wedding,
+    budgetItems,
+    vendors,
+    venues,
+    updateWeddingProfile,
+    scenarioSelection,
+    updateScenarioSelection,
+  } = useWedding();
   const { getEffectivePricing } = useUserVenueQuotes();
 
   const guestCount = wedding?.guestCount || 250;
@@ -83,51 +91,34 @@ export function useShortlistBudget() {
     );
   }, [budgetItems]);
 
-  // Selected venue for scenario
-  const [selectedVenueId, setSelectedVenueIdState] = useState<string | null>(null);
-
-  const readVenueSelectionFromStorage = useCallback(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_VENUE);
-      if (saved === EXCLUDE_VENUE_SENTINEL) {
-        setSelectedVenueIdState(null);
-        return;
-      }
-      if (saved && candidateVenues.some((v) => v.id === saved)) {
-        setSelectedVenueIdState(saved);
-        return;
-      }
-    } catch {}
+  // Selected venue for scenario — backed by Firebase-synced WeddingContext (works across laptop + mobile!)
+  const selectedVenueId = useMemo<string | null>(() => {
+    const saved = scenarioSelection?.selectedVenueId;
+    if (saved === EXCLUDE_VENUE_SENTINEL) {
+      return null;
+    }
+    if (saved && candidateVenues.some((v) => v.id === saved)) {
+      return saved;
+    }
 
     // If venue is ALREADY committed in budget ledger, default to excluding it from shortlist estimate (no double-counting!)
     if (hasCommittedVenueBudget) {
-      setSelectedVenueIdState(null);
-      return;
+      return null;
     }
 
     // Otherwise default to official venue or first shortlisted
     const official = candidateVenues.find((v) => v.isSelectedOfficialVenue || v.tourStatus === 'selected');
-    if (official) {
-      setSelectedVenueIdState(official.id);
-    } else if (candidateVenues.length > 0) {
-      setSelectedVenueIdState(candidateVenues[0].id);
-    } else {
-      setSelectedVenueIdState(null);
-    }
-  }, [candidateVenues, hasCommittedVenueBudget]);
+    if (official) return official.id;
+    if (candidateVenues.length > 0) return candidateVenues[0].id;
+    return null;
+  }, [scenarioSelection?.selectedVenueId, candidateVenues, hasCommittedVenueBudget]);
 
-  // Initialize selected venue from storage or smart default
-  useEffect(() => {
-    readVenueSelectionFromStorage();
-  }, [readVenueSelectionFromStorage]);
-
-  const setSelectedVenueId = useCallback((id: string | null) => {
-    setSelectedVenueIdState(id);
-    try {
-      localStorage.setItem(STORAGE_KEY_VENUE, id ? id : EXCLUDE_VENUE_SENTINEL);
-      window.dispatchEvent(new Event(SCENARIO_SYNC_EVENT));
-    } catch {}
-  }, []);
+  const setSelectedVenueId = useCallback(
+    (id: string | null) => {
+      updateScenarioSelection({ selectedVenueId: id ? id : EXCLUDE_VENUE_SENTINEL });
+    },
+    [updateScenarioSelection]
+  );
 
   // Shortlisted venues with resolved costs (prefer user's agreed contract amount when set)
   const shortlistedVenuesList = useMemo<ShortlistedVenueItem[]>(() => {
@@ -161,73 +152,31 @@ export function useShortlistBudget() {
     return vendors.filter((v) => v.status === 'shortlisted');
   }, [vendors]);
 
-  // Included vendors in scenario
-  const [includedVendorIds, setIncludedVendorIds] = useState<string[]>([]);
-  const [initializedVendors, setInitializedVendors] = useState(false);
+  // Included vendors in scenario — backed by Firebase-synced WeddingContext
+  const includedVendorIds = useMemo<string[]>(() => {
+    if (Array.isArray(scenarioSelection?.includedVendorIds)) {
+      return scenarioSelection.includedVendorIds;
+    }
+    return shortlistedVendorsRaw.map((v) => v.id);
+  }, [scenarioSelection?.includedVendorIds, shortlistedVendorsRaw]);
 
-  const readVendorSelectionFromStorage = useCallback(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_VENDORS);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          setIncludedVendorIds(parsed);
-          setInitializedVendors(true);
-          return;
-        }
-      }
-    } catch {}
-
-    // Default: include all shortlisted vendors
-    setIncludedVendorIds(shortlistedVendorsRaw.map((v) => v.id));
-    setInitializedVendors(true);
-  }, [shortlistedVendorsRaw]);
-
-  useEffect(() => {
-    readVendorSelectionFromStorage();
-  }, [readVendorSelectionFromStorage]);
-
-  // Listen for cross-component scenario updates (so Navbar, Budget page & Modal stay 100% synced in real time)
-  useEffect(() => {
-    const handleSync = () => {
-      readVenueSelectionFromStorage();
-      readVendorSelectionFromStorage();
-    };
-    window.addEventListener(SCENARIO_SYNC_EVENT, handleSync);
-    window.addEventListener('storage', handleSync);
-    return () => {
-      window.removeEventListener(SCENARIO_SYNC_EVENT, handleSync);
-      window.removeEventListener('storage', handleSync);
-    };
-  }, [readVenueSelectionFromStorage, readVendorSelectionFromStorage]);
-
-  const toggleVendorInclusion = useCallback((vendorId: string) => {
-    setIncludedVendorIds((prev) => {
-      const next = prev.includes(vendorId) ? prev.filter((id) => id !== vendorId) : [...prev, vendorId];
-      try {
-        localStorage.setItem(STORAGE_KEY_VENDORS, JSON.stringify(next));
-        window.dispatchEvent(new Event(SCENARIO_SYNC_EVENT));
-      } catch {}
-      return next;
-    });
-  }, []);
+  const toggleVendorInclusion = useCallback(
+    (vendorId: string) => {
+      const next = includedVendorIds.includes(vendorId)
+        ? includedVendorIds.filter((id) => id !== vendorId)
+        : [...includedVendorIds, vendorId];
+      updateScenarioSelection({ includedVendorIds: next });
+    },
+    [includedVendorIds, updateScenarioSelection]
+  );
 
   const selectAllVendors = useCallback(() => {
-    const allIds = shortlistedVendorsRaw.map((v) => v.id);
-    setIncludedVendorIds(allIds);
-    try {
-      localStorage.setItem(STORAGE_KEY_VENDORS, JSON.stringify(allIds));
-      window.dispatchEvent(new Event(SCENARIO_SYNC_EVENT));
-    } catch {}
-  }, [shortlistedVendorsRaw]);
+    updateScenarioSelection({ includedVendorIds: shortlistedVendorsRaw.map((v) => v.id) });
+  }, [shortlistedVendorsRaw, updateScenarioSelection]);
 
   const deselectAllVendors = useCallback(() => {
-    setIncludedVendorIds([]);
-    try {
-      localStorage.setItem(STORAGE_KEY_VENDORS, JSON.stringify([]));
-      window.dispatchEvent(new Event(SCENARIO_SYNC_EVENT));
-    } catch {}
-  }, []);
+    updateScenarioSelection({ includedVendorIds: [] });
+  }, [updateScenarioSelection]);
 
   // Shortlisted vendors with resolved candidate costs
   const shortlistedVendorsList = useMemo<ShortlistedVendorItem[]>(() => {
