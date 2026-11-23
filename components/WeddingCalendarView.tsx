@@ -164,6 +164,48 @@ export const WeddingCalendarView: React.FC<WeddingCalendarViewProps> = ({
     return map;
   }, [scheduledEvents]);
 
+  // Helper: get the Saturday on or before a given local Date
+  const getSaturdayOnOrBefore = (d: Date): Date => {
+    // JS getDay(): Sun=0, Mon=1, ..., Fri=5, Sat=6
+    const daysSinceSaturday = (d.getDay() + 1) % 7;
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate() - daysSinceSaturday);
+  };
+
+  // Compute smart 7-day wedding week start (prefers Sat -> Fri so Sangeet on Sat/Sun + Haldi mid-week + Wedding on Fri all fit!)
+  const computeWeddingWeekStart = (): Date => {
+    if (scheduledEvents.length > 0) {
+      const first = parseLocalDate(scheduledEvents[0].date);
+      const last = parseLocalDate(scheduledEvents[scheduledEvents.length - 1].date);
+      if (first && last) {
+        const diffDays = Math.round((last.getTime() - first.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays <= 6) {
+          // If the latest event is Friday (or earliest is Saturday), anchor Sat -> Fri!
+          if (last.getDay() === 5) {
+            return new Date(last.getFullYear(), last.getMonth(), last.getDate() - 6);
+          }
+          const satStart = getSaturdayOnOrBefore(first);
+          const spanFromSat = Math.round((last.getTime() - satStart.getTime()) / (1000 * 60 * 60 * 24));
+          if (spanFromSat <= 6) return satStart;
+          return first;
+        }
+        return getSaturdayOnOrBefore(first);
+      }
+    }
+    const start = parseLocalDate(wedding?.startDate);
+    const end = parseLocalDate(wedding?.endDate);
+    if (end && end.getDay() === 5) {
+      return new Date(end.getFullYear(), end.getMonth(), end.getDate() - 6);
+    }
+    if (start) {
+      return getSaturdayOnOrBefore(start);
+    }
+    return getSaturdayOnOrBefore(new Date());
+  };
+
+  // Default to focused 7-Day Week View (with optional Month zoom-out)
+  const [calendarScope, setCalendarScope] = useState<'week' | 'month'>('week');
+  const [weekStartDate, setWeekStartDate] = useState<Date>(() => computeWeddingWeekStart());
+
   // Active calendar month (defaults to earliest scheduled event or wedding startDate or current month)
   const initialMonthDate = useMemo(() => {
     if (scheduledEvents.length > 0) {
@@ -180,13 +222,14 @@ export const WeddingCalendarView: React.FC<WeddingCalendarViewProps> = ({
   const [viewMonth, setViewMonth] = useState(initialMonthDate.getMonth());
   const [hasUserNavigated, setHasUserNavigated] = useState(false);
 
-  // If events get scheduled for the first time, jump to their month automatically
+  // If events get scheduled for the first time, jump week & month automatically
   useEffect(() => {
     if (!hasUserNavigated && scheduledEvents.length > 0) {
       const first = parseLocalDate(scheduledEvents[0].date);
       if (first) {
         setViewYear(first.getFullYear());
         setViewMonth(first.getMonth());
+        setWeekStartDate(computeWeddingWeekStart());
       }
     }
   }, [scheduledEvents, hasUserNavigated]);
@@ -274,6 +317,35 @@ export const WeddingCalendarView: React.FC<WeddingCalendarViewProps> = ({
     return cells;
   }, [viewYear, viewMonth]);
 
+  // Build 7-day week cells starting at weekStartDate
+  const weekDays = useMemo(() => {
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(
+        weekStartDate.getFullYear(),
+        weekStartDate.getMonth(),
+        weekStartDate.getDate() + i
+      );
+      return {
+        date: d,
+        dateKey: toDateKey(d.getFullYear(), d.getMonth(), d.getDate()),
+        weekdayShort: d.toLocaleDateString('en-US', { weekday: 'short' }),
+        monthShort: d.toLocaleDateString('en-US', { month: 'short' }),
+        dayNumber: d.getDate(),
+        isWeekend: d.getDay() === 0 || d.getDay() === 6,
+      };
+    });
+  }, [weekStartDate]);
+
+  const weekRangeTitle = useMemo(() => {
+    const first = weekDays[0].date;
+    const last = weekDays[6].date;
+    const sameMonth = first.getMonth() === last.getMonth() && first.getFullYear() === last.getFullYear();
+    if (sameMonth) {
+      return `${first.toLocaleDateString('en-US', { month: 'short' })} ${first.getDate()} – ${last.getDate()}, ${last.getFullYear()}`;
+    }
+    return `${first.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${last.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  }, [weekDays]);
+
   const todayKey = useMemo(() => {
     const now = new Date();
     return toDateKey(now.getFullYear(), now.getMonth(), now.getDate());
@@ -284,9 +356,13 @@ export const WeddingCalendarView: React.FC<WeddingCalendarViewProps> = ({
     year: 'numeric',
   });
 
-  const handlePrevMonth = () => {
+  const handlePrevPeriod = () => {
     setHasUserNavigated(true);
-    if (viewMonth === 0) {
+    if (calendarScope === 'week') {
+      setWeekStartDate(
+        (prev) => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() - 7)
+      );
+    } else if (viewMonth === 0) {
       setViewYear((y) => y - 1);
       setViewMonth(11);
     } else {
@@ -294,9 +370,13 @@ export const WeddingCalendarView: React.FC<WeddingCalendarViewProps> = ({
     }
   };
 
-  const handleNextMonth = () => {
+  const handleNextPeriod = () => {
     setHasUserNavigated(true);
-    if (viewMonth === 11) {
+    if (calendarScope === 'week') {
+      setWeekStartDate(
+        (prev) => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 7)
+      );
+    } else if (viewMonth === 11) {
       setViewYear((y) => y + 1);
       setViewMonth(0);
     } else {
@@ -310,6 +390,7 @@ export const WeddingCalendarView: React.FC<WeddingCalendarViewProps> = ({
     setHasUserNavigated(true);
     setViewYear(d.getFullYear());
     setViewMonth(d.getMonth());
+    setWeekStartDate(getSaturdayOnOrBefore(d));
     if (openModal) {
       setSelectedDateKey(dateStr);
       setEditingEventId(null);
@@ -544,48 +625,197 @@ export const WeddingCalendarView: React.FC<WeddingCalendarViewProps> = ({
         </div>
       )}
 
-      {/* Calendar Header & Month Navigation */}
+      {/* Calendar Header & Week/Month Navigation */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={handlePrevMonth}
+            onClick={handlePrevPeriod}
             className="p-2 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 transition-colors"
-            aria-label="Previous month"
+            aria-label={calendarScope === 'week' ? 'Previous week' : 'Previous month'}
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <h3 className="text-base sm:text-lg font-bold font-serif text-stone-900 min-w-[150px] text-center">
-            {monthTitle}
+          <h3 className="text-sm sm:text-lg font-bold font-serif text-stone-900 min-w-[175px] text-center">
+            {calendarScope === 'week' ? weekRangeTitle : monthTitle}
           </h3>
           <button
             type="button"
-            onClick={handleNextMonth}
+            onClick={handleNextPeriod}
             className="p-2 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 transition-colors"
-            aria-label="Next month"
+            aria-label={calendarScope === 'week' ? 'Next week' : 'Next month'}
           >
             <ChevronRight className="w-4 h-4" />
           </button>
           <button
             type="button"
             onClick={() => {
-              const now = new Date();
-              setHasUserNavigated(true);
-              setViewYear(now.getFullYear());
-              setViewMonth(now.getMonth());
+              const target = computeWeddingWeekStart();
+              setHasUserNavigated(false);
+              setWeekStartDate(target);
+              setViewYear(target.getFullYear());
+              setViewMonth(target.getMonth());
             }}
             className="px-3 py-1.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-xs font-semibold text-stone-700 transition-colors"
           >
-            Today
+            Wedding Week
           </button>
         </div>
 
-        <div className="flex items-center gap-2 text-[11px] text-stone-500">
-          <span className="hidden sm:inline">Drag events between days or click any date for details</span>
+        <div className="flex items-center gap-2">
+          <div className="inline-flex p-0.5 rounded-xl bg-stone-100 border border-stone-200/80 text-xs">
+            <button
+              type="button"
+              onClick={() => setCalendarScope('week')}
+              className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+                calendarScope === 'week'
+                  ? 'bg-white text-stone-900 shadow-2xs'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              7-Day Week
+            </button>
+            <button
+              type="button"
+              onClick={() => setCalendarScope('month')}
+              className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+                calendarScope === 'month'
+                  ? 'bg-white text-stone-900 shadow-2xs'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              Month
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Month Calendar Grid */}
+      {/* 7-Day Focused Wedding Week View (Default) */}
+      {calendarScope === 'week' ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-2.5">
+          {weekDays.map((day) => {
+            const dayEvents = eventsByDate[day.dateKey] || [];
+            const isToday = day.dateKey === todayKey;
+            const isDragTarget = dragOverDateKey === day.dateKey;
+            const hasEvents = dayEvents.length > 0;
+
+            return (
+              <div
+                key={day.dateKey}
+                onDragOver={(e) => handleDragOver(e, day.dateKey)}
+                onDragLeave={() => {
+                  if (dragOverDateKey === day.dateKey) setDragOverDateKey(null);
+                }}
+                onDrop={(e) => handleDrop(e, day.dateKey)}
+                onClick={() => handleDayClick(day.dateKey)}
+                className={`rounded-2xl border transition-all cursor-pointer flex flex-col min-h-[150px] lg:min-h-[240px] group overflow-hidden ${
+                  isDragTarget
+                    ? 'border-rose-500 ring-2 ring-rose-400/50 bg-rose-50/60'
+                    : placingEventId
+                    ? 'border-rose-200 bg-white hover:border-rose-400 hover:bg-rose-50/40'
+                    : hasEvents
+                    ? 'border-amber-300/90 bg-white shadow-xs hover:shadow-md hover:border-amber-400'
+                    : day.isWeekend
+                    ? 'border-stone-200 bg-amber-50/25 hover:border-stone-300 hover:bg-amber-50/40'
+                    : 'border-stone-200 bg-stone-50/40 hover:border-stone-300 hover:bg-white'
+                }`}
+              >
+                {/* Day Header */}
+                <div
+                  className={`px-3 py-2.5 border-b flex items-center justify-between ${
+                    hasEvents
+                      ? 'bg-amber-50/70 border-amber-200/70'
+                      : 'bg-stone-50/80 border-stone-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
+                      {day.weekdayShort}
+                    </span>
+                    <span
+                      className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                        isToday
+                          ? 'bg-rose-700 text-white'
+                          : hasEvents
+                          ? 'bg-amber-200/80 text-amber-950'
+                          : 'text-stone-800'
+                      }`}
+                    >
+                      {day.monthShort} {day.dayNumber}
+                    </span>
+                  </div>
+                  <span className="opacity-60 group-hover:opacity-100 text-stone-400 group-hover:text-rose-600 transition-all">
+                    <Plus className="w-3.5 h-3.5" />
+                  </span>
+                </div>
+
+                {/* Day Events Body */}
+                <div className="p-2.5 flex-1 space-y-2 flex flex-col">
+                  {dayEvents.length === 0 ? (
+                    <div className="flex-1 flex items-center justify-center text-center py-4">
+                      <span className="text-[11px] text-stone-400 group-hover:text-stone-600 transition-colors">
+                        {placingEventId ? 'Tap to place here' : 'Open day'}
+                      </span>
+                    </div>
+                  ) : (
+                    dayEvents.map((ev) => {
+                      const colors = getEventColorClasses(ev.type);
+                      const arrangedCount = ev.checklist?.filter((c) => c.isArranged).length || 0;
+                      const totalChecklist = ev.checklist?.length || 0;
+
+                      return (
+                        <div
+                          key={ev.id}
+                          draggable
+                          onDragStart={(e) => {
+                            e.stopPropagation();
+                            handleDragStart(e, ev.id);
+                          }}
+                          onDragEnd={() => {
+                            setDraggingEventId(null);
+                            setDragOverDateKey(null);
+                          }}
+                          onClick={(e) => handleEventPillClick(e, ev)}
+                          title="Drag to move to another day, or click for full details"
+                          className={`p-2.5 rounded-xl border text-left cursor-grab active:cursor-grabbing transition-all space-y-1 shadow-2xs ${colors.pill}`}
+                        >
+                          <div className="flex items-start gap-1.5">
+                            <span className={`w-2 h-2 rounded-full shrink-0 mt-1 ${colors.dot}`} />
+                            <span className="font-bold text-xs leading-snug line-clamp-2">
+                              {ev.name}
+                            </span>
+                          </div>
+
+                          <div className="text-[10px] opacity-80 flex items-center gap-1 pl-3.5 font-medium">
+                            <Clock className="w-2.5 h-2.5 shrink-0" />
+                            <span>
+                              {ev.startTime}–{ev.endTime}
+                            </span>
+                          </div>
+
+                          {ev.venueName && !ev.venueName.toLowerCase().includes('tbd') && (
+                            <div className="text-[10px] opacity-85 flex items-center gap-1 pl-3.5 truncate font-medium">
+                              <MapPin className="w-2.5 h-2.5 shrink-0" />
+                              <span className="truncate">{ev.venueName}</span>
+                            </div>
+                          )}
+
+                          {totalChecklist > 0 && (
+                            <div className="text-[10px] opacity-80 pl-3.5 pt-0.5 font-semibold">
+                              ✓ {arrangedCount}/{totalChecklist} arranged
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+      /* Month Calendar Grid */
       <div className="rounded-2xl border border-stone-200 overflow-hidden bg-white shadow-2xs">
         {/* Weekday Headers */}
         <div className="grid grid-cols-7 border-b border-stone-200 bg-stone-50">
@@ -689,6 +919,7 @@ export const WeddingCalendarView: React.FC<WeddingCalendarViewProps> = ({
           })}
         </div>
       </div>
+      )}
 
       {/* In-Depth Day Detail & Event Quick-Edit Modal */}
       <Modal
