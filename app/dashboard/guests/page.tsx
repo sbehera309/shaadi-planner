@@ -247,6 +247,18 @@ export default function GuestsPage() {
     });
   };
 
+  const handleSetGroupTier = (groupName: string, tier: GuestTier) => {
+    if (isReadOnly) return;
+    const targetGuests = guests.filter((g) => {
+      const grp = g.familyGroup?.trim() || 'Unassigned';
+      return grp === groupName;
+    });
+    const nextColor = GUEST_TIER_META[tier].defaultColor;
+    targetGuests.forEach((g) => {
+      updateGuest(g.id, { tier, cardColor: nextColor });
+    });
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isReadOnly) return;
@@ -654,59 +666,92 @@ export default function GuestsPage() {
                   }`}
                 >
                   {/* Group Column Header */}
-                  <div className={`px-4 py-3 border-b flex items-center justify-between gap-2 ${headerAccent}`}>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <h3 className="font-bold text-sm text-stone-900 truncate">{groupName}</h3>
-                        {isCustomGroup && (
-                          <span className="px-1.5 py-0.2 rounded-full bg-white/80 border border-stone-200 text-[9px] font-bold text-stone-500 uppercase">
-                            Custom
-                          </span>
-                        )}
+                  <div className={`px-4 py-3 border-b space-y-2 ${headerAccent}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <h3 className="font-bold text-sm text-stone-900 truncate">{groupName}</h3>
+                          {isCustomGroup && (
+                            <span className="px-1.5 py-0.2 rounded-full bg-white/80 border border-stone-200 text-[9px] font-bold text-stone-500 uppercase">
+                              Custom
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-stone-500 font-medium">
+                          {groupGuests.length} {groupGuests.length === 1 ? 'card' : 'cards'} • {groupHeadcount} people
+                        </p>
                       </div>
-                      <p className="text-[11px] text-stone-500 font-medium">
-                        {groupGuests.length} {groupGuests.length === 1 ? 'card' : 'cards'} • {groupHeadcount} people
-                      </p>
-                    </div>
 
-                    {!isReadOnly && (
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPasteDefaultGroup(groupName === 'Unassigned' ? undefined : groupName);
-                            setIsPasteModalOpen(true);
-                          }}
-                          className="p-1.5 rounded-lg bg-white/80 hover:bg-white border border-stone-200 text-stone-600 hover:text-rose-700 transition-colors"
-                          title={`Paste guests into ${groupName}`}
-                        >
-                          <ClipboardPaste className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenAdd(groupName);
-                          }}
-                          className="p-1.5 rounded-lg bg-white/80 hover:bg-white border border-stone-200 text-stone-600 hover:text-rose-700 transition-colors"
-                          title={`Add guest to ${groupName}`}
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                        </button>
-                        {isCustomGroup && groupGuests.length === 0 && (
+                      {!isReadOnly && (
+                        <div className="flex items-center gap-1 shrink-0">
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              deleteCustomGuestGroup(groupName);
+                              setPasteDefaultGroup(groupName === 'Unassigned' ? undefined : groupName);
+                              setIsPasteModalOpen(true);
                             }}
-                            className="p-1.5 rounded-lg text-stone-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                            title="Delete empty custom group"
+                            className="p-1.5 rounded-lg bg-white/80 hover:bg-white border border-stone-200 text-stone-600 hover:text-rose-700 transition-colors"
+                            title={`Paste guests into ${groupName}`}
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <ClipboardPaste className="w-3.5 h-3.5" />
                           </button>
-                        )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenAdd(groupName);
+                            }}
+                            className="p-1.5 rounded-lg bg-white/80 hover:bg-white border border-stone-200 text-stone-600 hover:text-rose-700 transition-colors"
+                            title={`Add guest to ${groupName}`}
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                          {isCustomGroup && groupGuests.length === 0 && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteCustomGuestGroup(groupName);
+                              }}
+                              className="p-1.5 rounded-lg text-stone-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                              title="Delete empty custom group"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 1-Click Bulk Tier Assignment for Entire Group */}
+                    {!isReadOnly && groupGuests.length > 0 && (
+                      <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-stone-200/60">
+                        <span className="text-[10px] font-semibold text-stone-500">Set all:</span>
+                        <div className="flex items-center gap-1">
+                          {(['A', 'B', 'C'] as GuestTier[]).map((t) => {
+                            const meta = GUEST_TIER_META[t];
+                            const allMatch = groupGuests.every((g) => g.tier === t);
+                            return (
+                              <button
+                                key={t}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSetGroupTier(groupName, t);
+                                }}
+                                title={`Set all ${groupGuests.length} guests in "${groupName}" to ${meta.label}`}
+                                className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-all ${
+                                  allMatch
+                                    ? meta.activeClass
+                                    : 'bg-white/85 text-stone-600 border-stone-200 hover:border-stone-400'
+                                }`}
+                              >
+                                {meta.shortLabel}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
                   </div>
