@@ -140,28 +140,28 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
   // Quick venue suggestions
   const quickVenueChoices = useMemo(() => {
     const list: Array<{ label: string; name: string; address: string }> = [];
+    if (officialSangeetVenue) {
+      list.push({
+        label: `⭐ Official Sangeet Venue: ${officialSangeetVenue.name}`,
+        name: officialSangeetVenue.name,
+        address: `${officialSangeetVenue.address}, ${officialSangeetVenue.city}, ${officialSangeetVenue.state}`,
+      });
+    }
     if (
       wedding?.venueName &&
       !wedding.venueName.toLowerCase().includes('scouting') &&
       !wedding.venueName.toLowerCase().includes('decided')
     ) {
       list.push({
-        label: `Official: ${wedding.venueName}`,
+        label: `⭐ Official Wedding Venue: ${wedding.venueName}`,
         name: wedding.venueName,
         address: wedding.city || '',
-      });
-    }
-    if (officialSangeetVenue) {
-      list.push({
-        label: `Sangeet: ${officialSangeetVenue.name}`,
-        name: officialSangeetVenue.name,
-        address: `${officialSangeetVenue.address}, ${officialSangeetVenue.city}, ${officialSangeetVenue.state}`,
       });
     }
     venues.forEach((v) => {
       if (!list.some((i) => i.name.toLowerCase() === v.name.toLowerCase())) {
         list.push({
-          label: v.name,
+          label: `${v.name}${v.city ? ` (${v.city}, ${v.state})` : ''}`,
           name: v.name,
           address: [v.address, v.city, v.state].filter(Boolean).join(', '),
         });
@@ -424,13 +424,44 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                   </button>
                 )}
               </div>
+              {!isReadOnly && quickVenueChoices.length > 0 && (
+                <select
+                  value={
+                    quickVenueChoices.some(
+                      (c) => c.name.toLowerCase() === detailsForm.venueName.toLowerCase()
+                    )
+                      ? quickVenueChoices.find(
+                          (c) => c.name.toLowerCase() === detailsForm.venueName.toLowerCase()
+                        )?.name || ''
+                      : ''
+                  }
+                  onChange={(e) => {
+                    const picked = quickVenueChoices.find((c) => c.name === e.target.value);
+                    if (picked) {
+                      setDetailsForm({
+                        ...detailsForm,
+                        venueName: picked.name,
+                        venueAddress: picked.address,
+                      });
+                    }
+                  }}
+                  className="w-full px-3 py-2 rounded-xl border border-amber-300 bg-amber-50/50 text-stone-800 font-semibold text-xs focus:outline-hidden focus:ring-2 focus:ring-amber-500"
+                >
+                  <option value="">— Select Official Sangeet / Wedding / Saved Venue —</option>
+                  {quickVenueChoices.map((choice, idx) => (
+                    <option key={idx} value={choice.name}>
+                      {choice.label}
+                    </option>
+                  ))}
+                </select>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <input
                   type="text"
                   disabled={isReadOnly}
                   value={detailsForm.venueName}
                   onChange={(e) => setDetailsForm({ ...detailsForm, venueName: e.target.value })}
-                  placeholder="Venue name (e.g. The Rockleigh, Bride's Home)"
+                  placeholder="Or type custom venue name..."
                   className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white font-semibold disabled:bg-stone-100"
                 />
                 <input
@@ -442,26 +473,6 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                   className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white disabled:bg-stone-100"
                 />
               </div>
-              {!isReadOnly && quickVenueChoices.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-0.5">
-                  {quickVenueChoices.slice(0, 5).map((choice, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() =>
-                        setDetailsForm({
-                          ...detailsForm,
-                          venueName: choice.name,
-                          venueAddress: choice.address,
-                        })
-                      }
-                      className="px-2.5 py-1 rounded-lg bg-white hover:bg-amber-100 border border-stone-200 text-stone-700 text-[10px] font-semibold transition-colors"
-                    >
-                      {choice.label}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

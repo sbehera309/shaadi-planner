@@ -265,6 +265,7 @@ export const WeddingCalendarView: React.FC<WeddingCalendarViewProps> = ({
   const [newEventStart, setNewEventStart] = useState(QUICK_EVENT_PRESETS[0].startTime);
   const [newEventEnd, setNewEventEnd] = useState(QUICK_EVENT_PRESETS[0].endTime);
   const [newEventVenue, setNewEventVenue] = useState('');
+  const [newEventVenueAddress, setNewEventVenueAddress] = useState('');
 
   // Build calendar cells for viewYear / viewMonth
   const calendarCells = useMemo(() => {
@@ -480,18 +481,25 @@ export const WeddingCalendarView: React.FC<WeddingCalendarViewProps> = ({
     e.preventDefault();
     if (!selectedDateKey || !newEventName.trim()) return;
     const preset = QUICK_EVENT_PRESETS[newEventPresetIdx];
+    const fallbackVenueName =
+      preset.type === 'sangeet' && officialSangeetVenue
+        ? officialSangeetVenue.name
+        : preset.type === 'pheras' || preset.type === 'baraat' || preset.type === 'reception'
+        ? wedding?.venueName || 'Venue TBD'
+        : 'Venue TBD';
+    const fallbackVenueAddress =
+      !newEventVenue.trim() && preset.type === 'sangeet' && officialSangeetVenue
+        ? `${officialSangeetVenue.address}, ${officialSangeetVenue.city}, ${officialSangeetVenue.state}`
+        : '';
+
     addEvent({
       name: newEventName.trim(),
       type: preset.type,
       date: selectedDateKey,
       startTime: newEventStart,
       endTime: newEventEnd,
-      venueName:
-        newEventVenue.trim() ||
-        (preset.type === 'pheras' || preset.type === 'baraat' || preset.type === 'reception'
-          ? wedding?.venueName || 'Venue TBD'
-          : 'Venue TBD'),
-      venueAddress: '',
+      venueName: newEventVenue.trim() || fallbackVenueName,
+      venueAddress: newEventVenueAddress.trim() || fallbackVenueAddress,
       dressCode: preset.dressCode,
       colorTheme: '',
       bannerGradient: 'from-rose-600 to-amber-600',
@@ -503,6 +511,7 @@ export const WeddingCalendarView: React.FC<WeddingCalendarViewProps> = ({
     // Also ensure wedding date span updates
     setShowAddOnDay(false);
     setNewEventVenue('');
+    setNewEventVenueAddress('');
   };
 
   const placingEvent = placingEventId ? events.find((e) => e.id === placingEventId) : null;
@@ -511,28 +520,28 @@ export const WeddingCalendarView: React.FC<WeddingCalendarViewProps> = ({
   // Quick venue suggestions for inline event venue picker
   const quickVenueChoices = useMemo(() => {
     const list: Array<{ label: string; name: string; address: string }> = [];
+    if (officialSangeetVenue) {
+      list.push({
+        label: `⭐ Official Sangeet Venue: ${officialSangeetVenue.name}`,
+        name: officialSangeetVenue.name,
+        address: `${officialSangeetVenue.address}, ${officialSangeetVenue.city}, ${officialSangeetVenue.state}`,
+      });
+    }
     if (
       wedding?.venueName &&
       !wedding.venueName.toLowerCase().includes('scouting') &&
       !wedding.venueName.toLowerCase().includes('decided')
     ) {
       list.push({
-        label: `Official: ${wedding.venueName}`,
+        label: `⭐ Official Wedding Venue: ${wedding.venueName}`,
         name: wedding.venueName,
         address: wedding.city || '',
-      });
-    }
-    if (officialSangeetVenue) {
-      list.push({
-        label: `Sangeet: ${officialSangeetVenue.name}`,
-        name: officialSangeetVenue.name,
-        address: `${officialSangeetVenue.address}, ${officialSangeetVenue.city}, ${officialSangeetVenue.state}`,
       });
     }
     venues.forEach((v) => {
       if (!list.some((item) => item.name.toLowerCase() === v.name.toLowerCase())) {
         list.push({
-          label: v.name,
+          label: `${v.name}${v.city ? ` (${v.city}, ${v.state})` : ''}`,
           name: v.name,
           address: [v.address, v.city, v.state].filter(Boolean).join(', '),
         });
@@ -1115,35 +1124,46 @@ export const WeddingCalendarView: React.FC<WeddingCalendarViewProps> = ({
                                 <span>Browse Venues</span>
                               </button>
                             </div>
+                            {quickVenueChoices.length > 0 && (
+                              <select
+                                value={
+                                  quickVenueChoices.some(
+                                    (c) => c.name.toLowerCase() === quickEditForm.venueName.toLowerCase()
+                                  )
+                                    ? quickVenueChoices.find(
+                                        (c) => c.name.toLowerCase() === quickEditForm.venueName.toLowerCase()
+                                      )?.name || ''
+                                    : ''
+                                }
+                                onChange={(e) => {
+                                  const picked = quickVenueChoices.find((c) => c.name === e.target.value);
+                                  if (picked) {
+                                    setQuickEditForm({
+                                      ...quickEditForm,
+                                      venueName: picked.name,
+                                      venueAddress: picked.address,
+                                    });
+                                  }
+                                }}
+                                className="w-full px-2.5 py-1.5 rounded-lg border border-amber-300 bg-amber-50/50 text-stone-800 font-semibold text-xs mb-1.5"
+                              >
+                                <option value="">— Quick-select Official / Saved Venue —</option>
+                                {quickVenueChoices.map((choice, idx) => (
+                                  <option key={idx} value={choice.name}>
+                                    {choice.label}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
                             <input
                               type="text"
                               value={quickEditForm.venueName}
                               onChange={(e) =>
                                 setQuickEditForm({ ...quickEditForm, venueName: e.target.value })
                               }
-                              placeholder="Enter venue or pick one below..."
+                              placeholder="Or type custom venue name..."
                               className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300"
                             />
-                            {quickVenueChoices.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5 pt-1">
-                                {quickVenueChoices.slice(0, 5).map((choice, idx) => (
-                                  <button
-                                    key={idx}
-                                    type="button"
-                                    onClick={() =>
-                                      setQuickEditForm({
-                                        ...quickEditForm,
-                                        venueName: choice.name,
-                                        venueAddress: choice.address,
-                                      })
-                                    }
-                                    className="px-2 py-0.5 rounded-md bg-stone-100 hover:bg-amber-100 text-stone-700 text-[10px] font-semibold transition-colors"
-                                  >
-                                    {choice.label}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
                           </div>
 
                           <div>
@@ -1221,6 +1241,19 @@ export const WeddingCalendarView: React.FC<WeddingCalendarViewProps> = ({
                         setNewEventName(p.name);
                         setNewEventStart(p.startTime);
                         setNewEventEnd(p.endTime);
+                        if (p.type === 'sangeet' && officialSangeetVenue) {
+                          setNewEventVenue(officialSangeetVenue.name);
+                          setNewEventVenueAddress(
+                            `${officialSangeetVenue.address}, ${officialSangeetVenue.city}, ${officialSangeetVenue.state}`
+                          );
+                        } else if (
+                          (p.type === 'pheras' || p.type === 'baraat' || p.type === 'reception') &&
+                          wedding?.venueName &&
+                          !wedding.venueName.toLowerCase().includes('scouting')
+                        ) {
+                          setNewEventVenue(wedding.venueName);
+                          setNewEventVenueAddress(wedding.city || '');
+                        }
                       }}
                       className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-colors ${
                         newEventPresetIdx === idx
@@ -1264,13 +1297,41 @@ export const WeddingCalendarView: React.FC<WeddingCalendarViewProps> = ({
                   </div>
                 </div>
 
-                <div>
-                  <label className="font-semibold text-stone-600 block mb-1">Venue (Optional)</label>
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-stone-600 block">Venue (Optional)</label>
+                  {quickVenueChoices.length > 0 && (
+                    <select
+                      value={
+                        quickVenueChoices.some(
+                          (c) => c.name.toLowerCase() === newEventVenue.toLowerCase()
+                        )
+                          ? quickVenueChoices.find(
+                              (c) => c.name.toLowerCase() === newEventVenue.toLowerCase()
+                            )?.name || ''
+                          : ''
+                      }
+                      onChange={(e) => {
+                        const picked = quickVenueChoices.find((c) => c.name === e.target.value);
+                        if (picked) {
+                          setNewEventVenue(picked.name);
+                          setNewEventVenueAddress(picked.address);
+                        }
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-amber-300 bg-white text-stone-800 font-semibold text-xs"
+                    >
+                      <option value="">— Select Official Sangeet / Wedding / Saved Venue —</option>
+                      {quickVenueChoices.map((choice, idx) => (
+                        <option key={idx} value={choice.name}>
+                          {choice.label}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   <input
                     type="text"
                     value={newEventVenue}
                     onChange={(e) => setNewEventVenue(e.target.value)}
-                    placeholder="e.g. Bride's Family Home, Royal Albert's Palace..."
+                    placeholder="Or type custom venue (e.g. Bride's Family Home, Valley Country Club...)"
                     className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 bg-white"
                   />
                 </div>
