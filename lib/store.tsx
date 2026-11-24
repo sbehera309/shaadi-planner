@@ -202,6 +202,112 @@ const STORAGE_KEYS = {
   SEATING_PLAN: 'shaadi_v5_seating_plan',
 };
 
+interface PrivateFinancialsDoc {
+  targetBudget?: number;
+  budgetItems?: BudgetItem[];
+  shagunRecords?: ShagunRecord[];
+  scenarioSelection?: {
+    selectedVenueId?: string | null;
+    includedVendorIds?: string[] | null;
+  };
+  venueFinancials?: Record<
+    string,
+    {
+      contractAgreedAmount?: number;
+      contractNotes?: string;
+      installments?: VenueOption['installments'];
+      paymentSchedule?: VenueOption['paymentSchedule'];
+    }
+  >;
+  vendorFinancials?: Record<
+    string,
+    {
+      agreedAmount?: number;
+      depositPaid?: number;
+      installments?: Vendor['installments'];
+      paymentSchedule?: Vendor['paymentSchedule'];
+      addOns?: Vendor['addOns'];
+      eventBreakdown?: Vendor['eventBreakdown'];
+    }
+  >;
+  updatedAt?: string;
+}
+
+const sanitizeProfileForSharedDoc = (profile: WeddingProfile | null): WeddingProfile | null => {
+  if (!profile) return null;
+  return { ...profile, targetBudget: 0 };
+};
+
+const sanitizeVenuesForSharedDoc = (list: VenueOption[]): VenueOption[] =>
+  list.map((v) => {
+    const { contractAgreedAmount, contractNotes, installments, paymentSchedule, ...rest } = v;
+    return rest;
+  });
+
+const sanitizeVendorsForSharedDoc = (list: Vendor[]): Vendor[] =>
+  list.map((v) => {
+    const { installments, paymentSchedule, ...rest } = v;
+    return {
+      ...rest,
+      agreedAmount: 0,
+      depositPaid: 0,
+      ...(v.addOns
+        ? { addOns: v.addOns.map((a) => ({ ...a, price: 0 })) }
+        : {}),
+      ...(v.eventBreakdown
+        ? { eventBreakdown: v.eventBreakdown.map(({ rate, priceLabel, ...evRest }) => evRest) }
+        : {}),
+    };
+  });
+
+const buildPrivateFinancialsDoc = (params: {
+  profile: WeddingProfile | null;
+  budgetItems: BudgetItem[];
+  shagunRecords: ShagunRecord[];
+  scenarioSelection: { selectedVenueId?: string | null; includedVendorIds?: string[] | null };
+  venues: VenueOption[];
+  vendors: Vendor[];
+}): PrivateFinancialsDoc => {
+  const venueFinancials: NonNullable<PrivateFinancialsDoc['venueFinancials']> = {};
+  params.venues.forEach((v) => {
+    if (
+      v.contractAgreedAmount !== undefined ||
+      v.contractNotes ||
+      (v.installments && v.installments.length > 0) ||
+      (v.paymentSchedule && v.paymentSchedule.length > 0)
+    ) {
+      venueFinancials[v.id] = {
+        ...(v.contractAgreedAmount !== undefined ? { contractAgreedAmount: v.contractAgreedAmount } : {}),
+        ...(v.contractNotes ? { contractNotes: v.contractNotes } : {}),
+        ...(v.installments ? { installments: v.installments } : {}),
+        ...(v.paymentSchedule ? { paymentSchedule: v.paymentSchedule } : {}),
+      };
+    }
+  });
+
+  const vendorFinancials: NonNullable<PrivateFinancialsDoc['vendorFinancials']> = {};
+  params.vendors.forEach((v) => {
+    vendorFinancials[v.id] = {
+      agreedAmount: v.agreedAmount || 0,
+      depositPaid: v.depositPaid || 0,
+      ...(v.installments ? { installments: v.installments } : {}),
+      ...(v.paymentSchedule ? { paymentSchedule: v.paymentSchedule } : {}),
+      ...(v.addOns ? { addOns: v.addOns } : {}),
+      ...(v.eventBreakdown ? { eventBreakdown: v.eventBreakdown } : {}),
+    };
+  });
+
+  return {
+    targetBudget: params.profile?.targetBudget || 0,
+    budgetItems: params.budgetItems,
+    shagunRecords: params.shagunRecords,
+    scenarioSelection: params.scenarioSelection,
+    venueFinancials,
+    vendorFinancials,
+    updatedAt: new Date().toISOString(),
+  };
+};
+
 const dedupeEventIds = (rawEvents: WeddingEvent[]): { events: WeddingEvent[]; hadDuplicates: boolean } => {
   const seen = new Set<string>();
   let hadDuplicates = false;
@@ -262,6 +368,11 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const isApplyingRemoteRef = useRef(false);
   const hasHydratedFromCloudRef = useRef(false);
   const allowEmptySyncRef = useRef(false);
+  const privateFinancialsRef = useRef<PrivateFinancialsDoc | null>(null);
+  const userRoleRef = useRef<CollaboratorRole>(userRole);
+  useEffect(() => {
+    userRoleRef.current = userRole;
+  }, [userRole]);
 
   // 1. Initial Load from localStorage on client mount (instant offline cache)
   useEffect(() => {
@@ -349,8 +460,18 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Helper to hydrate React state & local cache from a Firestore wedding document
   const applyRemoteWeddingData = useCallback((remoteData: any, docId?: string) => {
     isApplyingRemoteRef.current = true;
+    const isViewer = userRoleRef.current === 'viewer';
+    const priv = !isViewer ? privateFinancialsRef.current : null;
 
-    if (remoteData.profile) setWedding(remoteData.profile);
+    if (remoteData.profile) {
+      const mergedProfile = {
+        ...remoteData.profile,
+        targetBudget: isViewer
+          ? 0
+          : remoteData.profile.targetBudget || priv?.targetBudget || 0,
+      };
+      setWedding(mergedProfile);
+    }
     const cleanedEvents = Array.isArray(remoteData.events)
       ? dedupeEventIds(remoteData.events)
       : null;
@@ -358,11 +479,62 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (Array.isArray(remoteData.guests)) setGuests(remoteData.guests);
     if (Array.isArray(remoteData.customGuestGroups)) setCustomGuestGroups(remoteData.customGuestGroups);
     if (remoteData.seatingPlan !== undefined) setSeatingPlan(remoteData.seatingPlan);
-    if (Array.isArray(remoteData.budgetItems)) setBudgetItems(remoteData.budgetItems);
-    if (Array.isArray(remoteData.vendors)) setVendors(remoteData.vendors);
-    if (Array.isArray(remoteData.shagunRecords)) setShagunRecords(remoteData.shagunRecords);
+
+    if (isViewer) {
+      setBudgetItems([]);
+      setShagunRecords([]);
+      setScenarioSelection({});
+    } else {
+      if (Array.isArray(remoteData.budgetItems) && remoteData.budgetItems.length > 0) {
+        setBudgetItems(remoteData.budgetItems);
+      } else if (priv?.budgetItems) {
+        setBudgetItems(priv.budgetItems);
+      }
+      if (Array.isArray(remoteData.shagunRecords) && remoteData.shagunRecords.length > 0) {
+        setShagunRecords(remoteData.shagunRecords);
+      } else if (priv?.shagunRecords) {
+        setShagunRecords(priv.shagunRecords);
+      }
+    }
+
+    if (Array.isArray(remoteData.vendors)) {
+      const mergedVendors = isViewer
+        ? sanitizeVendorsForSharedDoc(remoteData.vendors)
+        : remoteData.vendors.map((v: Vendor) => {
+            const vf = priv?.vendorFinancials?.[v.id];
+            if (!vf) return v;
+            return {
+              ...v,
+              agreedAmount: v.agreedAmount || vf.agreedAmount || 0,
+              depositPaid: v.depositPaid || vf.depositPaid || 0,
+              installments: v.installments || vf.installments,
+              paymentSchedule: v.paymentSchedule || vf.paymentSchedule,
+              addOns: vf.addOns || v.addOns,
+              eventBreakdown: vf.eventBreakdown || v.eventBreakdown,
+            };
+          });
+      setVendors(mergedVendors);
+    }
+
     if (Array.isArray(remoteData.rooms)) setRooms(remoteData.rooms);
-    if (Array.isArray(remoteData.venues)) setVenues(remoteData.venues);
+
+    if (Array.isArray(remoteData.venues)) {
+      const mergedVenues = isViewer
+        ? sanitizeVenuesForSharedDoc(remoteData.venues)
+        : remoteData.venues.map((v: VenueOption) => {
+            const vf = priv?.venueFinancials?.[v.id];
+            if (!vf) return v;
+            return {
+              ...v,
+              contractAgreedAmount: v.contractAgreedAmount ?? vf.contractAgreedAmount,
+              contractNotes: v.contractNotes ?? vf.contractNotes,
+              installments: v.installments || vf.installments,
+              paymentSchedule: v.paymentSchedule || vf.paymentSchedule,
+            };
+          });
+      setVenues(mergedVenues);
+    }
+
     if (remoteData.tourPlan !== undefined) setTourPlan(remoteData.tourPlan);
     if (remoteData.officialSangeetVenue !== undefined) setOfficialSangeetVenueState(remoteData.officialSangeetVenue);
     if (Array.isArray(remoteData.collaborators)) setCollaborators(remoteData.collaborators);
@@ -374,20 +546,29 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     if (docId) setActiveWeddingDocId(docId);
 
-    // Update local cache for offline availability
+    // Update local cache for offline availability (never cache private financial data for viewers)
     try {
-      if (remoteData.profile) localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(remoteData.profile));
+      if (remoteData.profile) {
+        localStorage.setItem(
+          STORAGE_KEYS.PROFILE,
+          JSON.stringify(isViewer ? sanitizeProfileForSharedDoc(remoteData.profile) : remoteData.profile)
+        );
+      }
       if (cleanedEvents) localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(cleanedEvents.events));
       if (remoteData.guests) localStorage.setItem(STORAGE_KEYS.GUESTS, JSON.stringify(remoteData.guests));
-      if (remoteData.budgetItems) localStorage.setItem(STORAGE_KEYS.BUDGET, JSON.stringify(remoteData.budgetItems));
+      if (!isViewer && remoteData.budgetItems && remoteData.budgetItems.length > 0) {
+        localStorage.setItem(STORAGE_KEYS.BUDGET, JSON.stringify(remoteData.budgetItems));
+      }
       if (remoteData.vendors) localStorage.setItem(STORAGE_KEYS.VENDORS, JSON.stringify(remoteData.vendors));
-      if (remoteData.shagunRecords) localStorage.setItem(STORAGE_KEYS.SHAGUN, JSON.stringify(remoteData.shagunRecords));
+      if (!isViewer && remoteData.shagunRecords && remoteData.shagunRecords.length > 0) {
+        localStorage.setItem(STORAGE_KEYS.SHAGUN, JSON.stringify(remoteData.shagunRecords));
+      }
       if (remoteData.rooms) localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(remoteData.rooms));
       if (remoteData.venues) localStorage.setItem(STORAGE_KEYS.VENUES, JSON.stringify(remoteData.venues));
       if (remoteData.tourPlan) localStorage.setItem(STORAGE_KEYS.TOUR_PLAN, JSON.stringify(remoteData.tourPlan));
       if (remoteData.officialSangeetVenue) localStorage.setItem(STORAGE_KEYS.SANGEET_VENUE, JSON.stringify(remoteData.officialSangeetVenue));
 
-      if (remoteData.scenarioSelection) {
+      if (!isViewer && remoteData.scenarioSelection) {
         setScenarioSelection(remoteData.scenarioSelection);
         if (remoteData.scenarioSelection.selectedVenueId !== undefined) {
           localStorage.setItem(
@@ -692,6 +873,96 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return () => clearInterval(interval);
   }, [mounted, user, userRole, activeWeddingDocId]);
 
+  // 2c. Strict Private Financials Real-Time Listener (OWNER & EDITOR ONLY — server-enforced by Firestore Rules!)
+  useEffect(() => {
+    if (!mounted || !isFirebaseConfigured || !db || !user || !activeWeddingDocId) return;
+
+    // View-Only users NEVER subscribe to private financials and immediately scrub financial state in memory
+    if (userRole === 'viewer') {
+      privateFinancialsRef.current = null;
+      setBudgetItems([]);
+      setShagunRecords([]);
+      setScenarioSelection({});
+      return;
+    }
+
+    const finRef = doc(db, 'weddings', activeWeddingDocId, 'private', 'financials');
+    const unsub = onSnapshot(
+      finRef,
+      (snap) => {
+        if (!snap.exists()) return;
+        const finData = snap.data() as PrivateFinancialsDoc;
+        privateFinancialsRef.current = finData;
+        isApplyingRemoteRef.current = true;
+
+        if (typeof finData.targetBudget === 'number' && finData.targetBudget > 0) {
+          setWedding((prev) => (prev ? { ...prev, targetBudget: finData.targetBudget! } : prev));
+        }
+        if (Array.isArray(finData.budgetItems)) {
+          setBudgetItems(finData.budgetItems);
+          try {
+            localStorage.setItem(STORAGE_KEYS.BUDGET, JSON.stringify(finData.budgetItems));
+          } catch {}
+        }
+        if (Array.isArray(finData.shagunRecords)) {
+          setShagunRecords(finData.shagunRecords);
+          try {
+            localStorage.setItem(STORAGE_KEYS.SHAGUN, JSON.stringify(finData.shagunRecords));
+          } catch {}
+        }
+        if (finData.scenarioSelection) {
+          setScenarioSelection(finData.scenarioSelection);
+        }
+        if (finData.venueFinancials) {
+          const vfMap = finData.venueFinancials;
+          setVenues((prev) =>
+            prev.map((v) => {
+              const vf = vfMap[v.id];
+              if (!vf) return v;
+              return {
+                ...v,
+                contractAgreedAmount: vf.contractAgreedAmount ?? v.contractAgreedAmount,
+                contractNotes: vf.contractNotes ?? v.contractNotes,
+                installments: vf.installments || v.installments,
+                paymentSchedule: vf.paymentSchedule || v.paymentSchedule,
+              };
+            })
+          );
+        }
+        if (finData.vendorFinancials) {
+          const vdfMap = finData.vendorFinancials;
+          setVendors((prev) =>
+            prev.map((v) => {
+              const vf = vdfMap[v.id];
+              if (!vf) return v;
+              return {
+                ...v,
+                agreedAmount: vf.agreedAmount ?? v.agreedAmount,
+                depositPaid: vf.depositPaid ?? v.depositPaid,
+                installments: vf.installments || v.installments,
+                paymentSchedule: vf.paymentSchedule || v.paymentSchedule,
+                addOns: vf.addOns || v.addOns,
+                eventBreakdown: vf.eventBreakdown || v.eventBreakdown,
+              };
+            })
+          );
+        }
+
+        setTimeout(() => {
+          isApplyingRemoteRef.current = false;
+        }, 300);
+      },
+      (err) => {
+        // Silently ignore permission-denied if role was just downgraded
+        if (err?.code !== 'permission-denied') {
+          console.warn('Private financials listener error:', err);
+        }
+      }
+    );
+
+    return () => unsub();
+  }, [mounted, user, userRole, activeWeddingDocId]);
+
   // 3. Save changes locally & push updates to Firestore (Role-Aware: Owner / Editor / Blocked for Viewer!)
   useEffect(() => {
     if (!mounted) return;
@@ -756,9 +1027,56 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const resolvedOwnerUid = ownerUid || user.uid;
         const resolvedOwnerEmail = ownerEmail || (user.email || '').toLowerCase();
         const collaboratorEmails = collaborators.map((c) => c.email.toLowerCase().trim());
+        const editorEmails = collaborators
+          .filter((c) => c.role === 'editor')
+          .map((c) => c.email.toLowerCase().trim());
+        const nowIso = new Date().toISOString();
 
-        // Deep-strip all `undefined` values before writing to Firestore (Firestore rejects `undefined` anywhere in payload!)
-        const cloudData = JSON.parse(
+        // 1. Sanitized Shared Doc (readable by Owner, Editors, AND Viewers — ZERO private financial data!)
+        const sharedCloudData = JSON.parse(
+          JSON.stringify({
+            profile: sanitizeProfileForSharedDoc(wedding),
+            events,
+            guests,
+            customGuestGroups,
+            seatingPlan,
+            budgetItems: [],
+            vendors: sanitizeVendorsForSharedDoc(vendors),
+            shagunRecords: [],
+            rooms,
+            venues: sanitizeVenuesForSharedDoc(venues),
+            tourPlan,
+            officialSangeetVenue,
+            scenarioSelection: null,
+            collaborators,
+            collaboratorEmails,
+            editorEmails,
+            ownerUid: resolvedOwnerUid,
+            ownerEmail: resolvedOwnerEmail,
+            userId: resolvedOwnerUid,
+            userEmail: resolvedOwnerEmail,
+            lastEditedBy: user.email || '',
+            updatedAt: nowIso,
+          })
+        );
+
+        // 2. Strictly Private Financials Subdocument (server-locked in firestore.rules to Owner & Editors ONLY!)
+        const privateFinancialsPayload = JSON.parse(
+          JSON.stringify(
+            buildPrivateFinancialsDoc({
+              profile: wedding,
+              budgetItems,
+              shagunRecords,
+              scenarioSelection,
+              venues,
+              vendors,
+            })
+          )
+        );
+        privateFinancialsRef.current = privateFinancialsPayload;
+
+        // 3. Owner Personal Full Backup (locked in firestore.rules to request.auth.uid == userId)
+        const ownerFullBackup = JSON.parse(
           JSON.stringify({
             profile: wedding,
             events,
@@ -775,12 +1093,13 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
             scenarioSelection,
             collaborators,
             collaboratorEmails,
+            editorEmails,
             ownerUid: resolvedOwnerUid,
             ownerEmail: resolvedOwnerEmail,
             userId: resolvedOwnerUid,
             userEmail: resolvedOwnerEmail,
             lastEditedBy: user.email || '',
-            updatedAt: new Date().toISOString(),
+            updatedAt: nowIso,
           })
         );
 
@@ -789,13 +1108,20 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const writePromises: Promise<any>[] = [];
         if (targetWeddingId) {
           writePromises.push(
-            setDoc(doc(firestore, 'weddings', targetWeddingId), cloudData, { merge: true })
+            setDoc(doc(firestore, 'weddings', targetWeddingId), sharedCloudData, { merge: true })
+          );
+          writePromises.push(
+            setDoc(
+              doc(firestore, 'weddings', targetWeddingId, 'private', 'financials'),
+              privateFinancialsPayload,
+              { merge: true }
+            )
           );
         }
         // Only the owner mirrors to their personal users/{uid}/wedding_data/main doc
         if (userRole === 'owner') {
           writePromises.push(
-            setDoc(doc(firestore, 'users', user.uid, 'wedding_data', 'main'), cloudData, { merge: true })
+            setDoc(doc(firestore, 'users', user.uid, 'wedding_data', 'main'), ownerFullBackup, { merge: true })
           );
         }
 

@@ -1,0 +1,74 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Personal user mirror — strictly private to the signed-in owner
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // 2. Shared Wedding Workspace (Non-Financial Planning Data Only)
+    // Financial data (budgetItems, shagunRecords, targetBudget, venue contracts, vendor fees)
+    // is stored strictly in /weddings/{weddingId}/private/financials below.
+    match /weddings/{weddingId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function userEmailLower() {
+        return request.auth.token.email != null ? request.auth.token.email.lower() : '';
+      }
+
+      function isOwner() {
+        return isSignedIn() && (
+          resource.data.ownerUid == request.auth.uid ||
+          resource.data.userId == request.auth.uid ||
+          (resource.data.ownerEmail != null && resource.data.ownerEmail.lower() == userEmailLower())
+        );
+      }
+
+      function isEditor() {
+        return isSignedIn() &&
+          resource.data.editorEmails != null &&
+          userEmailLower() in resource.data.editorEmails;
+      }
+
+      function isViewerJoinOrPresenceOnly() {
+        return isSignedIn() &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['collaborators', 'collaboratorEmails', 'updatedAt']);
+      }
+
+      // Owner, Editors, and Viewers (including ?join= link visitors) can read the shared non-financial plan
+      allow read: if isSignedIn();
+
+      // Creating a brand-new wedding doc
+      allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
+
+      // Updating the shared wedding doc: Owner & Editors can edit; Viewers can only record join/presence
+      allow update: if isOwner() || isEditor() || isViewerJoinOrPresenceOnly();
+
+      allow delete: if isOwner();
+
+      // 3. STRICT PRIVATE FINANCIALS SUBDOCUMENT
+      // Server-side enforced: View-Only collaborators receive PERMISSION_DENIED even if they forge HTTP requests!
+      match /private/financials {
+        function parentWedding() {
+          return get(/databases/$(database)/documents/weddings/$(weddingId)).data;
+        }
+
+        function isFinancialAuthorized() {
+          return isSignedIn() && (
+            parentWedding().ownerUid == request.auth.uid ||
+            parentWedding().userId == request.auth.uid ||
+            (parentWedding().ownerEmail != null && parentWedding().ownerEmail.lower() == userEmailLower()) ||
+            (parentWedding().editorEmails != null && userEmailLower() in parentWedding().editorEmails)
+          );
+        }
+
+        allow read, write: if isFinancialAuthorized();
+      }
+    }
+  }
+}
