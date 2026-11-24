@@ -168,14 +168,14 @@ export default function GuestsPage() {
     allGroups.forEach((grp) => {
       const hasGuests = (guestsByGroup[grp] || []).length > 0;
       const isCustom = customGuestGroups.includes(grp);
-      // Always show groups with guests, custom groups, or when moving/dragging/toggled to show all
-      if (hasGuests || isCustom || showAllEmptyGroups || draggingGuestId || movingGuestId || guests.length === 0) {
+      // Keep grid layout rock-solid during drag (no sudden group injection mid-drag!)
+      if (hasGuests || isCustom || showAllEmptyGroups || movingGuestId || guests.length === 0) {
         list.push(grp);
       }
     });
 
     return list;
-  }, [allGroups, guestsByGroup, customGuestGroups, showAllEmptyGroups, draggingGuestId, movingGuestId, guests.length]);
+  }, [allGroups, guestsByGroup, customGuestGroups, showAllEmptyGroups, movingGuestId, guests.length]);
 
   const totalFilteredHeadcount = filteredGuests.reduce(
     (acc, g) => acc + g.adultsCount + g.kidsCount,
@@ -657,9 +657,9 @@ export default function GuestsPage() {
                       handleMoveGuestToGroup(movingGuestId, groupName);
                     }
                   }}
-                  className={`rounded-2xl border bg-white flex flex-col overflow-hidden transition-all ${
+                  className={`rounded-2xl border bg-white flex flex-col overflow-hidden transition-colors ${
                     isDropTarget
-                      ? 'border-rose-500 ring-2 ring-rose-400/50 bg-rose-50/30 scale-[1.01]'
+                      ? 'border-rose-500 ring-2 ring-rose-400/50 bg-rose-50/30'
                       : movingGuestId
                       ? 'border-rose-300 hover:border-rose-500 hover:ring-2 hover:ring-rose-200 cursor-pointer'
                       : 'border-stone-200 shadow-2xs'
@@ -756,10 +756,10 @@ export default function GuestsPage() {
                     )}
                   </div>
 
-                  {/* Guest Cards List inside Group */}
-                  <div className="p-3 space-y-2 flex-1 min-h-[110px]">
+                  {/* Guest Cards List inside Group (fixed scrollable window for rock-solid drag-and-drop) */}
+                  <div className="p-3 space-y-2 h-[320px] overflow-y-auto overscroll-contain">
                     {groupGuests.length === 0 ? (
-                      <div className="h-full min-h-[84px] rounded-xl border border-dashed border-stone-200 flex items-center justify-center text-center px-3">
+                      <div className="h-full rounded-xl border border-dashed border-stone-200 flex items-center justify-center text-center px-3">
                         <span className="text-[11px] text-stone-400">
                           {movingGuestId
                             ? `Tap here to move into ${groupName}`
