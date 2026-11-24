@@ -48,7 +48,7 @@ export const ShareCollaboratorsModal: React.FC<ShareCollaboratorsModalProps> = (
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedWhatsApp, setCopiedWhatsApp] = useState(false);
-  const [linkRole, setLinkRole] = useState<'editor' | 'viewer'>('editor');
+  const [linkRole, setLinkRole] = useState<'editor' | 'viewer'>('viewer');
 
   const isOwner = userRole === 'owner';
   const shareUrl =
@@ -262,18 +262,37 @@ export const ShareCollaboratorsModal: React.FC<ShareCollaboratorsModalProps> = (
                 No collaborators added yet. Add your fiancé, parents, or planner above.
               </div>
             ) : (
-              collaborators.map((collab) => (
+              collaborators.map((collab) => {
+                const isViewingNow =
+                  Boolean(collab.lastSeenAt) &&
+                  Date.now() - new Date(collab.lastSeenAt!).getTime() < 5 * 60 * 1000;
+                return (
                 <div
                   key={collab.email}
                   className="p-3 flex items-center justify-between gap-2.5"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-800 font-bold flex items-center justify-center shrink-0 uppercase">
-                      {(collab.name || collab.email)[0]}
+                    <div className="relative shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-800 font-bold flex items-center justify-center uppercase">
+                        {(collab.name || collab.email)[0]}
+                      </div>
+                      {isViewingNow && (
+                        <span
+                          className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white animate-pulse"
+                          title="Viewing now"
+                        />
+                      )}
                     </div>
                     <div className="min-w-0">
-                      <div className="font-bold text-stone-900 truncate">
-                        {collab.name || collab.email}
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-stone-900 truncate">
+                          {collab.name || collab.email}
+                        </span>
+                        {isViewingNow && (
+                          <span className="px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[9px] font-bold shrink-0">
+                            Viewing now
+                          </span>
+                        )}
                       </div>
                       {collab.name && (
                         <div className="text-[11px] text-stone-500 truncate">
@@ -286,6 +305,15 @@ export const ShareCollaboratorsModal: React.FC<ShareCollaboratorsModalProps> = (
                   <div className="flex items-center gap-1.5 shrink-0">
                     {isOwner ? (
                       <>
+                        {collab.role === 'viewer' && (
+                          <button
+                            type="button"
+                            onClick={() => updateCollaboratorRole(collab.email, 'editor')}
+                            className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition-colors"
+                          >
+                            Allow Edit
+                          </button>
+                        )}
                         <select
                           value={collab.role}
                           onChange={(e) =>
@@ -321,7 +349,8 @@ export const ShareCollaboratorsModal: React.FC<ShareCollaboratorsModalProps> = (
                     )}
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

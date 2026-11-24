@@ -294,7 +294,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         sessionStorage.setItem('vivaah_pending_join_wedding_id', joinParam.trim());
         sessionStorage.setItem(
           'vivaah_pending_join_role',
-          roleParam === 'viewer' ? 'viewer' : 'editor'
+          roleParam === 'editor' ? 'editor' : 'viewer'
         );
         setPendingJoinWeddingId(joinParam.trim());
       } else {
@@ -472,19 +472,22 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
               subscribeToSharedWeddingDoc(pendingJoinWeddingId, matchedCollab.role);
               return;
             } else if (userEmailLower) {
-              // Auto-join via direct Share Link! Add this signed-in user to collaborators & immediately link workspace
-              let grantedRole: 'editor' | 'viewer' = 'editor';
+              // Auto-join via direct Share Link! Defaults to safe View-Only so Owner can promote to Editor in 1 click
+              let grantedRole: 'editor' | 'viewer' = 'viewer';
               try {
                 const storedRole = sessionStorage.getItem('vivaah_pending_join_role');
-                if (storedRole === 'viewer') grantedRole = 'viewer';
+                if (storedRole === 'editor') grantedRole = 'editor';
               } catch {}
 
+              const nowIso = new Date().toISOString();
               const newEntry: WeddingCollaborator = {
                 email: userEmailLower,
                 name: user.displayName || undefined,
                 role: grantedRole,
-                addedAt: new Date().toISOString(),
+                addedAt: nowIso,
                 addedByEmail: 'share-link',
+                joinedViaLink: true,
+                lastSeenAt: nowIso,
               };
               const updatedCollabs = [...collabList, newEntry];
               const updatedEmails = Array.from(
@@ -610,6 +613,39 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (activeUnsubscribe) activeUnsubscribe();
     };
   }, [user, mounted, pendingJoinWeddingId, applyRemoteWeddingData]);
+
+  // 2b. Collaborator Presence Heartbeat (lets Owner see who is currently viewing the plan!)
+  useEffect(() => {
+    if (!mounted || !isFirebaseConfigured || !db || !user) return;
+    if (userRole === 'owner' || !activeWeddingDocId) return;
+
+    const firestore = db;
+    const myEmail = (user.email || '').toLowerCase().trim();
+    if (!myEmail) return;
+
+    const pingPresence = async () => {
+      try {
+        const ref = doc(firestore, 'weddings', activeWeddingDocId);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) return;
+        const data = snap.data();
+        const list: WeddingCollaborator[] = Array.isArray(data.collaborators)
+          ? data.collaborators
+          : [];
+        if (!list.some((c) => c.email.toLowerCase().trim() === myEmail)) return;
+        const updated = list.map((c) =>
+          c.email.toLowerCase().trim() === myEmail
+            ? { ...c, lastSeenAt: new Date().toISOString(), name: c.name || user.displayName || undefined }
+            : c
+        );
+        await setDoc(ref, { collaborators: updated }, { merge: true });
+      } catch {}
+    };
+
+    pingPresence();
+    const interval = setInterval(pingPresence, 120000); // refresh every 2 minutes
+    return () => clearInterval(interval);
+  }, [mounted, user, userRole, activeWeddingDocId]);
 
   // 3. Save changes locally & push updates to Firestore (Role-Aware: Owner / Editor / Blocked for Viewer!)
   useEffect(() => {

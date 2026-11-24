@@ -8,6 +8,8 @@ export interface WeddingCollaborator {
   role: 'editor' | 'viewer';
   addedAt: string; // ISO timestamp
   addedByEmail?: string;
+  joinedViaLink?: boolean;
+  lastSeenAt?: string; // ISO timestamp for live "Viewing now" presence
 }
 
 export type DietaryTag = 'Strict Veg' | 'Jain' | 'Swaminarayan' | 'Non-Veg' | 'Halal' | 'Gluten-Free';

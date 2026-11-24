@@ -17,14 +17,17 @@ export const CollaboratorBanner: React.FC = () => {
   const { user, logout } = useAuth();
   const {
     wedding,
+    collaborators,
     userRole,
     ownerEmail,
     joinAccessStatus,
+    updateCollaboratorRole,
     dismissJoinBanner,
   } = useWedding();
 
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [dismissedEditorBanner, setDismissedEditorBanner] = useState(false);
+  const [dismissedViewerEmails, setDismissedViewerEmails] = useState<string[]>([]);
 
   const coupleName =
     wedding?.brideName && wedding?.groomName
@@ -150,6 +153,75 @@ export const CollaboratorBanner: React.FC = () => {
         </div>
       </div>
     );
+  }
+
+  // 5. Owner Notification: Show when someone is viewing your wedding plan (with 1-click Grant Edit Access!)
+  if (user && userRole === 'owner') {
+    const activeViewers = collaborators.filter(
+      (c) =>
+        c.role === 'viewer' &&
+        !dismissedViewerEmails.includes(c.email) &&
+        (c.joinedViaLink ||
+          (c.lastSeenAt && Date.now() - new Date(c.lastSeenAt).getTime() < 5 * 60 * 1000))
+    );
+
+    if (activeViewers.length > 0) {
+      return (
+        <div className="mb-4 space-y-2">
+          {activeViewers.map((viewer) => {
+            const isLive =
+              Boolean(viewer.lastSeenAt) &&
+              Date.now() - new Date(viewer.lastSeenAt!).getTime() < 5 * 60 * 1000;
+            return (
+              <div
+                key={viewer.email}
+                className="px-4 py-3 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs shadow-2xs"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="relative flex h-2.5 w-2.5 shrink-0">
+                    {isLive && (
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    )}
+                    <span
+                      className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                        isLive ? 'bg-emerald-500' : 'bg-amber-500'
+                      }`}
+                    />
+                  </span>
+                  <div className="min-w-0">
+                    <strong className="font-bold text-stone-900">
+                      {viewer.name ? `${viewer.name} (${viewer.email})` : viewer.email}
+                    </strong>{' '}
+                    {isLive ? 'is viewing your wedding plan right now' : 'joined your wedding plan'}{' '}
+                    <span className="text-amber-800 font-semibold">(View Only)</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => updateCollaboratorRole(viewer.email, 'editor')}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-2xs transition-colors inline-flex items-center gap-1"
+                  >
+                    <Pencil className="w-3 h-3" />
+                    <span>Grant Edit Access</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDismissedViewerEmails((prev) => [...prev, viewer.email])
+                    }
+                    className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-amber-100 border border-amber-200 text-stone-700 font-semibold text-xs transition-colors"
+                  >
+                    Keep View Only
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
   }
 
   return null;
