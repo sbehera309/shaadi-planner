@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useWedding } from '@/lib/store';
 import { Guest, ReceptionFloorPlan, SeatingTable } from '@/lib/types';
+import { GUEST_CARD_COLORS, GUEST_TIER_META, getEffectiveCardColor } from '@/lib/guestTiers';
 import { Modal } from './Modal';
 import {
   Users,
@@ -585,6 +586,8 @@ export const ReceptionSeatingChart: React.FC = () => {
               filteredUnseated.map((guest) => {
                 const count = guest.adultsCount + guest.kidsCount;
                 const isSelectedToPlace = placingGuestId === guest.id;
+                const colorStyle = GUEST_CARD_COLORS[getEffectiveCardColor(guest)];
+                const tierMeta = guest.tier ? GUEST_TIER_META[guest.tier] : null;
                 return (
                   <div
                     key={guest.id}
@@ -605,7 +608,7 @@ export const ReceptionSeatingChart: React.FC = () => {
                     className={`p-2.5 rounded-xl border transition-all cursor-grab active:cursor-grabbing flex items-center justify-between gap-2 select-none ${
                       isSelectedToPlace
                         ? 'bg-rose-700 text-white border-rose-700 ring-2 ring-rose-300'
-                        : 'bg-stone-50/70 hover:bg-white border-stone-200 hover:border-amber-400'
+                        : colorStyle.cardClass
                     }`}
                   >
                     <div className="flex items-center gap-2 min-w-0">
@@ -615,7 +618,20 @@ export const ReceptionSeatingChart: React.FC = () => {
                         }`}
                       />
                       <div className="min-w-0">
-                        <div className="font-bold text-xs truncate">{guest.name}</div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-xs truncate">{guest.name}</span>
+                          {tierMeta && (
+                            <span
+                              className={`px-1.5 py-0.2 rounded text-[9px] font-bold border shrink-0 ${
+                                isSelectedToPlace
+                                  ? 'bg-white/20 text-white border-white/30'
+                                  : tierMeta.badgeClass
+                              }`}
+                            >
+                              {tierMeta.shortLabel}
+                            </span>
+                          )}
+                        </div>
                         <div
                           className={`text-[10px] truncate ${
                             isSelectedToPlace ? 'text-rose-100' : 'text-stone-500'
@@ -629,7 +645,7 @@ export const ReceptionSeatingChart: React.FC = () => {
                       className={`px-2 py-0.5 rounded-md text-[10px] font-bold shrink-0 ${
                         isSelectedToPlace
                           ? 'bg-white/20 text-white'
-                          : 'bg-white border border-stone-200 text-stone-700'
+                          : 'bg-white/90 border border-stone-200 text-stone-700'
                       }`}
                     >
                       {count} {count === 1 ? 'seat' : 'seats'}

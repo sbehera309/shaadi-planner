@@ -3,7 +3,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Modal } from './Modal';
 import { useWedding } from '@/lib/store';
-import { WeddingSide, RsvpStatus } from '@/lib/types';
+import { WeddingSide, RsvpStatus, GuestTier } from '@/lib/types';
+import { GUEST_TIER_META } from '@/lib/guestTiers';
 import {
   ClipboardPaste,
   Users,
@@ -134,6 +135,7 @@ export const BulkPasteGuestsModal: React.FC<BulkPasteGuestsModalProps> = ({
   const [newGroupInput, setNewGroupInput] = useState('');
   const [useNewGroup, setUseNewGroup] = useState(false);
   const [side, setSide] = useState<WeddingSide>('bride');
+  const [tier, setTier] = useState<GuestTier>('A');
   const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
 
   useEffect(() => {
@@ -142,6 +144,7 @@ export const BulkPasteGuestsModal: React.FC<BulkPasteGuestsModalProps> = ({
     const initialGrp = defaultGroup || "Bride's Family";
     setSelectedGroup(initialGrp);
     setSide(inferSideFromGroup(initialGrp));
+    setTier('A');
     setUseNewGroup(false);
     setNewGroupInput('');
     setSelectedEventIds(events.map((e) => e.id));
@@ -197,6 +200,8 @@ export const BulkPasteGuestsModal: React.FC<BulkPasteGuestsModalProps> = ({
         dietaryPreference: 'Strict Veg',
         city: '',
         needsPickup: false,
+        tier,
+        cardColor: GUEST_TIER_META[tier].defaultColor,
         eventRsvps: { ...rsvpMap },
       }))
     );
@@ -321,7 +326,7 @@ export const BulkPasteGuestsModal: React.FC<BulkPasteGuestsModalProps> = ({
           )}
 
           {/* Side Selector */}
-          <div className="flex items-center gap-2 pt-1.5 border-t border-stone-200/80">
+          <div className="flex flex-wrap items-center gap-2 pt-1.5 border-t border-stone-200/80">
             <span className="text-[11px] font-semibold text-stone-500">Side:</span>
             {(
               [
@@ -343,6 +348,31 @@ export const BulkPasteGuestsModal: React.FC<BulkPasteGuestsModalProps> = ({
                 {opt.label}
               </button>
             ))}
+          </div>
+
+          {/* Invite Tier Selector */}
+          <div className="flex flex-wrap items-center gap-2 pt-1.5 border-t border-stone-200/80">
+            <span className="text-[11px] font-semibold text-stone-500">Invite Tier:</span>
+            {(['A', 'B', 'C'] as GuestTier[]).map((t) => {
+              const meta = GUEST_TIER_META[t];
+              const active = tier === t;
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setTier(t)}
+                  title={meta.description}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors ${
+                    active ? meta.activeClass : `${meta.badgeClass} opacity-75 hover:opacity-100`
+                  }`}
+                >
+                  {meta.shortLabel}
+                  <span className="hidden sm:inline font-medium opacity-90">
+                    {t === 'A' ? ' (Must Invite)' : t === 'B' ? ' (If Space)' : ' (Backup)'}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 

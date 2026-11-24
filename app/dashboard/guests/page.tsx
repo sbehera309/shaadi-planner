@@ -2,7 +2,13 @@
 
 import React, { useState, useMemo } from 'react';
 import { useWedding } from '@/lib/store';
-import { Guest, WeddingSide, DietaryTag, RsvpStatus } from '@/lib/types';
+import { Guest, WeddingSide, DietaryTag, RsvpStatus, GuestTier, GuestCardColor } from '@/lib/types';
+import {
+  GUEST_TIER_META,
+  GUEST_CARD_COLORS,
+  getEffectiveCardColor,
+  getNextTier,
+} from '@/lib/guestTiers';
 import { Modal } from '@/components/Modal';
 import {
   BulkPasteGuestsModal,
@@ -52,6 +58,7 @@ export default function GuestsPage() {
   const [viewMode, setViewMode] = useState<'board' | 'table' | 'seating'>('board');
   const [searchTerm, setSearchTerm] = useState('');
   const [sideFilter, setSideFilter] = useState<'all' | WeddingSide>('all');
+  const [tierFilter, setTierFilter] = useState<'all' | GuestTier | 'unset'>('all');
   const [dietFilter, setDietFilter] = useState<'all' | DietaryTag>('all');
   const [showAllEmptyGroups, setShowAllEmptyGroups] = useState(false);
 
@@ -85,6 +92,8 @@ export default function GuestsPage() {
     hotelAssigned: '',
     roomNumber: '',
     notes: '',
+    tier: 'A' as GuestTier | undefined,
+    cardColor: 'emerald' as GuestCardColor,
     eventRsvps: {} as Record<string, RsvpStatus>,
   });
 
@@ -119,9 +128,25 @@ export default function GuestsPage() {
         (g.phone || '').includes(q);
       const matchesSide = sideFilter === 'all' || g.side === sideFilter;
       const matchesDiet = dietFilter === 'all' || g.dietaryPreference === dietFilter;
-      return matchesSearch && matchesSide && matchesDiet;
+      const matchesTier =
+        tierFilter === 'all' ||
+        (tierFilter === 'unset' ? !g.tier : g.tier === tierFilter);
+      return matchesSearch && matchesSide && matchesDiet && matchesTier;
     });
-  }, [guests, searchTerm, sideFilter, dietFilter]);
+  }, [guests, searchTerm, sideFilter, dietFilter, tierFilter]);
+
+  // Headcount summary by Invite Tier (across all guests)
+  const tierStats = useMemo(() => {
+    const counts = { A: 0, B: 0, C: 0, unset: 0 };
+    guests.forEach((g) => {
+      const head = g.adultsCount + g.kidsCount;
+      if (g.tier === 'A') counts.A += head;
+      else if (g.tier === 'B') counts.B += head;
+      else if (g.tier === 'C') counts.C += head;
+      else counts.unset += head;
+    });
+    return counts;
+  }, [guests]);
 
   // Group filtered guests by familyGroup
   const guestsByGroup = useMemo(() => {
@@ -181,6 +206,8 @@ export default function GuestsPage() {
       hotelAssigned: '',
       roomNumber: '',
       notes: '',
+      tier: 'A',
+      cardColor: 'emerald',
       eventRsvps: defaultRsvps,
     });
     setIsModalOpen(true);
@@ -204,9 +231,20 @@ export default function GuestsPage() {
       hotelAssigned: guest.hotelAssigned || '',
       roomNumber: guest.roomNumber || '',
       notes: guest.notes || '',
+      tier: guest.tier,
+      cardColor: getEffectiveCardColor(guest),
       eventRsvps: { ...guest.eventRsvps },
     });
     setIsModalOpen(true);
+  };
+
+  const handleCycleGuestTier = (guest: Guest) => {
+    if (isReadOnly) return;
+    const nextTier = getNextTier(guest.tier);
+    updateGuest(guest.id, {
+      tier: nextTier,
+      cardColor: nextTier ? GUEST_TIER_META[nextTier].defaultColor : 'default',
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -248,9 +286,10 @@ export default function GuestsPage() {
   };
 
   const exportCSV = () => {
-    const headers = ['Name', 'Phone', 'Side', 'Group', 'Adults', 'Kids', 'Diet', 'City', 'Pickup', 'Hotel'];
+    const headers = ['Name', 'Tier', 'Phone', 'Side', 'Group', 'Adults', 'Kids', 'Diet', 'City', 'Pickup', 'Hotel'];
     const rows = filteredGuests.map((g) => [
       `"${g.name}"`,
+      g.tier ? `Tier ${g.tier}` : '',
       `"${g.phone}"`,
       g.side,
       `"${g.familyGroup}"`,
@@ -431,6 +470,19 @@ export default function GuestsPage() {
               ))}
             </div>
 
+            {/* Tier Filter */}
+            <select
+              value={tierFilter}
+              onChange={(e) => setTierFilter(e.target.value as 'all' | GuestTier | 'unset')}
+              className="px-2.5 py-1.5 rounded-xl border border-stone-200 bg-white text-stone-700 font-semibold focus:outline-hidden focus:ring-2 focus:ring-rose-500"
+            >
+              <option value="all">All Tiers</option>
+              <option value="A">Tier A (Must Invite)</option>
+              <option value="B">Tier B (If Space)</option>
+              <option value="C">Tier C (Backup)</option>
+              <option value="unset">No Tier Set</option>
+            </select>
+
             {/* Dietary Filter */}
             <select
               value={dietFilter}
@@ -456,10 +508,42 @@ export default function GuestsPage() {
       {/* Summary Strip (Groups & Table views) */}
       {viewMode !== 'seating' && (
         <div className="bg-amber-50/70 border border-amber-200/80 px-4 py-2.5 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs text-amber-950">
-          <span>
-            Showing <strong>{filteredGuests.length}</strong> guest cards representing{' '}
-            <strong>{totalFilteredHeadcount}</strong> total people (adults + kids).
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span>
+              Showing <strong>{filteredGuests.length}</strong> guest cards (
+              <strong>{totalFilteredHeadcount}</strong> people)
+            </span>
+            <span className="text-amber-300 hidden sm:inline">|</span>
+            {/* Clickable Invite Tier Breakdown Pills */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {(['A', 'B', 'C'] as GuestTier[]).map((t) => {
+                const meta = GUEST_TIER_META[t];
+                const isSelected = tierFilter === t;
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTierFilter(isSelected ? 'all' : t)}
+                    title={`Filter by ${meta.label}`}
+                    className={`px-2 py-0.5 rounded-full text-[11px] font-bold border transition-all ${
+                      isSelected ? meta.activeClass : meta.badgeClass
+                    }`}
+                  >
+                    {meta.shortLabel}: {tierStats[t]}
+                  </button>
+                );
+              })}
+              {tierFilter !== 'all' && (
+                <button
+                  type="button"
+                  onClick={() => setTierFilter('all')}
+                  className="text-[11px] font-semibold text-stone-600 hover:text-stone-900 underline ml-1"
+                >
+                  Clear filter
+                </button>
+              )}
+            </div>
+          </div>
           {viewMode === 'board' && (
             <button
               type="button"
@@ -643,7 +727,9 @@ export default function GuestsPage() {
                           const st = guest.eventRsvps?.[ev.id];
                           return st && st !== 'not_sent';
                         }).length;
-                        const needsDetails = !guest.phone && !guest.city;
+                        const effectiveColor = getEffectiveCardColor(guest);
+                        const colorStyle = GUEST_CARD_COLORS[effectiveColor];
+                        const tierMeta = guest.tier ? GUEST_TIER_META[guest.tier] : null;
 
                         return (
                           <div
@@ -666,33 +752,55 @@ export default function GuestsPage() {
                               }
                               handleOpenEdit(guest);
                             }}
-                            className={`p-3 rounded-xl border bg-stone-50/50 hover:bg-white hover:border-amber-400 hover:shadow-xs transition-all cursor-pointer group/card ${
+                            className={`p-3 rounded-xl border hover:shadow-xs transition-all cursor-pointer group/card ${
                               draggingGuestId === guest.id
-                                ? 'opacity-50 border-rose-400'
+                                ? 'opacity-50 border-rose-400 bg-white'
                                 : movingGuestId === guest.id
                                 ? 'border-rose-500 ring-2 ring-rose-300 bg-rose-50/40'
-                                : 'border-stone-200/90'
+                                : colorStyle.cardClass
                             }`}
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex items-start gap-2 min-w-0">
                                 {!isReadOnly && (
-                                  <GripVertical className="w-3.5 h-3.5 text-stone-300 group-hover/card:text-stone-500 shrink-0 mt-0.5 cursor-grab" />
+                                  <GripVertical className="w-3.5 h-3.5 text-stone-400 group-hover/card:text-stone-600 shrink-0 mt-0.5 cursor-grab" />
                                 )}
                                 <div className="min-w-0">
-                                  <div className="font-bold text-stone-900 text-xs sm:text-sm truncate">
-                                    {guest.name}
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="font-bold text-stone-900 text-xs sm:text-sm truncate">
+                                      {guest.name}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      disabled={isReadOnly}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCycleGuestTier(guest);
+                                      }}
+                                      title={
+                                        tierMeta
+                                          ? `${tierMeta.label} — click to switch tier`
+                                          : 'Click to assign Tier A / B / C'
+                                      }
+                                      className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold border transition-all shrink-0 ${
+                                        tierMeta
+                                          ? tierMeta.badgeClass
+                                          : 'bg-white/80 text-stone-400 border-stone-200 hover:border-stone-400 hover:text-stone-600'
+                                      }`}
+                                    >
+                                      {tierMeta ? tierMeta.shortLabel : '+ Tier'}
+                                    </button>
                                   </div>
                                   <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[10px] text-stone-500">
-                                    <span className="px-1.5 py-0.5 rounded-md bg-white border border-stone-200 font-bold text-stone-700">
+                                    <span className="px-1.5 py-0.5 rounded-md bg-white/90 border border-stone-200 font-bold text-stone-700">
                                       {guest.adultsCount + guest.kidsCount}{' '}
                                       {guest.adultsCount + guest.kidsCount === 1 ? 'person' : 'people'}
                                     </span>
-                                    <span className="px-1.5 py-0.5 rounded-md bg-amber-50 border border-amber-200/80 font-semibold text-amber-900">
+                                    <span className="px-1.5 py-0.5 rounded-md bg-white/80 border border-amber-200/80 font-semibold text-amber-900">
                                       {guest.dietaryPreference}
                                     </span>
                                     {events.length > 0 && (
-                                      <span className="text-stone-500 font-medium">
+                                      <span className="text-stone-600 font-medium">
                                         • {invitedEventsCount}/{events.length} events
                                       </span>
                                     )}
@@ -754,6 +862,7 @@ export default function GuestsPage() {
               <thead>
                 <tr className="bg-stone-100/90 border-b border-stone-200 text-stone-700 font-bold uppercase tracking-wider">
                   <th className="py-3 px-4">Guest / Family</th>
+                  <th className="py-3 px-4">Tier</th>
                   <th className="py-3 px-4">Group</th>
                   <th className="py-3 px-4">Side</th>
                   <th className="py-3 px-4">Headcount</th>
@@ -765,27 +874,49 @@ export default function GuestsPage() {
               <tbody className="divide-y divide-stone-100">
                 {filteredGuests.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-10 text-center text-stone-500">
+                    <td colSpan={8} className="py-10 text-center text-stone-500">
                       No guests match your filter. Click <strong>Paste Guest List</strong> to add guests quickly!
                     </td>
                   </tr>
                 ) : (
-                  filteredGuests.map((guest) => (
-                    <tr key={guest.id} className="hover:bg-stone-50/70 transition-colors">
+                  filteredGuests.map((guest) => {
+                    const effectiveColor = getEffectiveCardColor(guest);
+                    const colorStyle = GUEST_CARD_COLORS[effectiveColor];
+                    const tierMeta = guest.tier ? GUEST_TIER_META[guest.tier] : null;
+                    return (
+                    <tr key={guest.id} className={`hover:bg-stone-50/70 transition-colors ${colorStyle.rowClass}`}>
                       <td className="py-3 px-4">
                         <button
                           type="button"
                           onClick={() => handleOpenEdit(guest)}
-                          className="text-left group"
+                          className="text-left group flex items-center gap-2"
                         >
-                          <div className="font-bold text-stone-900 group-hover:text-rose-700">
-                            {guest.name}
-                          </div>
-                          {(guest.phone || guest.city) && (
-                            <div className="text-[11px] text-stone-400">
-                              {[guest.phone, guest.city].filter(Boolean).join(' • ')}
+                          <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${colorStyle.dotClass}`} />
+                          <div>
+                            <div className="font-bold text-stone-900 group-hover:text-rose-700">
+                              {guest.name}
                             </div>
-                          )}
+                            {(guest.phone || guest.city) && (
+                              <div className="text-[11px] text-stone-400">
+                                {[guest.phone, guest.city].filter(Boolean).join(' • ')}
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      </td>
+                      <td className="py-3 px-4">
+                        <button
+                          type="button"
+                          disabled={isReadOnly}
+                          onClick={() => handleCycleGuestTier(guest)}
+                          title="Click to cycle Tier A / B / C"
+                          className={`px-2 py-0.5 rounded-md text-[11px] font-bold border transition-all ${
+                            tierMeta
+                              ? tierMeta.badgeClass
+                              : 'bg-white text-stone-400 border-stone-200 hover:border-stone-400'
+                          }`}
+                        >
+                          {tierMeta ? tierMeta.shortLabel : '—'}
                         </button>
                       </td>
                       <td className="py-3 px-4">
@@ -878,7 +1009,8 @@ export default function GuestsPage() {
                         </div>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -1025,6 +1157,87 @@ export default function GuestsPage() {
                 <option value="groom">Groom&apos;s Side (Ladkewale)</option>
                 <option value="mutual">Mutual / Both</option>
               </select>
+            </div>
+          </div>
+
+          {/* Invite Tier & Card Color Picker */}
+          <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200 space-y-3">
+            <div>
+              <label className="font-semibold text-stone-800 block mb-1.5">
+                Invite Tier (Priority Wave)
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {(['A', 'B', 'C'] as GuestTier[]).map((t) => {
+                  const meta = GUEST_TIER_META[t];
+                  const active = formData.tier === t;
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      disabled={isReadOnly}
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          tier: t,
+                          cardColor: meta.defaultColor,
+                        })
+                      }
+                      className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold border transition-all ${
+                        active ? meta.activeClass : `${meta.badgeClass} opacity-75 hover:opacity-100`
+                      }`}
+                    >
+                      {meta.label}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  disabled={isReadOnly}
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      tier: undefined,
+                      cardColor: 'default',
+                    })
+                  }
+                  className={`px-2.5 py-1.5 rounded-xl text-[11px] font-semibold border transition-all ${
+                    !formData.tier
+                      ? 'bg-stone-800 text-white border-stone-800'
+                      : 'bg-white text-stone-500 border-stone-200 hover:border-stone-300'
+                  }`}
+                >
+                  No Tier
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="font-semibold text-stone-700 block mb-1.5 text-[11px]">
+                Card Color Highlight
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                {(Object.keys(GUEST_CARD_COLORS) as GuestCardColor[]).map((colorKey) => {
+                  const c = GUEST_CARD_COLORS[colorKey];
+                  const active = formData.cardColor === colorKey;
+                  return (
+                    <button
+                      key={colorKey}
+                      type="button"
+                      disabled={isReadOnly}
+                      onClick={() => setFormData({ ...formData, cardColor: colorKey })}
+                      title={c.label}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[11px] font-semibold transition-all ${
+                        active
+                          ? 'bg-white border-stone-900 ring-2 ring-stone-900/15 text-stone-900'
+                          : 'bg-white/70 border-stone-200 text-stone-600 hover:border-stone-400'
+                      }`}
+                    >
+                      <span className={`w-3 h-3 rounded-full border ${c.swatchClass}`} />
+                      <span>{c.label.split(' ')[0]}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 

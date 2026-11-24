@@ -85,9 +85,15 @@ export interface Guest {
   hotelAssigned?: string;
   roomNumber?: string;
   notes?: string;
+  tier?: GuestTier;
+  cardColor?: GuestCardColor;
   // Event ID to RSVP status map
   eventRsvps: Record<string, RsvpStatus>;
 }
+
+export type GuestTier = 'A' | 'B' | 'C';
+
+export type GuestCardColor = 'default' | 'emerald' | 'amber' | 'sky' | 'purple' | 'rose';
 
 export type PaymentPayer = 'bride_side' | 'groom_side' | 'split_50_50' | 'couple';
 
