@@ -97,11 +97,15 @@ interface WeddingContextType {
   toggleChecklistSubItem: (eventId: string, itemId: string, subItemId: string) => void;
   deleteChecklistItem: (eventId: string, itemId: string) => void;
 
-  // Guests
+  // Guests & Custom Groups
   addGuest: (guest: Omit<Guest, 'id' | 'weddingId'>) => void;
+  bulkAddGuests: (guests: Array<Omit<Guest, 'id' | 'weddingId'>>) => void;
   updateGuest: (id: string, guest: Partial<Guest>) => void;
   deleteGuest: (id: string) => void;
   updateGuestRsvp: (guestId: string, eventId: string, status: RsvpStatus) => void;
+  customGuestGroups: string[];
+  addCustomGuestGroup: (groupName: string) => void;
+  deleteCustomGuestGroup: (groupName: string) => void;
 
   // Budget
   addBudgetItem: (item: Omit<BudgetItem, 'id' | 'weddingId'>) => void;
@@ -191,6 +195,7 @@ const STORAGE_KEYS = {
   VENUES: 'shaadi_v5_venues',
   TOUR_PLAN: 'shaadi_v5_tour_plan',
   SANGEET_VENUE: 'shaadi_v5_sangeet_venue',
+  GUEST_GROUPS: 'shaadi_v5_custom_guest_groups',
 };
 
 export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -198,6 +203,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [wedding, setWedding] = useState<WeddingProfile | null>(initialWeddingProfile);
   const [events, setEvents] = useState<WeddingEvent[]>(initialEvents);
   const [guests, setGuests] = useState<Guest[]>(initialGuests);
+  const [customGuestGroups, setCustomGuestGroups] = useState<string[]>([]);
   const [budgetItems, setBudgetItems] = useState<BudgetItem[]>(initialBudgetItems);
   const [vendors, setVendors] = useState<Vendor[]>(initialVendors);
   const [shagunRecords, setShagunRecords] = useState<ShagunRecord[]>(initialShagunRecords);
@@ -269,6 +275,8 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (savedVenues) setVenues(JSON.parse(savedVenues));
       if (savedTourPlan) setTourPlan(JSON.parse(savedTourPlan));
       if (savedSangeetVenue) setOfficialSangeetVenueState(JSON.parse(savedSangeetVenue));
+      const savedGuestGroups = localStorage.getItem(STORAGE_KEYS.GUEST_GROUPS);
+      if (savedGuestGroups) setCustomGuestGroups(JSON.parse(savedGuestGroups));
       const savedScenarioVenue = localStorage.getItem('shaadi_scenario_selected_venue_id');
       const savedScenarioVendors = localStorage.getItem('shaadi_scenario_included_vendors');
       if (savedScenarioVenue !== null || savedScenarioVendors !== null) {
@@ -313,6 +321,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (remoteData.profile) setWedding(remoteData.profile);
     if (Array.isArray(remoteData.events)) setEvents(remoteData.events);
     if (Array.isArray(remoteData.guests)) setGuests(remoteData.guests);
+    if (Array.isArray(remoteData.customGuestGroups)) setCustomGuestGroups(remoteData.customGuestGroups);
     if (Array.isArray(remoteData.budgetItems)) setBudgetItems(remoteData.budgetItems);
     if (Array.isArray(remoteData.vendors)) setVendors(remoteData.vendors);
     if (Array.isArray(remoteData.shagunRecords)) setShagunRecords(remoteData.shagunRecords);
@@ -659,6 +668,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
       localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(events));
       localStorage.setItem(STORAGE_KEYS.GUESTS, JSON.stringify(guests));
+      localStorage.setItem(STORAGE_KEYS.GUEST_GROUPS, JSON.stringify(customGuestGroups));
       localStorage.setItem(STORAGE_KEYS.BUDGET, JSON.stringify(budgetItems));
       localStorage.setItem(STORAGE_KEYS.VENDORS, JSON.stringify(vendors));
       localStorage.setItem(STORAGE_KEYS.SHAGUN, JSON.stringify(shagunRecords));
@@ -710,6 +720,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           profile: wedding,
           events,
           guests,
+          customGuestGroups,
           budgetItems,
           vendors,
           shagunRecords,
@@ -776,6 +787,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     wedding,
     events,
     guests,
+    customGuestGroups,
     budgetItems,
     vendors,
     shagunRecords,
@@ -1004,10 +1016,34 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addGuest = (guestData: Omit<Guest, 'id' | 'weddingId'>) => {
     const newGuest: Guest = {
       ...guestData,
-      id: `g-${Date.now()}`,
+      id: `g-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
       weddingId: wedding?.id || 'w-current',
     };
     setGuests((prev) => [...prev, newGuest]);
+  };
+
+  const bulkAddGuests = (guestItems: Array<Omit<Guest, 'id' | 'weddingId'>>) => {
+    if (!guestItems || guestItems.length === 0) return;
+    const baseTs = Date.now();
+    const wId = wedding?.id || 'w-current';
+    const created: Guest[] = guestItems.map((item, idx) => ({
+      ...item,
+      id: `g-${baseTs}-${idx}-${Math.random().toString(36).slice(2, 5)}`,
+      weddingId: wId,
+    }));
+    setGuests((prev) => [...prev, ...created]);
+  };
+
+  const addCustomGuestGroup = (groupName: string) => {
+    const clean = groupName.trim();
+    if (!clean) return;
+    setCustomGuestGroups((prev) =>
+      prev.some((g) => g.toLowerCase() === clean.toLowerCase()) ? prev : [...prev, clean]
+    );
+  };
+
+  const deleteCustomGuestGroup = (groupName: string) => {
+    setCustomGuestGroups((prev) => prev.filter((g) => g !== groupName));
   };
 
   const updateGuest = (id: string, updated: Partial<Guest>) => {
@@ -2102,9 +2138,13 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         toggleChecklistSubItem,
         deleteChecklistItem,
         addGuest,
+        bulkAddGuests,
         updateGuest,
         deleteGuest,
         updateGuestRsvp,
+        customGuestGroups,
+        addCustomGuestGroup,
+        deleteCustomGuestGroup,
         addBudgetItem,
         updateBudgetItem,
         deleteBudgetItem,
