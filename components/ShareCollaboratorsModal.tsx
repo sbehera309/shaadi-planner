@@ -48,11 +48,12 @@ export const ShareCollaboratorsModal: React.FC<ShareCollaboratorsModalProps> = (
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedWhatsApp, setCopiedWhatsApp] = useState(false);
+  const [linkRole, setLinkRole] = useState<'editor' | 'viewer'>('editor');
 
   const isOwner = userRole === 'owner';
   const shareUrl =
     typeof window !== 'undefined' && activeWeddingDocId
-      ? `${window.location.origin}/dashboard?join=${activeWeddingDocId}`
+      ? `${window.location.origin}/dashboard?join=${activeWeddingDocId}&role=${linkRole}`
       : '';
 
   const coupleTitle =
@@ -327,13 +328,40 @@ export const ShareCollaboratorsModal: React.FC<ShareCollaboratorsModalProps> = (
 
         {/* Share Link & WhatsApp Helper */}
         {shareUrl && (
-          <div className="p-4 rounded-2xl bg-stone-900 text-white space-y-2.5">
-            <div className="flex items-center gap-1.5 text-amber-300 font-bold text-xs">
-              <Link2 className="w-3.5 h-3.5" />
-              <span>Collaborator Sign-In Link</span>
+          <div className="p-4 rounded-2xl bg-stone-900 text-white space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 text-amber-300 font-bold text-xs">
+                <Link2 className="w-3.5 h-3.5" />
+                <span>Direct Invite Link (Auto-Joins!)</span>
+              </div>
+              <div className="inline-flex p-0.5 rounded-lg bg-white/10 border border-white/15 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setLinkRole('editor')}
+                  className={`px-2.5 py-1 rounded-md font-bold transition-colors ${
+                    linkRole === 'editor'
+                      ? 'bg-amber-500 text-stone-950'
+                      : 'text-stone-300 hover:text-white'
+                  }`}
+                >
+                  Can Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLinkRole('viewer')}
+                  className={`px-2.5 py-1 rounded-md font-bold transition-colors ${
+                    linkRole === 'viewer'
+                      ? 'bg-blue-500 text-white'
+                      : 'text-stone-300 hover:text-white'
+                  }`}
+                >
+                  View Only
+                </button>
+              </div>
             </div>
             <p className="text-[11px] text-stone-300 leading-relaxed">
-              Send this link to anyone you added above. Once they sign in with their invited email, they&apos;ll immediately see your shared wedding workspace.
+              Anyone you send this link to will automatically join your wedding plan as{' '}
+              <strong className="text-white">{linkRole === 'editor' ? 'Editor' : 'Viewer'}</strong> as soon as they sign in — and they&apos;ll appear in your access list above so you can change or revoke their role anytime.
             </p>
             <div className="flex flex-wrap gap-2 pt-1">
               <button

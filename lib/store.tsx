@@ -283,14 +283,19 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setMounted(true);
   }, []);
 
-  // 1b. Capture ?join=<weddingId> invite parameter on mount (survives OAuth redirects via sessionStorage)
+  // 1b. Capture ?join=<weddingId>&role=editor|viewer invite parameter on mount (survives OAuth redirects via sessionStorage)
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
       const params = new URLSearchParams(window.location.search);
       const joinParam = params.get('join');
+      const roleParam = params.get('role');
       if (joinParam && joinParam.trim()) {
         sessionStorage.setItem('vivaah_pending_join_wedding_id', joinParam.trim());
+        sessionStorage.setItem(
+          'vivaah_pending_join_role',
+          roleParam === 'viewer' ? 'viewer' : 'editor'
+        );
         setPendingJoinWeddingId(joinParam.trim());
       } else {
         const storedJoin = sessionStorage.getItem('vivaah_pending_join_wedding_id');
@@ -454,6 +459,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
               setJoinAccessStatus('joined');
               try {
                 sessionStorage.removeItem('vivaah_pending_join_wedding_id');
+                sessionStorage.removeItem('vivaah_pending_join_role');
               } catch {}
               subscribeToSharedWeddingDoc(pendingJoinWeddingId, 'owner');
               return;
@@ -461,8 +467,55 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
               setJoinAccessStatus('joined');
               try {
                 sessionStorage.removeItem('vivaah_pending_join_wedding_id');
+                sessionStorage.removeItem('vivaah_pending_join_role');
               } catch {}
               subscribeToSharedWeddingDoc(pendingJoinWeddingId, matchedCollab.role);
+              return;
+            } else if (userEmailLower) {
+              // Auto-join via direct Share Link! Add this signed-in user to collaborators & immediately link workspace
+              let grantedRole: 'editor' | 'viewer' = 'editor';
+              try {
+                const storedRole = sessionStorage.getItem('vivaah_pending_join_role');
+                if (storedRole === 'viewer') grantedRole = 'viewer';
+              } catch {}
+
+              const newEntry: WeddingCollaborator = {
+                email: userEmailLower,
+                name: user.displayName || undefined,
+                role: grantedRole,
+                addedAt: new Date().toISOString(),
+                addedByEmail: 'share-link',
+              };
+              const updatedCollabs = [...collabList, newEntry];
+              const updatedEmails = Array.from(
+                new Set([
+                  ...(Array.isArray(joinData.collaboratorEmails) ? joinData.collaboratorEmails : []),
+                  userEmailLower,
+                ])
+              );
+
+              await setDoc(
+                joinRef,
+                {
+                  collaborators: updatedCollabs,
+                  collaboratorEmails: updatedEmails,
+                  updatedAt: new Date().toISOString(),
+                },
+                { merge: true }
+              );
+
+              setJoinAccessStatus('joined');
+              try {
+                sessionStorage.removeItem('vivaah_pending_join_wedding_id');
+                sessionStorage.removeItem('vivaah_pending_join_role');
+                if (typeof window !== 'undefined' && window.location.search.includes('join=')) {
+                  const cleanUrl = new URL(window.location.href);
+                  cleanUrl.searchParams.delete('join');
+                  cleanUrl.searchParams.delete('role');
+                  window.history.replaceState({}, '', cleanUrl.toString());
+                }
+              } catch {}
+              subscribeToSharedWeddingDoc(pendingJoinWeddingId, grantedRole);
               return;
             } else {
               setJoinAccessStatus('not_invited');
