@@ -6,19 +6,21 @@ import { useAuth } from '@/lib/authContext';
 import { EditWeddingModal } from './EditWeddingModal';
 import { AuthModal } from './AuthModal';
 import { CloudSyncStatusModal } from './CloudSyncStatusModal';
+import { ShareCollaboratorsModal } from './ShareCollaboratorsModal';
 import { BudgetHeaderWidget } from './BudgetHeaderWidget';
-import { Calendar, Share2, Check, RefreshCw, Database, Menu, LogIn, LogOut, User as UserIcon, Cloud, CloudOff, AlertTriangle } from 'lucide-react';
+import { Calendar, Share2, Check, RefreshCw, Database, Menu, LogIn, LogOut, User as UserIcon, Cloud, CloudOff, AlertTriangle, Users } from 'lucide-react';
 
 interface NavbarProps {
   onOpenMobileMenu?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
-  const { wedding, isDemoMode, resetToDefaultData, isCloudSynced, isSyncing, lastSyncedAt, cloudSyncError, forceCloudSync } = useWedding();
+  const { wedding, isDemoMode, resetToDefaultData, isCloudSynced, isSyncing, lastSyncedAt, cloudSyncError, forceCloudSync, collaborators, userRole, isReadOnly } = useWedding();
   const { user, logout, isFirebaseConfigured } = useAuth();
   const [copied, setCopied] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   // Calculate days left
@@ -231,38 +233,37 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
             </button>
           )}
 
-          {/* Reset Clean State button: visible on tablet/desktop */}
-          <button
-            onClick={() => {
-              if (confirm('Reset planner back to clean minimal start?')) {
-                resetToDefaultData();
-              }
-            }}
-            title="Reset to clean state"
-            className="hidden sm:flex p-2 text-stone-500 hover:text-rose-600 hover:bg-stone-100 rounded-xl transition-colors text-xs items-center gap-1 shrink-0"
-          >
-            <RefreshCw className="w-4 h-4" />
-            <span className="hidden lg:inline">Reset</span>
-          </button>
+          {/* Reset Clean State button: owner only on tablet/desktop */}
+          {!isReadOnly && userRole === 'owner' && (
+            <button
+              onClick={() => {
+                if (confirm('Reset planner back to clean minimal start?')) {
+                  resetToDefaultData();
+                }
+              }}
+              title="Reset to clean state"
+              className="hidden sm:flex p-2 text-stone-500 hover:text-rose-600 hover:bg-stone-100 rounded-xl transition-colors text-xs items-center gap-1 shrink-0"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span className="hidden lg:inline">Reset</span>
+            </button>
+          )}
 
-          {/* Copy Invite Link or Setup Wedding */}
+          {/* Share & Collaborators or Setup Wedding */}
           {wedding && wedding.isConfigured ? (
             <button
-              onClick={handleShare}
+              type="button"
+              onClick={() => setIsShareModalOpen(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-rose-700 hover:bg-rose-800 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors shrink-0"
+              title="Invite fiancé, parents, or wedding planner to view or co-edit"
             >
-              {copied ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-emerald-300" />
-                  <span className="hidden sm:inline">Link Copied!</span>
-                  <span className="sm:hidden">Copied!</span>
-                </>
-              ) : (
-                <>
-                  <Share2 className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Copy Invite Link</span>
-                  <span className="sm:hidden">Invite</span>
-                </>
+              <Users className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Share Plan</span>
+              <span className="sm:hidden">Share</span>
+              {collaborators.length > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-[10px] font-bold">
+                  {collaborators.length}
+                </span>
               )}
             </button>
           ) : (
@@ -290,6 +291,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
       <CloudSyncStatusModal
         isOpen={isSyncModalOpen}
         onClose={() => setIsSyncModalOpen(false)}
+      />
+
+      <ShareCollaboratorsModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
       />
     </>
   );

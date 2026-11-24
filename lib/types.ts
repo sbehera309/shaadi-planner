@@ -1,5 +1,15 @@
 export type WeddingSide = 'bride' | 'groom' | 'mutual';
 
+export type CollaboratorRole = 'owner' | 'editor' | 'viewer';
+
+export interface WeddingCollaborator {
+  email: string; // normalized lowercase
+  name?: string; // e.g., "Shital", "Mom & Dad", "Wedding Planner"
+  role: 'editor' | 'viewer';
+  addedAt: string; // ISO timestamp
+  addedByEmail?: string;
+}
+
 export type DietaryTag = 'Strict Veg' | 'Jain' | 'Swaminarayan' | 'Non-Veg' | 'Halal' | 'Gluten-Free';
 
 export type RsvpStatus = 'attending' | 'declined' | 'tentative' | 'invited' | 'not_sent';

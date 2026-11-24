@@ -17,6 +17,8 @@ import {
   SangeetVenueOption,
   PaymentInstallment,
   PaymentMilestone,
+  CollaboratorRole,
+  WeddingCollaborator,
 } from './types';
 import {
   initialWeddingProfile,
@@ -60,6 +62,23 @@ interface WeddingContextType {
   lastSyncedAt: string | null;
   cloudSyncError: string | null;
   forceCloudSync: () => Promise<{ success: boolean; error?: string }>;
+
+  // Multi-User Collaboration (Owner / Editor / Viewer)
+  collaborators: WeddingCollaborator[];
+  userRole: CollaboratorRole;
+  isReadOnly: boolean;
+  ownerEmail: string | null;
+  activeWeddingDocId: string | null;
+  joinAccessStatus: 'idle' | 'joined' | 'needs_auth' | 'not_invited';
+  pendingJoinWeddingId: string | null;
+  addCollaborator: (
+    email: string,
+    role: 'editor' | 'viewer',
+    name?: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  updateCollaboratorRole: (email: string, role: 'editor' | 'viewer') => Promise<void>;
+  removeCollaborator: (email: string) => Promise<void>;
+  dismissJoinBanner: () => void;
 
   // Wedding Profile
   createWeddingProfile: (profile: Omit<WeddingProfile, 'id' | 'ownerId'>) => void;
@@ -198,6 +217,17 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [cloudSyncError, setCloudSyncError] = useState<string | null>(null);
 
+  // Multi-User Collaborator State
+  const [collaborators, setCollaborators] = useState<WeddingCollaborator[]>([]);
+  const [userRole, setUserRole] = useState<CollaboratorRole>('owner');
+  const [ownerEmail, setOwnerEmail] = useState<string | null>(null);
+  const [ownerUid, setOwnerUid] = useState<string | null>(null);
+  const [activeWeddingDocId, setActiveWeddingDocId] = useState<string | null>(null);
+  const [joinAccessStatus, setJoinAccessStatus] = useState<
+    'idle' | 'joined' | 'needs_auth' | 'not_invited'
+  >('idle');
+  const [pendingJoinWeddingId, setPendingJoinWeddingId] = useState<string | null>(null);
+
   const isApplyingRemoteRef = useRef(false);
   const hasHydratedFromCloudRef = useRef(false);
   const allowEmptySyncRef = useRef(false);
@@ -253,182 +283,286 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setMounted(true);
   }, []);
 
-  // 2. Real-Time Cloud Firestore Sync Linked Directly to User's Profile (Mobile + Desktop)
+  // 1b. Capture ?join=<weddingId> invite parameter on mount (survives OAuth redirects via sessionStorage)
   useEffect(() => {
-    if (!mounted || !isFirebaseConfigured || !db || !user) {
+    if (typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const joinParam = params.get('join');
+      if (joinParam && joinParam.trim()) {
+        sessionStorage.setItem('vivaah_pending_join_wedding_id', joinParam.trim());
+        setPendingJoinWeddingId(joinParam.trim());
+      } else {
+        const storedJoin = sessionStorage.getItem('vivaah_pending_join_wedding_id');
+        if (storedJoin) {
+          setPendingJoinWeddingId(storedJoin);
+        }
+      }
+    } catch {}
+  }, []);
+
+  // Helper to hydrate React state & local cache from a Firestore wedding document
+  const applyRemoteWeddingData = useCallback((remoteData: any, docId?: string) => {
+    isApplyingRemoteRef.current = true;
+
+    if (remoteData.profile) setWedding(remoteData.profile);
+    if (Array.isArray(remoteData.events)) setEvents(remoteData.events);
+    if (Array.isArray(remoteData.guests)) setGuests(remoteData.guests);
+    if (Array.isArray(remoteData.budgetItems)) setBudgetItems(remoteData.budgetItems);
+    if (Array.isArray(remoteData.vendors)) setVendors(remoteData.vendors);
+    if (Array.isArray(remoteData.shagunRecords)) setShagunRecords(remoteData.shagunRecords);
+    if (Array.isArray(remoteData.rooms)) setRooms(remoteData.rooms);
+    if (Array.isArray(remoteData.venues)) setVenues(remoteData.venues);
+    if (remoteData.tourPlan !== undefined) setTourPlan(remoteData.tourPlan);
+    if (remoteData.officialSangeetVenue !== undefined) setOfficialSangeetVenueState(remoteData.officialSangeetVenue);
+    if (Array.isArray(remoteData.collaborators)) setCollaborators(remoteData.collaborators);
+    if (remoteData.ownerEmail || remoteData.userEmail) {
+      setOwnerEmail((remoteData.ownerEmail || remoteData.userEmail || '').toLowerCase());
+    }
+    if (remoteData.ownerUid || remoteData.userId) {
+      setOwnerUid(remoteData.ownerUid || remoteData.userId);
+    }
+    if (docId) setActiveWeddingDocId(docId);
+
+    // Update local cache for offline availability
+    try {
+      if (remoteData.profile) localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(remoteData.profile));
+      if (remoteData.events) localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(remoteData.events));
+      if (remoteData.guests) localStorage.setItem(STORAGE_KEYS.GUESTS, JSON.stringify(remoteData.guests));
+      if (remoteData.budgetItems) localStorage.setItem(STORAGE_KEYS.BUDGET, JSON.stringify(remoteData.budgetItems));
+      if (remoteData.vendors) localStorage.setItem(STORAGE_KEYS.VENDORS, JSON.stringify(remoteData.vendors));
+      if (remoteData.shagunRecords) localStorage.setItem(STORAGE_KEYS.SHAGUN, JSON.stringify(remoteData.shagunRecords));
+      if (remoteData.rooms) localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(remoteData.rooms));
+      if (remoteData.venues) localStorage.setItem(STORAGE_KEYS.VENUES, JSON.stringify(remoteData.venues));
+      if (remoteData.tourPlan) localStorage.setItem(STORAGE_KEYS.TOUR_PLAN, JSON.stringify(remoteData.tourPlan));
+      if (remoteData.officialSangeetVenue) localStorage.setItem(STORAGE_KEYS.SANGEET_VENUE, JSON.stringify(remoteData.officialSangeetVenue));
+
+      if (remoteData.scenarioSelection) {
+        setScenarioSelection(remoteData.scenarioSelection);
+        if (remoteData.scenarioSelection.selectedVenueId !== undefined) {
+          localStorage.setItem(
+            'shaadi_scenario_selected_venue_id',
+            remoteData.scenarioSelection.selectedVenueId || '__NONE__'
+          );
+        }
+        if (remoteData.scenarioSelection.includedVendorIds) {
+          localStorage.setItem(
+            'shaadi_scenario_included_vendors',
+            JSON.stringify(remoteData.scenarioSelection.includedVendorIds)
+          );
+        }
+      }
+    } catch {}
+
+    hasHydratedFromCloudRef.current = true;
+    setIsCloudSynced(true);
+    setCloudSyncError(null);
+    setLastSyncedAt(remoteData.updatedAt || new Date().toISOString());
+
+    setTimeout(() => {
+      isApplyingRemoteRef.current = false;
+    }, 400);
+  }, []);
+
+  // 2. Real-Time Cloud Firestore Sync (Supports Owner Multi-Device + Invited Collaborators View/Edit!)
+  useEffect(() => {
+    if (!mounted) return;
+
+    if (!isFirebaseConfigured || !db) {
       setIsCloudSynced(false);
       return;
     }
 
-    const firestore = db;
-    const userWeddingDocRef = doc(firestore, 'users', user.uid, 'wedding_data', 'main');
-
-    // Subscribe to real-time changes from the user's cloud profile
-    const unsubscribe = onSnapshot(
-      userWeddingDocRef,
-      async (snapshot) => {
-        let remoteData: any = null;
-
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          const hasMeaningfulRemote =
-            (data.profile !== null && data.profile !== undefined && (data.profile.isConfigured || data.profile.brideName || data.profile.groomName)) ||
-            (Array.isArray(data.venues) && data.venues.length > 0 && data.venues.some((v: any) => v.tourStatus === 'shortlisted' || v.isSelectedOfficialVenue)) ||
-            (Array.isArray(data.vendors) && data.vendors.some((v: any) => v.status === 'shortlisted' || v.status === 'booked'));
-
-          if (hasMeaningfulRemote) {
-            remoteData = data;
-          }
-        }
-
-        // If user's main doc is empty, missing, or unconfigured, fallback to check weddings collection
-        if (!remoteData) {
-          try {
-            const weddingsCol = collection(firestore, 'weddings');
-            const qUser = query(weddingsCol, where('userId', '==', user.uid));
-            const snapUser = await getDocs(qUser);
-            if (!snapUser.empty) {
-              remoteData = snapUser.docs[0].data();
-            } else if (user.email) {
-              const qEmail = query(weddingsCol, where('userEmail', '==', user.email));
-              const snapEmail = await getDocs(qEmail);
-              if (!snapEmail.empty) {
-                remoteData = snapEmail.docs[0].data();
-              }
-            }
-          } catch (lookupErr) {
-            console.warn('Fallback lookup in weddings collection failed:', lookupErr);
-          }
-        }
-
-        if (remoteData) {
-          isApplyingRemoteRef.current = true;
-
-          // Hydrate user profile, shortlists, route planning & budget
-          if (remoteData.profile) setWedding(remoteData.profile);
-          if (Array.isArray(remoteData.events)) setEvents(remoteData.events);
-          if (Array.isArray(remoteData.guests)) setGuests(remoteData.guests);
-          if (Array.isArray(remoteData.budgetItems)) setBudgetItems(remoteData.budgetItems);
-          if (Array.isArray(remoteData.vendors)) setVendors(remoteData.vendors);
-          if (Array.isArray(remoteData.shagunRecords)) setShagunRecords(remoteData.shagunRecords);
-          if (Array.isArray(remoteData.rooms)) setRooms(remoteData.rooms);
-          if (Array.isArray(remoteData.venues)) setVenues(remoteData.venues);
-          if (remoteData.tourPlan !== undefined) setTourPlan(remoteData.tourPlan);
-          if (remoteData.officialSangeetVenue !== undefined) setOfficialSangeetVenueState(remoteData.officialSangeetVenue);
-
-          // Update local cache for offline availability
-          try {
-            if (remoteData.profile) localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(remoteData.profile));
-            if (remoteData.events) localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(remoteData.events));
-            if (remoteData.guests) localStorage.setItem(STORAGE_KEYS.GUESTS, JSON.stringify(remoteData.guests));
-            if (remoteData.budgetItems) localStorage.setItem(STORAGE_KEYS.BUDGET, JSON.stringify(remoteData.budgetItems));
-            if (remoteData.vendors) localStorage.setItem(STORAGE_KEYS.VENDORS, JSON.stringify(remoteData.vendors));
-            if (remoteData.shagunRecords) localStorage.setItem(STORAGE_KEYS.SHAGUN, JSON.stringify(remoteData.shagunRecords));
-            if (remoteData.rooms) localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(remoteData.rooms));
-            if (remoteData.venues) localStorage.setItem(STORAGE_KEYS.VENUES, JSON.stringify(remoteData.venues));
-            if (remoteData.tourPlan) localStorage.setItem(STORAGE_KEYS.TOUR_PLAN, JSON.stringify(remoteData.tourPlan));
-            if (remoteData.officialSangeetVenue) localStorage.setItem(STORAGE_KEYS.SANGEET_VENUE, JSON.stringify(remoteData.officialSangeetVenue));
-
-            if (remoteData.scenarioSelection) {
-              setScenarioSelection(remoteData.scenarioSelection);
-              if (remoteData.scenarioSelection.selectedVenueId !== undefined) {
-                localStorage.setItem(
-                  'shaadi_scenario_selected_venue_id',
-                  remoteData.scenarioSelection.selectedVenueId || '__NONE__'
-                );
-              }
-              if (remoteData.scenarioSelection.includedVendorIds) {
-                localStorage.setItem(
-                  'shaadi_scenario_included_vendors',
-                  JSON.stringify(remoteData.scenarioSelection.includedVendorIds)
-                );
-              }
-            }
-          } catch {}
-
-          // Ensure user's main doc in Firestore has this full verified copy
-          if (!snapshot.exists() || !snapshot.data()?.profile) {
-            setDoc(userWeddingDocRef, {
-              ...remoteData,
-              userId: user.uid,
-              userEmail: user.email || '',
-              updatedAt: new Date().toISOString(),
-            }, { merge: true }).catch(() => {});
-          }
-
-          hasHydratedFromCloudRef.current = true;
-          setIsCloudSynced(true);
-          setCloudSyncError(null);
-          setLastSyncedAt(remoteData.updatedAt || new Date().toISOString());
-
-          setTimeout(() => {
-            isApplyingRemoteRef.current = false;
-          }, 400);
-        } else {
-          // Document does not exist in Firestore yet for this user.
-          // If the user already has data created locally on this device, immediately upload it to seed their cloud profile!
-          try {
-            const hasLocalData =
-              (wedding !== null && wedding.isConfigured) ||
-              venues.some((v) => v.tourStatus === 'shortlisted' || v.isSelectedOfficialVenue) ||
-              vendors.some((v) => v.status === 'shortlisted' || v.status === 'confirmed');
-
-            if (hasLocalData) {
-              setIsSyncing(true);
-              const seedData = {
-                profile: wedding,
-                events,
-                guests,
-                budgetItems,
-                vendors,
-                shagunRecords,
-                rooms,
-                venues,
-                tourPlan,
-                officialSangeetVenue,
-                userId: user.uid,
-                userEmail: user.email || '',
-                updatedAt: new Date().toISOString(),
-              };
-              await setDoc(userWeddingDocRef, seedData, { merge: true });
-              await setDoc(
-                doc(firestore, 'users', user.uid),
-                { email: user.email, hasWeddingData: true, updatedAt: new Date().toISOString() },
-                { merge: true }
-              );
-              setIsCloudSynced(true);
-              setLastSyncedAt(new Date().toISOString());
-            }
-          } catch (seedErr) {
-            console.warn('Failed to seed user profile data to Firestore:', seedErr);
-          } finally {
-            setIsSyncing(false);
-            hasHydratedFromCloudRef.current = true;
-          }
-        }
-      },
-      (err: any) => {
-        console.warn('Real-time cloud profile sync listener error:', err);
-        setIsCloudSynced(false);
-        if (err?.code === 'permission-denied') {
-          setCloudSyncError(
-            'Firestore Security Rules are denying access (Permission Denied). Please update rules in Firebase Console.'
-          );
-        } else {
-          setCloudSyncError(err?.message || 'Firestore connection error');
-        }
+    if (!user) {
+      setIsCloudSynced(false);
+      if (pendingJoinWeddingId) {
+        setJoinAccessStatus('needs_auth');
       }
-    );
+      return;
+    }
+
+    const firestore = db;
+    const userEmailLower = (user.email || '').toLowerCase().trim();
+    let activeUnsubscribe: (() => void) | null = null;
+    let cancelled = false;
+
+    const resolveAndSubscribe = async () => {
+      try {
+        // Helper to subscribe to a shared weddings/{docId} document in real time
+        const subscribeToSharedWeddingDoc = (targetDocId: string, initialRole: CollaboratorRole) => {
+          if (cancelled) return;
+          setActiveWeddingDocId(targetDocId);
+          setUserRole(initialRole);
+
+          const sharedDocRef = doc(firestore, 'weddings', targetDocId);
+          activeUnsubscribe = onSnapshot(
+            sharedDocRef,
+            (snap) => {
+              if (!snap.exists()) return;
+              const data = snap.data();
+
+              // Dynamically re-verify role on every live update (handles instant role changes or revocation!)
+              const docOwnerUid = data.ownerUid || data.userId;
+              const docOwnerEmail = (data.ownerEmail || data.userEmail || '').toLowerCase().trim();
+              if (docOwnerUid === user.uid || (docOwnerEmail && docOwnerEmail === userEmailLower)) {
+                setUserRole('owner');
+              } else {
+                const list: WeddingCollaborator[] = Array.isArray(data.collaborators)
+                  ? data.collaborators
+                  : [];
+                const match = list.find((c) => c.email.toLowerCase().trim() === userEmailLower);
+                if (match) {
+                  setUserRole(match.role);
+                } else {
+                  // Access was revoked by owner!
+                  setUserRole('viewer');
+                  setJoinAccessStatus('not_invited');
+                  return;
+                }
+              }
+
+              applyRemoteWeddingData(data, targetDocId);
+            },
+            (err: any) => {
+              console.warn('Shared wedding real-time listener error:', err);
+              setIsCloudSynced(false);
+              setCloudSyncError(
+                err?.code === 'permission-denied'
+                  ? 'Firestore Security Rules are denying access (Permission Denied). Please update rules in Firebase Console.'
+                  : err?.message || 'Firestore connection error'
+              );
+            }
+          );
+        };
+
+        // PATH A: User arrived via a direct Collaborator Invite Link (?join=<weddingId>)
+        if (pendingJoinWeddingId) {
+          const joinRef = doc(firestore, 'weddings', pendingJoinWeddingId);
+          const joinSnap = await getDoc(joinRef);
+          if (joinSnap.exists()) {
+            const joinData = joinSnap.data();
+            const docOwnerUid = joinData.ownerUid || joinData.userId;
+            const docOwnerEmail = (joinData.ownerEmail || joinData.userEmail || '').toLowerCase().trim();
+            const collabList: WeddingCollaborator[] = Array.isArray(joinData.collaborators)
+              ? joinData.collaborators
+              : [];
+            const matchedCollab = collabList.find(
+              (c) => c.email.toLowerCase().trim() === userEmailLower
+            );
+
+            if (docOwnerUid === user.uid || (docOwnerEmail && docOwnerEmail === userEmailLower)) {
+              setJoinAccessStatus('joined');
+              try {
+                sessionStorage.removeItem('vivaah_pending_join_wedding_id');
+              } catch {}
+              subscribeToSharedWeddingDoc(pendingJoinWeddingId, 'owner');
+              return;
+            } else if (matchedCollab) {
+              setJoinAccessStatus('joined');
+              try {
+                sessionStorage.removeItem('vivaah_pending_join_wedding_id');
+              } catch {}
+              subscribeToSharedWeddingDoc(pendingJoinWeddingId, matchedCollab.role);
+              return;
+            } else {
+              setJoinAccessStatus('not_invited');
+              hasHydratedFromCloudRef.current = true;
+              return;
+            }
+          }
+        }
+
+        // PATH B: Check if this user OWNS a wedding in weddings collection
+        const weddingsCol = collection(firestore, 'weddings');
+        const qOwned = query(weddingsCol, where('userId', '==', user.uid));
+        const snapOwned = await getDocs(qOwned);
+        if (!snapOwned.empty) {
+          const ownedDoc = snapOwned.docs[0];
+          subscribeToSharedWeddingDoc(ownedDoc.id, 'owner');
+          return;
+        }
+
+        // PATH C: Check if this user is an INVITED COLLABORATOR on any wedding (via collaboratorEmails!)
+        if (userEmailLower) {
+          const qCollab = query(
+            weddingsCol,
+            where('collaboratorEmails', 'array-contains', userEmailLower)
+          );
+          const snapCollab = await getDocs(qCollab);
+          if (!snapCollab.empty) {
+            const sharedDoc = snapCollab.docs[0];
+            const sharedData = sharedDoc.data();
+            const collabList: WeddingCollaborator[] = Array.isArray(sharedData.collaborators)
+              ? sharedData.collaborators
+              : [];
+            const matched = collabList.find((c) => c.email.toLowerCase().trim() === userEmailLower);
+            if (matched) {
+              subscribeToSharedWeddingDoc(sharedDoc.id, matched.role);
+              return;
+            }
+          }
+        }
+
+        // PATH D: Fallback to user's personal profile doc (users/{uid}/wedding_data/main)
+        const userWeddingDocRef = doc(firestore, 'users', user.uid, 'wedding_data', 'main');
+        setUserRole('owner');
+        setOwnerUid(user.uid);
+        setOwnerEmail(userEmailLower);
+
+        activeUnsubscribe = onSnapshot(
+          userWeddingDocRef,
+          async (snapshot) => {
+            if (snapshot.exists()) {
+              const data = snapshot.data();
+              const hasMeaningfulRemote =
+                (data.profile !== null &&
+                  data.profile !== undefined &&
+                  (data.profile.isConfigured || data.profile.brideName || data.profile.groomName)) ||
+                (Array.isArray(data.venues) &&
+                  data.venues.length > 0 &&
+                  data.venues.some((v: any) => v.tourStatus === 'shortlisted' || v.isSelectedOfficialVenue));
+
+              if (hasMeaningfulRemote) {
+                const weddingId = data.profile?.id || null;
+                applyRemoteWeddingData(data, weddingId || undefined);
+                return;
+              }
+            }
+
+            // Brand new user with no cloud doc yet — allow local seeding
+            hasHydratedFromCloudRef.current = true;
+            setIsCloudSynced(true);
+          },
+          (err: any) => {
+            console.warn('Real-time cloud profile sync listener error:', err);
+            setIsCloudSynced(false);
+            setCloudSyncError(
+              err?.code === 'permission-denied'
+                ? 'Firestore Security Rules are denying access (Permission Denied). Please update rules in Firebase Console.'
+                : err?.message || 'Firestore connection error'
+            );
+          }
+        );
+      } catch (err: any) {
+        console.warn('Workspace resolution error:', err);
+        setCloudSyncError(err?.message || 'Could not load cloud workspace');
+        hasHydratedFromCloudRef.current = true;
+      }
+    };
+
+    resolveAndSubscribe();
 
     return () => {
-      unsubscribe();
+      cancelled = true;
+      if (activeUnsubscribe) activeUnsubscribe();
     };
-  }, [user, mounted]);
+  }, [user, mounted, pendingJoinWeddingId, applyRemoteWeddingData]);
 
-  // 3. Save changes locally & push updates to User's Cloud Profile
+  // 3. Save changes locally & push updates to Firestore (Role-Aware: Owner / Editor / Blocked for Viewer!)
   useEffect(() => {
     if (!mounted) return;
     try {
+      // Viewers can browse locally without overwriting the couple's cloud data
       if (wedding) {
         localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(wedding));
       } else {
@@ -452,8 +586,13 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         localStorage.removeItem(STORAGE_KEYS.SANGEET_VENUE);
       }
 
-      // Sync directly to the Authenticated User's Firestore Profile
+      // Sync directly to Firestore if authenticated AND not view-only
       if (!isApplyingRemoteRef.current && isFirebaseConfigured && db && user) {
+        // Critical Guard 0: Viewers are strictly read-only!
+        if (userRole === 'viewer') {
+          return;
+        }
+
         // Critical Guard 1: Do NOT push to Firestore until this device has completed initial hydration from the cloud!
         if (!hasHydratedFromCloudRef.current) {
           return;
@@ -465,7 +604,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           (wedding !== null && wedding.isConfigured) ||
           venues.some((v) => v.tourStatus === 'shortlisted' || v.isSelectedOfficialVenue) ||
           vendors.some((v) => v.status === 'shortlisted' || v.status === 'confirmed') ||
-          budgetItems.some((b) => (b.installments && b.installments.length > 0)) ||
+          budgetItems.some((b) => b.installments && b.installments.length > 0) ||
           (tourPlan !== null && tourPlan.optimizedStops && tourPlan.optimizedStops.length > 0);
 
         if (!hasMeaningfulLocalData) {
@@ -474,6 +613,10 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         setIsSyncing(true);
         const firestore = db;
+        const resolvedOwnerUid = ownerUid || user.uid;
+        const resolvedOwnerEmail = ownerEmail || (user.email || '').toLowerCase();
+        const collaboratorEmails = collaborators.map((c) => c.email.toLowerCase().trim());
+
         const cloudData = {
           profile: wedding,
           events,
@@ -486,37 +629,49 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           tourPlan,
           officialSangeetVenue,
           scenarioSelection,
-          userId: user.uid,
-          userEmail: user.email || '',
+          collaborators,
+          collaboratorEmails,
+          ownerUid: resolvedOwnerUid,
+          ownerEmail: resolvedOwnerEmail,
+          userId: resolvedOwnerUid,
+          userEmail: resolvedOwnerEmail,
+          lastEditedBy: user.email || '',
           updatedAt: new Date().toISOString(),
         };
 
-        const userDocRef = doc(firestore, 'users', user.uid, 'wedding_data', 'main');
-        setDoc(userDocRef, cloudData, { merge: true })
+        const targetWeddingId = activeWeddingDocId || wedding?.id;
+
+        const writePromises: Promise<any>[] = [];
+        if (targetWeddingId) {
+          writePromises.push(
+            setDoc(doc(firestore, 'weddings', targetWeddingId), cloudData, { merge: true })
+          );
+        }
+        // Only the owner mirrors to their personal users/{uid}/wedding_data/main doc
+        if (userRole === 'owner') {
+          writePromises.push(
+            setDoc(doc(firestore, 'users', user.uid, 'wedding_data', 'main'), cloudData, { merge: true })
+          );
+        }
+
+        Promise.all(writePromises)
           .then(() => {
             setIsCloudSynced(true);
             setCloudSyncError(null);
             setLastSyncedAt(new Date().toISOString());
           })
           .catch((err: any) => {
-            console.warn('Failed to sync changes to user profile:', err);
+            console.warn('Failed to sync changes to cloud workspace:', err);
             setIsCloudSynced(false);
-            if (err?.code === 'permission-denied') {
-              setCloudSyncError(
-                'Firestore Security Rules are denying access (Permission Denied). Please update rules in Firebase Console.'
-              );
-            } else {
-              setCloudSyncError(err?.message || 'Failed to sync changes to user profile');
-            }
+            setCloudSyncError(
+              err?.code === 'permission-denied'
+                ? 'Firestore Security Rules are denying access (Permission Denied). Please update rules in Firebase Console.'
+                : err?.message || 'Failed to sync changes'
+            );
           })
           .finally(() => {
             setIsSyncing(false);
           });
-
-        // Also update public wedding record if wedding profile exists
-        if (wedding && wedding.id) {
-          setDoc(doc(firestore, 'weddings', wedding.id), cloudData, { merge: true }).catch(() => {});
-        }
       }
     } catch (e) {
       console.error('Failed to sync changes:', e);
@@ -524,6 +679,11 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [
     mounted,
     user,
+    userRole,
+    activeWeddingDocId,
+    ownerUid,
+    ownerEmail,
+    collaborators,
     wedding,
     events,
     guests,
@@ -1686,6 +1846,130 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     []
   );
 
+  const addCollaborator = useCallback(
+    async (
+      rawEmail: string,
+      role: 'editor' | 'viewer',
+      name?: string
+    ): Promise<{ success: boolean; error?: string }> => {
+      const email = rawEmail.trim().toLowerCase();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return { success: false, error: 'Please enter a valid email address.' };
+      }
+      if (userRole !== 'owner') {
+        return { success: false, error: 'Only the main wedding account owner can add collaborators.' };
+      }
+      const myEmail = (user?.email || '').toLowerCase().trim();
+      if (myEmail && email === myEmail) {
+        return { success: false, error: 'You are already the owner of this wedding plan.' };
+      }
+      if (collaborators.some((c) => c.email.toLowerCase() === email)) {
+        return { success: false, error: 'This email is already on your collaborators list.' };
+      }
+
+      const newCollab: WeddingCollaborator = {
+        email,
+        name: name?.trim() || undefined,
+        role,
+        addedAt: new Date().toISOString(),
+        addedByEmail: user?.email || undefined,
+      };
+      const updatedList = [...collaborators, newCollab];
+      setCollaborators(updatedList);
+
+      // Immediately persist to Firestore shared wedding doc so invite link works right away
+      if (isFirebaseConfigured && db && user) {
+        const targetId = activeWeddingDocId || wedding?.id;
+        if (targetId) {
+          try {
+            await setDoc(
+              doc(db, 'weddings', targetId),
+              {
+                collaborators: updatedList,
+                collaboratorEmails: updatedList.map((c) => c.email.toLowerCase()),
+                ownerUid: ownerUid || user.uid,
+                ownerEmail: ownerEmail || myEmail,
+                updatedAt: new Date().toISOString(),
+              },
+              { merge: true }
+            );
+          } catch (err: any) {
+            console.warn('Failed to save collaborator to Firestore:', err);
+            return { success: false, error: err?.message || 'Could not save to cloud.' };
+          }
+        }
+      }
+
+      return { success: true };
+    },
+    [collaborators, userRole, user, activeWeddingDocId, wedding?.id, ownerUid, ownerEmail]
+  );
+
+  const updateCollaboratorRole = useCallback(
+    async (rawEmail: string, role: 'editor' | 'viewer') => {
+      if (userRole !== 'owner') return;
+      const email = rawEmail.trim().toLowerCase();
+      const updatedList = collaborators.map((c) =>
+        c.email.toLowerCase() === email ? { ...c, role } : c
+      );
+      setCollaborators(updatedList);
+
+      if (isFirebaseConfigured && db && user) {
+        const targetId = activeWeddingDocId || wedding?.id;
+        if (targetId) {
+          await setDoc(
+            doc(db, 'weddings', targetId),
+            {
+              collaborators: updatedList,
+              collaboratorEmails: updatedList.map((c) => c.email.toLowerCase()),
+              updatedAt: new Date().toISOString(),
+            },
+            { merge: true }
+          ).catch(() => {});
+        }
+      }
+    },
+    [collaborators, userRole, user, activeWeddingDocId, wedding?.id]
+  );
+
+  const removeCollaborator = useCallback(
+    async (rawEmail: string) => {
+      if (userRole !== 'owner') return;
+      const email = rawEmail.trim().toLowerCase();
+      const updatedList = collaborators.filter((c) => c.email.toLowerCase() !== email);
+      setCollaborators(updatedList);
+
+      if (isFirebaseConfigured && db && user) {
+        const targetId = activeWeddingDocId || wedding?.id;
+        if (targetId) {
+          await setDoc(
+            doc(db, 'weddings', targetId),
+            {
+              collaborators: updatedList,
+              collaboratorEmails: updatedList.map((c) => c.email.toLowerCase()),
+              updatedAt: new Date().toISOString(),
+            },
+            { merge: true }
+          ).catch(() => {});
+        }
+      }
+    },
+    [collaborators, userRole, user, activeWeddingDocId, wedding?.id]
+  );
+
+  const dismissJoinBanner = useCallback(() => {
+    setJoinAccessStatus('idle');
+    setPendingJoinWeddingId(null);
+    try {
+      sessionStorage.removeItem('vivaah_pending_join_wedding_id');
+      if (typeof window !== 'undefined' && window.location.search.includes('join=')) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('join');
+        window.history.replaceState({}, '', url.toString());
+      }
+    } catch {}
+  }, []);
+
   return (
     <WeddingContext.Provider
       value={{
@@ -1707,6 +1991,17 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         lastSyncedAt,
         cloudSyncError,
         forceCloudSync,
+        collaborators,
+        userRole,
+        isReadOnly: userRole === 'viewer',
+        ownerEmail,
+        activeWeddingDocId: activeWeddingDocId || wedding?.id || null,
+        joinAccessStatus,
+        pendingJoinWeddingId,
+        addCollaborator,
+        updateCollaboratorRole,
+        removeCollaborator,
+        dismissJoinBanner,
         createWeddingProfile,
         updateWeddingProfile,
         initializeGuidedWedding,

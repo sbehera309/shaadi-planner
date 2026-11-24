@@ -22,6 +22,7 @@ import {
 import { useWedding } from '@/lib/store';
 import { EditWeddingModal } from './EditWeddingModal';
 import { ExcelSyncModal } from './ExcelSyncModal';
+import { ShareCollaboratorsModal } from './ShareCollaboratorsModal';
 
 interface SidebarProps {
   isMobileOpen?: boolean;
@@ -30,10 +31,11 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose }) => {
   const pathname = usePathname();
-  const { wedding } = useWedding();
+  const { wedding, collaborators, userRole } = useWedding();
 
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
   const [isExcelModalOpen, setIsExcelModalOpen] = React.useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = React.useState(false);
 
   const navSections = [
     {
@@ -161,8 +163,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose })
         ))}
       </nav>
 
-      {/* Excel Sync & Guest Invitation Footer Actions */}
+      {/* Share, Excel Sync & Guest Invitation Footer Actions */}
       <div className={`p-4 border-t border-stone-800 mt-auto space-y-2 shrink-0 ${isMobile ? 'pb-[max(1.5rem,env(safe-area-inset-bottom))]' : ''}`}>
+        {wedding && wedding.isConfigured && (
+          <button
+            type="button"
+            onClick={() => {
+              if (isMobile) onMobileClose?.();
+              setIsShareModalOpen(true);
+            }}
+            className="w-full flex items-center justify-between p-2.5 rounded-xl bg-stone-800/80 hover:bg-stone-800 text-stone-200 border border-stone-700/60 text-xs font-semibold transition-all group"
+          >
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>Share &amp; Collaborators</span>
+            </div>
+            <span className="text-[10px] text-amber-300 font-bold bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded-full">
+              {collaborators.length > 0 ? `${collaborators.length + 1}` : userRole === 'owner' ? '+ Add' : userRole}
+            </span>
+          </button>
+        )}
+
         <button
           type="button"
           onClick={() => {
@@ -226,6 +247,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose })
       <ExcelSyncModal
         isOpen={isExcelModalOpen}
         onClose={() => setIsExcelModalOpen(false)}
+      />
+
+      <ShareCollaboratorsModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
       />
     </>
   );
