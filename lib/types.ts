@@ -239,6 +239,9 @@ export interface CuratedVendor {
   instagramHandle: string;
   curatorReviewAndVerdict: string;
   negotiationTips: string[];
+  defaultCategoryDetails?: Record<string, string | boolean>;
+  defaultEventBreakdown?: VendorEventCoverage[];
+  defaultAddOns?: VendorAddOn[];
 }
 
 export interface ShagunRecord {

@@ -137,11 +137,14 @@ export default function VendorsPage() {
         contactPerson: curated.contactPerson || curated.name,
         phone: curated.contactPhone,
         email: curated.contactEmail,
-        agreedAmount: 0,
+        agreedAmount: curated.typicalPackagePrice || 0,
         depositPaid: 0,
         status: 'shortlisted',
         notes: `${curated.tagline}\nLocation: ${curated.baseLocation}\nTypical Rate: ${curated.pricingHeadline}\nApproved Venues: ${curated.estateApprovedVenues.join(', ')}`,
         deliverables: curated.inclusions.slice(0, 4),
+        categoryDetails: curated.defaultCategoryDetails ? { ...curated.defaultCategoryDetails } : undefined,
+        eventBreakdown: curated.defaultEventBreakdown ? curated.defaultEventBreakdown.map((e) => ({ ...e })) : undefined,
+        addOns: curated.defaultAddOns ? curated.defaultAddOns.map((a) => ({ ...a })) : undefined,
         curatedVendorId: curated.id,
       });
       setAddedSuccessId(curated.id);
@@ -214,9 +217,9 @@ export default function VendorsPage() {
       deliverablesString: curated.inclusions.slice(0, 4).join(', '),
       quoteExpiresAt: '',
       quoteUrl: curated.websiteUrl || '',
-      categoryDetails: {},
-      eventBreakdown: [],
-      addOns: [],
+      categoryDetails: curated.defaultCategoryDetails ? { ...curated.defaultCategoryDetails } : {},
+      eventBreakdown: curated.defaultEventBreakdown ? curated.defaultEventBreakdown.map((e) => ({ ...e })) : [],
+      addOns: curated.defaultAddOns ? curated.defaultAddOns.map((a) => ({ ...a })) : [],
     });
     setInspectingVendor(null);
     setIsModalOpen(true);
