@@ -36,6 +36,30 @@ interface ParsedGuestEntry {
   adultsCount: number;
 }
 
+const stripLeadingListMarkers = (rawLine: string): string => {
+  let clean = rawLine.trim();
+  let prev = '';
+  // Loop in case a line has combined markers like "- 1. Drew" or "• [ ] 2.Naveed"
+  while (clean !== prev) {
+    prev = clean;
+    clean = clean
+      // Checkboxes from Notes / Notion: "[ ] ", "[x] ", "☐ ", "✓ "
+      .replace(/^(?:\[\s*[xX✓✔]?\s*\]|[☐☑✓✔])\s*/, '')
+      // Bullets: "- ", "• ", "* ", "– ", "— ", "· ", "◦ "
+      .replace(/^[-•*–—·◦▪▫▸►]\s*/, '')
+      // Numbered prefixes: "1. Drew", "2.Naveed", "1) Drew", "(1) Drew", "#1. Drew", "1: Drew", "1 - Drew"
+      .replace(/^(?:#\s*)?(?:\(\d+\)|\d+\s*[\.\):\-–—])\s*/, '')
+      // "#1 Drew"
+      .replace(/^#\d+\s+/, '')
+      // Spreadsheet row number + tab: "1\tDrew"
+      .replace(/^\d+\t+/, '')
+      // Plain leading number + space before a name: "1 Drew", "2 Naveed"
+      .replace(/^\d+\s+(?=[A-Za-z])/, '')
+      .trim();
+  }
+  return clean;
+};
+
 const parsePastedGuestList = (rawText: string): ParsedGuestEntry[] => {
   if (!rawText.trim()) return [];
   // Split by newlines first; if only 1 line and has commas, split by commas
@@ -43,6 +67,17 @@ const parsePastedGuestList = (rawText: string): ParsedGuestEntry[] => {
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter(Boolean);
+
+  // Also split inline numbered lists on a single line, e.g. "1. Drew 2. Naveed 3. Priya" or "1.Drew 2.Naveed"
+  lines = lines.flatMap((line) => {
+    if (/^\s*(?:#\s*)?\d+[\.\)]\s*/.test(line)) {
+      return line
+        .split(/\s+(?=(?:#\s*)?\d+[\.\)]\s*[A-Za-z])/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+    return [line];
+  });
 
   if (lines.length === 1 && lines[0].includes(',')) {
     lines = lines[0]
@@ -53,8 +88,7 @@ const parsePastedGuestList = (rawText: string): ParsedGuestEntry[] => {
 
   return lines
     .map((line) => {
-      // Strip leading bullets or numbering like "1.", "1)", "-", "•", "*"
-      let clean = line.replace(/^(\d+[\.\)]\s*|[-•*–—]\s*)/, '').trim();
+      let clean = stripLeadingListMarkers(line);
       if (!clean) return null;
 
       // Detect optional headcount in parentheses or trailing xN, e.g. "Patel Family (4)" or "Shah Family x3"
@@ -72,6 +106,8 @@ const parsePastedGuestList = (rawText: string): ParsedGuestEntry[] => {
         adultsCount = 2;
       }
 
+      // Clean any trailing tabs/commas left over from spreadsheet copies
+      clean = clean.replace(/[\t,]+$/, '').trim();
       if (!clean) return null;
       return { name: clean, adultsCount };
     })
@@ -179,7 +215,7 @@ export const BulkPasteGuestsModal: React.FC<BulkPasteGuestsModalProps> = ({
         <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 flex items-start gap-2.5">
           <ClipboardPaste className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
           <div className="text-amber-950 leading-relaxed">
-            Paste names from Notes, WhatsApp, or Excel — <strong>one per line</strong> or comma-separated. Add optional counts like <code className="px-1 py-0.5 bg-white rounded border border-amber-200">Patel Family (4)</code>. You can click any guest card afterward to fill out phone, diet, and RSVPs.
+            Paste names from Notes, WhatsApp, or Excel — <strong>one per line</strong>, numbered lists (<code className="px-1 py-0.5 bg-white rounded border border-amber-200">1. Drew</code>, <code className="px-1 py-0.5 bg-white rounded border border-amber-200">2.Naveed</code>), or comma-separated. Numbers &amp; bullets are stripped automatically, and optional counts like <code className="px-1 py-0.5 bg-white rounded border border-amber-200">Patel Family (4)</code> are detected.
           </div>
         </div>
 
@@ -193,7 +229,7 @@ export const BulkPasteGuestsModal: React.FC<BulkPasteGuestsModalProps> = ({
             required
             value={rawText}
             onChange={(e) => setRawText(e.target.value)}
-            placeholder={`Example:\nRohan & Priya Shah\nMehta Family (4)\nAnanya Patel\nVikram Desai\nKiran & Neha Joshi`}
+            placeholder={`Example:\n1. Drew\n2.Naveed\n3. Rohan & Priya Shah\n4. Mehta Family (4)`}
             className="w-full px-3.5 py-2.5 rounded-2xl border border-stone-300 bg-white focus:outline-hidden focus:ring-2 focus:ring-rose-500 font-medium text-xs leading-relaxed"
           />
 
@@ -207,7 +243,7 @@ export const BulkPasteGuestsModal: React.FC<BulkPasteGuestsModalProps> = ({
                 </span>
               </span>
               <div className="flex flex-wrap gap-1 max-w-full">
-                {parsedEntries.slice(0, 4).map((e, i) => (
+                {parsedEntries.slice(0, 6).map((e, i) => (
                   <span
                     key={i}
                     className="px-2 py-0.5 rounded-md bg-white border border-emerald-200 text-emerald-900 text-[10px] font-semibold"
@@ -215,9 +251,9 @@ export const BulkPasteGuestsModal: React.FC<BulkPasteGuestsModalProps> = ({
                     {e.name} ({e.adultsCount})
                   </span>
                 ))}
-                {parsedEntries.length > 4 && (
+                {parsedEntries.length > 6 && (
                   <span className="text-[10px] font-bold text-emerald-700 self-center">
-                    +{parsedEntries.length - 4} more
+                    +{parsedEntries.length - 6} more
                   </span>
                 )}
               </div>
