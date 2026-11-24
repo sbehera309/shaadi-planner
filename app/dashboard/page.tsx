@@ -10,6 +10,7 @@ import { EventPlanningWizard } from '@/components/EventPlanningWizard';
 import { ExcelSyncModal } from '@/components/ExcelSyncModal';
 import { QuickVenuePickerModal } from '@/components/QuickVenuePickerModal';
 import { WeddingCalendarView } from '@/components/WeddingCalendarView';
+import { EventDetailModal } from '@/components/EventDetailModal';
 import {
   ContractAndPaymentsModal,
   ContractTarget,
@@ -78,6 +79,7 @@ export default function DashboardOverviewPage() {
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const [isVenuePickerOpen, setIsVenuePickerOpen] = useState(false);
   const [contractModalTarget, setContractModalTarget] = useState<ContractTarget | null>(null);
+  const [selectedEventDetailId, setSelectedEventDetailId] = useState<string | null>(null);
   const [selectedEventToPlan, setSelectedEventToPlan] = useState<WeddingEvent | null>(null);
 
   // Overview Primary View Mode: Interactive Calendar (default) vs Detailed Ceremony Cards
@@ -523,6 +525,7 @@ export default function DashboardOverviewPage() {
               </div>
             ) : overviewViewMode === 'calendar' ? (
               <WeddingCalendarView
+                onOpenEventDetail={(ev) => setSelectedEventDetailId(ev.id)}
                 onOpenEventPlanner={(ev) => setSelectedEventToPlan(ev)}
                 onOpenVenuePicker={() => setIsVenuePickerOpen(true)}
               />
@@ -730,11 +733,11 @@ export default function DashboardOverviewPage() {
                         )}
                       </div>
 
-                      {/* Action Button: Opens Guided Planning for this event */}
-                      <div className="pt-2 border-t border-stone-200/80 flex items-center justify-between gap-3">
+                      {/* Action Button: Opens Event Detail Workspace (Details, Checklist, Guests) */}
+                      <div className="pt-2 border-t border-stone-200/80 flex items-center justify-between gap-2">
                         <button
                           type="button"
-                          onClick={() => setSelectedEventToPlan(event)}
+                          onClick={() => setSelectedEventDetailId(event.id)}
                           className={`w-full py-2.5 px-4 rounded-xl text-white font-semibold text-xs shadow-xs hover:shadow transition-all flex items-center justify-center gap-2 group ${
                             isNeedsPlanning
                               ? 'bg-gradient-to-r from-rose-700 via-rose-800 to-amber-700 hover:opacity-95 shadow-md shadow-rose-900/20'
@@ -744,10 +747,10 @@ export default function DashboardOverviewPage() {
                           <Sparkles className="w-3.5 h-3.5 text-amber-400 group-hover:rotate-12 transition-transform" />
                           <span>
                             {isNeedsPlanning
-                              ? 'Plan Decisions'
+                              ? 'Open Details, Checklist & Guests'
                               : isInProgress
-                              ? `Continue Planning (${arrangedCount}/${totalChecklist} Arranged)`
-                              : 'Review Event Plan'}
+                              ? `Checklist, Guests & Details (${arrangedCount}/${totalChecklist})`
+                              : 'View Event Details & Guests'}
                           </span>
                         </button>
                       </div>
@@ -1010,6 +1013,15 @@ export default function DashboardOverviewPage() {
           )}
         </div>
       </section>
+
+      {/* Event Detail Workspace Modal (Details, Checklist & Event-Specific Guests) */}
+      <EventDetailModal
+        eventId={selectedEventDetailId}
+        isOpen={Boolean(selectedEventDetailId)}
+        onClose={() => setSelectedEventDetailId(null)}
+        onOpenGuidedWizard={(ev) => setSelectedEventToPlan(ev)}
+        onOpenVenuePicker={() => setIsVenuePickerOpen(true)}
+      />
 
       {/* Guided Event Planning Wizard Modal */}
       <EventPlanningWizard

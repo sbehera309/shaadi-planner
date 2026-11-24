@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 
 interface WeddingCalendarViewProps {
+  onOpenEventDetail: (event: WeddingEvent) => void;
   onOpenEventPlanner: (event: WeddingEvent) => void;
   onOpenVenuePicker: () => void;
 }
@@ -127,6 +128,7 @@ const QUICK_EVENT_PRESETS: Array<{
 ];
 
 export const WeddingCalendarView: React.FC<WeddingCalendarViewProps> = ({
+  onOpenEventDetail,
   onOpenEventPlanner,
   onOpenVenuePicker,
 }) => {
@@ -442,9 +444,7 @@ export const WeddingCalendarView: React.FC<WeddingCalendarViewProps> = ({
       setPlacingEventId(null);
       return;
     }
-    setSelectedDateKey(ev.date);
-    setShowAddOnDay(false);
-    startQuickEdit(ev);
+    onOpenEventDetail(ev);
   };
 
   const startQuickEdit = (ev: WeddingEvent) => {
@@ -1051,12 +1051,12 @@ export const WeddingCalendarView: React.FC<WeddingCalendarViewProps> = ({
                               type="button"
                               onClick={() => {
                                 setSelectedDateKey(null);
-                                onOpenEventPlanner(ev);
+                                onOpenEventDetail(ev);
                               }}
                               className="px-3.5 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-semibold inline-flex items-center gap-1.5 transition-colors"
                             >
                               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                              <span>Deep-Dive Planner & Checklist</span>
+                              <span>Checklist, Guests &amp; Details</span>
                               <ArrowRight className="w-3.5 h-3.5" />
                             </button>
                           </div>
