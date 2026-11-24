@@ -718,3 +718,19 @@ export interface RankedSangeetVenue {
   totalCostForGuests: number;
   costPerGuest: number;
 }
+
+export interface SeatingTable {
+  id: string;
+  label: string; // e.g., "Table 1", "Bridesmaids", "VIP Bride Family"
+  capacity: number; // e.g., 10
+  zone: 'left' | 'right' | 'back'; // Left of dance floor, Right of dance floor, or Back
+  shape: 'round' | 'rectangle';
+  assignedGuestIds: string[];
+}
+
+export interface ReceptionFloorPlan {
+  tableCount: number;
+  defaultSeatsPerTable: number;
+  tables: SeatingTable[];
+  updatedAt?: string;
+}

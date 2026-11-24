@@ -9,6 +9,7 @@ import {
   COMMON_GUEST_GROUPS,
   inferSideFromGroup,
 } from '@/components/BulkPasteGuestsModal';
+import { ReceptionSeatingChart } from '@/components/ReceptionSeatingChart';
 import {
   Users,
   Plus,
@@ -31,6 +32,7 @@ import {
   MapPin,
   X,
   Check,
+  Armchair,
 } from 'lucide-react';
 
 export default function GuestsPage() {
@@ -47,7 +49,7 @@ export default function GuestsPage() {
     deleteCustomGuestGroup,
   } = useWedding();
 
-  const [viewMode, setViewMode] = useState<'board' | 'table'>('board');
+  const [viewMode, setViewMode] = useState<'board' | 'table' | 'seating'>('board');
   const [searchTerm, setSearchTerm] = useState('');
   const [sideFilter, setSideFilter] = useState<'all' | WeddingSide>('all');
   const [dietFilter, setDietFilter] = useState<'all' | DietaryTag>('all');
@@ -277,10 +279,10 @@ export default function GuestsPage() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold font-serif text-stone-900">
-            Guest List &amp; Groups
+            Guest List, Groups &amp; Seating
           </h1>
           <p className="text-xs text-stone-500 mt-1">
-            Paste lists of names in seconds, organize guests into drag-and-drop groups, and click any card to fill details &amp; event RSVPs.
+            Paste lists of names in seconds, organize guests into drag-and-drop groups, and visualize your Reception seating floor plan.
           </p>
         </div>
 
@@ -349,106 +351,126 @@ export default function GuestsPage() {
         </div>
       )}
 
-      {/* Search, Filters & View Mode Switcher */}
+      {/* View Switcher & Optional Guest Filters */}
       <div className="bg-white p-3.5 rounded-2xl border border-stone-200 shadow-2xs flex flex-col lg:flex-row gap-3 justify-between items-stretch lg:items-center text-xs">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
-          <input
-            type="text"
-            placeholder="Search guest name, group, phone, or city..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 rounded-xl border border-stone-200 text-stone-900 bg-white font-medium text-base sm:text-xs focus:outline-hidden focus:ring-2 focus:ring-rose-500"
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Side Filter */}
-          <div className="flex items-center gap-1 bg-stone-100 p-1 rounded-xl overflow-x-auto no-scrollbar">
-            {(
-              [
-                { id: 'all', label: `All (${guests.length})` },
-                { id: 'bride', label: 'Bride' },
-                { id: 'groom', label: 'Groom' },
-                { id: 'mutual', label: 'Mutual' },
-              ] as const
-            ).map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => setSideFilter(opt.id)}
-                className={`px-2.5 py-1 rounded-lg font-semibold transition-all shrink-0 ${
-                  sideFilter === opt.id
-                    ? 'bg-white shadow-2xs text-stone-900 font-bold'
-                    : 'text-stone-600 hover:text-stone-900'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Dietary Filter */}
-          <select
-            value={dietFilter}
-            onChange={(e) => setDietFilter(e.target.value as 'all' | DietaryTag)}
-            className="px-2.5 py-1.5 rounded-xl border border-stone-200 bg-white text-stone-700 font-semibold focus:outline-hidden focus:ring-2 focus:ring-rose-500"
-          >
-            <option value="all">All Diets</option>
-            <option value="Strict Veg">Strict Veg</option>
-            <option value="Jain">Jain</option>
-            <option value="Swaminarayan">Swaminarayan</option>
-            <option value="Non-Veg">Non-Veg</option>
-            <option value="Halal">Halal</option>
-            <option value="Gluten-Free">Gluten-Free</option>
-          </select>
-
-          {/* Board vs Table View Switcher */}
-          <div className="inline-flex p-1 rounded-xl bg-stone-100 border border-stone-200/80">
-            <button
-              type="button"
-              onClick={() => setViewMode('board')}
-              className={`px-3 py-1 rounded-lg font-bold inline-flex items-center gap-1.5 transition-all ${
-                viewMode === 'board'
-                  ? 'bg-white text-stone-900 shadow-2xs'
-                  : 'text-stone-600 hover:text-stone-900'
-              }`}
-            >
-              <LayoutGrid className="w-3.5 h-3.5 text-rose-600" />
-              <span>Groups</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('table')}
-              className={`px-3 py-1 rounded-lg font-bold inline-flex items-center gap-1.5 transition-all ${
-                viewMode === 'table'
-                  ? 'bg-white text-stone-900 shadow-2xs'
-                  : 'text-stone-600 hover:text-stone-900'
-              }`}
-            >
-              <Table2 className="w-3.5 h-3.5 text-amber-600" />
-              <span>Table</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Summary Strip */}
-      <div className="bg-amber-50/70 border border-amber-200/80 px-4 py-2.5 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs text-amber-950">
-        <span>
-          Showing <strong>{filteredGuests.length}</strong> guest cards representing{' '}
-          <strong>{totalFilteredHeadcount}</strong> total people (adults + kids).
-        </span>
-        {viewMode === 'board' && (
+        {/* 3-Mode View Switcher */}
+        <div className="inline-flex p-1 rounded-xl bg-stone-100 border border-stone-200/80 self-start shrink-0">
           <button
             type="button"
-            onClick={() => setShowAllEmptyGroups(!showAllEmptyGroups)}
-            className="text-rose-800 hover:underline font-bold"
+            onClick={() => setViewMode('board')}
+            className={`px-3 py-1.5 rounded-lg font-bold inline-flex items-center gap-1.5 transition-all ${
+              viewMode === 'board'
+                ? 'bg-white text-stone-900 shadow-2xs'
+                : 'text-stone-600 hover:text-stone-900'
+            }`}
           >
-            {showAllEmptyGroups ? 'Hide Empty Groups' : `Show All Groups (${allGroups.length})`}
+            <LayoutGrid className="w-3.5 h-3.5 text-rose-600" />
+            <span>Groups</span>
           </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('table')}
+            className={`px-3 py-1.5 rounded-lg font-bold inline-flex items-center gap-1.5 transition-all ${
+              viewMode === 'table'
+                ? 'bg-white text-stone-900 shadow-2xs'
+                : 'text-stone-600 hover:text-stone-900'
+            }`}
+          >
+            <Table2 className="w-3.5 h-3.5 text-amber-600" />
+            <span>Table</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('seating')}
+            className={`px-3 py-1.5 rounded-lg font-bold inline-flex items-center gap-1.5 transition-all ${
+              viewMode === 'seating'
+                ? 'bg-gradient-to-r from-rose-700 to-amber-600 text-white shadow-2xs'
+                : 'text-stone-600 hover:text-stone-900'
+            }`}
+          >
+            <Armchair className={`w-3.5 h-3.5 ${viewMode === 'seating' ? 'text-amber-200' : 'text-emerald-600'}`} />
+            <span>Seating Floor Plan</span>
+          </button>
+        </div>
+
+        {viewMode !== 'seating' ? (
+          <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 flex-1 lg:justify-end">
+            <div className="relative flex-1 min-w-[180px] max-w-sm">
+              <Search className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                placeholder="Search guest name, group, phone, or city..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 rounded-xl border border-stone-200 text-stone-900 bg-white font-medium text-base sm:text-xs focus:outline-hidden focus:ring-2 focus:ring-rose-500"
+              />
+            </div>
+
+            {/* Side Filter */}
+            <div className="flex items-center gap-1 bg-stone-100 p-1 rounded-xl overflow-x-auto no-scrollbar">
+              {(
+                [
+                  { id: 'all', label: `All (${guests.length})` },
+                  { id: 'bride', label: 'Bride' },
+                  { id: 'groom', label: 'Groom' },
+                  { id: 'mutual', label: 'Mutual' },
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setSideFilter(opt.id)}
+                  className={`px-2.5 py-1 rounded-lg font-semibold transition-all shrink-0 ${
+                    sideFilter === opt.id
+                      ? 'bg-white shadow-2xs text-stone-900 font-bold'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Dietary Filter */}
+            <select
+              value={dietFilter}
+              onChange={(e) => setDietFilter(e.target.value as 'all' | DietaryTag)}
+              className="px-2.5 py-1.5 rounded-xl border border-stone-200 bg-white text-stone-700 font-semibold focus:outline-hidden focus:ring-2 focus:ring-rose-500"
+            >
+              <option value="all">All Diets</option>
+              <option value="Strict Veg">Strict Veg</option>
+              <option value="Jain">Jain</option>
+              <option value="Swaminarayan">Swaminarayan</option>
+              <option value="Non-Veg">Non-Veg</option>
+              <option value="Halal">Halal</option>
+              <option value="Gluten-Free">Gluten-Free</option>
+            </select>
+          </div>
+        ) : (
+          <p className="text-xs text-stone-500 font-medium lg:text-right">
+            Ballroom view: set your table count &amp; seats per table, drag guests to tables, and balance Left / Right / Back of the Dance Floor.
+          </p>
         )}
       </div>
+
+      {/* Summary Strip (Groups & Table views) */}
+      {viewMode !== 'seating' && (
+        <div className="bg-amber-50/70 border border-amber-200/80 px-4 py-2.5 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs text-amber-950">
+          <span>
+            Showing <strong>{filteredGuests.length}</strong> guest cards representing{' '}
+            <strong>{totalFilteredHeadcount}</strong> total people (adults + kids).
+          </span>
+          {viewMode === 'board' && (
+            <button
+              type="button"
+              onClick={() => setShowAllEmptyGroups(!showAllEmptyGroups)}
+              className="text-rose-800 hover:underline font-bold"
+            >
+              {showAllEmptyGroups ? 'Hide Empty Groups' : `Show All Groups (${allGroups.length})`}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* ================================================================ */}
       {/* VIEW 1: DRAG-AND-DROP GROUP CARDS BOARD (DEFAULT)                */}
@@ -863,6 +885,11 @@ export default function GuestsPage() {
           </div>
         </div>
       )}
+
+      {/* ================================================================ */}
+      {/* VIEW 3: RECEPTION FLOOR PLAN & SEATING CHART                     */}
+      {/* ================================================================ */}
+      {viewMode === 'seating' && <ReceptionSeatingChart />}
 
       {/* ================================================================ */}
       {/* MODAL 1: BULK PASTE GUEST LIST                                   */}
