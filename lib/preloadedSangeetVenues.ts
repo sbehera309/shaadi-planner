@@ -460,8 +460,8 @@ export const PRELOADED_SANGEET_VENUES: SangeetVenueOption[] = [
   {
     id: 'sangeet-valley-country-club-sugarloaf-pa',
     name: 'Valley Country Club',
-    tagline: 'Scenic Sugarloaf Valley country club ballroom ideal for NEPA Sangeet & Garba nights',
-    address: '79 Country Club Rd',
+    tagline: 'Renovated Sugarloaf Valley country club ballroom & outdoor deck for NEPA Sangeet nights',
+    address: '79 Country Club Lane',
     city: 'Sugarloaf',
     state: 'PA',
     zipCode: '18249',
@@ -470,15 +470,15 @@ export const PRELOADED_SANGEET_VENUES: SangeetVenueOption[] = [
     pricePerGuest: 55,
     hallRentalFee: 1500,
     estimatedTotalCost: 18000,
-    maxCapacity: 350,
+    maxCapacity: 300,
     contactPhone: '(570) 788-1112',
-    contactEmail: 'events@valleycountryclub.org',
-    websiteUrl: 'https://www.valleycountryclub.org',
+    contactEmail: 'events@thevalleycountryclub.com',
+    websiteUrl: 'https://thevalleycountryclub.com',
     highlightTag: '⛳ Scenic Sugarloaf Valley Club',
     description:
-      'Classic private country club tucked in the scenic Conyngham/Sugarloaf Valley near Hazleton and Mountain Top, PA. Features a bright grand ballroom overlooking the golf course, spacious patio for cocktail/chaat stations, and easy access off I-80 & I-81.',
+      'Private country club tucked in the Conyngham/Sugarloaf Valley near Hazleton and Mountain Top, PA. Features a newly renovated clubhouse, outdoor deck overlooking the golf course, up to 200 seated dining / 300 standing reception capacity, and easy access off I-80 & I-81.',
     curatedNotes:
-      'Very convenient for Northeast PA families around Hazleton, Sugarloaf, and Mountain Top. Confirm outside Indian catering approval, kitchen access, and sound curfew during walkthrough.',
+      'Seats up to 200 for dining (300 standing reception). Very convenient for Northeast PA families around Hazleton, Sugarloaf, and Mountain Top. Confirm outside Indian catering approval, kitchen access, and sound curfew during walkthrough.',
     desiFeatures: {
       largeDanceFloor: true,
       stageAvLighting: true,

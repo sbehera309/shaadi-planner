@@ -271,8 +271,8 @@ export const HotelRoomBlockGuide: React.FC<HotelRoomBlockGuideProps> = ({
                   Pro Tip: Book <strong>1 Primary Hotel</strong> (for family + shuttle) and optionally <strong>1 Budget Overflow Hotel</strong> (0% attrition courtesy block).
                 </span>
               </div>
-              <p className="text-[11px] text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-                ⚠️ Phone numbers, distances, and rates are starting estimates — please confirm them on the hotel&apos;s official website or Google Maps before you call.
+              <p className="text-[11px] text-stone-500">
+                Note: Group nightly rates, room-release cutoffs, and shuttle minimums vary by wedding season — confirm exact contract terms with Hotel Sales.
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
