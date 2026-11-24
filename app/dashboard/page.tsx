@@ -131,6 +131,24 @@ export default function DashboardOverviewPage() {
     .filter((d): d is string => Boolean(d && /^\d{4}-\d{2}-\d{2}$/.test(d.trim())))
     .sort();
   const scheduledEventsCount = scheduledEventDates.length;
+
+  // Dynamically label the calendar "Wedding Weekend" vs "Wedding Week" based on scheduled dates
+  const calendarHeading = (() => {
+    const uniqueDates = Array.from(new Set(scheduledEventDates));
+    if (uniqueDates.length === 0) return 'Wedding Week';
+    const parsed = uniqueDates.map((iso) => {
+      const [y, m, d] = iso.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    });
+    const spanDays = Math.round(
+      (parsed[parsed.length - 1].getTime() - parsed[0].getTime()) / (1000 * 60 * 60 * 24)
+    );
+    const allOnWeekend = parsed.every((dt) => {
+      const dow = dt.getDay(); // Fri=5, Sat=6, Sun=0
+      return dow === 5 || dow === 6 || dow === 0;
+    });
+    return spanDays <= 2 && allOnWeekend ? 'Wedding Weekend' : 'Wedding Week';
+  })();
   const earliestEventDate = scheduledEventDates[0] || wedding?.startDate || '';
   const latestEventDate =
     scheduledEventDates[scheduledEventDates.length - 1] || wedding?.endDate || '';
@@ -429,7 +447,7 @@ export default function DashboardOverviewPage() {
               <div>
                 <h2 className="text-xl sm:text-2xl font-bold font-serif text-stone-900">
                   {hasAnyEventVenueSelected && overviewViewMode === 'calendar'
-                    ? 'Master Wedding Calendar'
+                    ? calendarHeading
                     : hasAnyEventVenueSelected
                     ? 'All Ceremonies & Decisions'
                     : 'Your Wedding Plan'}
