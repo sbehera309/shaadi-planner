@@ -2,11 +2,15 @@
 
 import React, { useState, useMemo } from 'react';
 import { useWedding } from '@/lib/store';
-import { Vendor, CuratedVendor } from '@/lib/types';
+import { Vendor, CuratedVendor, VendorAddOn, VendorEventCoverage } from '@/lib/types';
 import { PRELOADED_CURATED_VENDORS } from '@/lib/preloadedVendors';
 import { Modal } from '@/components/Modal';
 import { ShortlistBudgetModal } from '@/components/ShortlistBudgetModal';
 import { useShortlistBudget } from '@/lib/useShortlistBudget';
+import {
+  VendorCategoryDetailsEditor,
+  VendorCategoryDetailsCard,
+} from '@/components/VendorCategoryDetails';
 import {
   Briefcase,
   Plus,
@@ -85,15 +89,20 @@ export default function VendorsPage() {
   const [payingVendor, setPayingVendor] = useState<Vendor | null>(null);
   const [formData, setFormData] = useState({
     name: '',
-    category: 'Pandit Ji' as Vendor['category'],
+    category: 'Photographer & Cinematographer' as Vendor['category'],
     contactPerson: '',
     phone: '',
     email: '',
-    agreedAmount: 50000,
-    depositPaid: 10000,
+    agreedAmount: 0,
+    depositPaid: 0,
     status: 'shortlisted' as Vendor['status'],
     notes: '',
     deliverablesString: '',
+    quoteExpiresAt: '',
+    quoteUrl: '',
+    categoryDetails: {} as Record<string, string | boolean>,
+    eventBreakdown: [] as VendorEventCoverage[],
+    addOns: [] as VendorAddOn[],
   });
 
   // Helper to match curated vendor with stored user vendor
@@ -144,7 +153,7 @@ export default function VendorsPage() {
     setEditingVendor(null);
     setFormData({
       name: '',
-      category: 'Pandit Ji',
+      category: 'Photographer & Cinematographer',
       contactPerson: '',
       phone: '',
       email: '',
@@ -153,6 +162,11 @@ export default function VendorsPage() {
       status: 'shortlisted',
       notes: '',
       deliverablesString: '',
+      quoteExpiresAt: '',
+      quoteUrl: '',
+      categoryDetails: {},
+      eventBreakdown: [],
+      addOns: [],
     });
     setIsModalOpen(true);
   };
@@ -170,6 +184,11 @@ export default function VendorsPage() {
       status: vendor.status,
       notes: vendor.notes,
       deliverablesString: vendor.deliverables.join(', '),
+      quoteExpiresAt: vendor.quoteExpiresAt || '',
+      quoteUrl: vendor.quoteUrl || '',
+      categoryDetails: { ...(vendor.categoryDetails || {}) },
+      eventBreakdown: vendor.eventBreakdown ? vendor.eventBreakdown.map((e) => ({ ...e })) : [],
+      addOns: vendor.addOns ? vendor.addOns.map((a) => ({ ...a })) : [],
     });
     setIsModalOpen(true);
   };
@@ -193,6 +212,11 @@ export default function VendorsPage() {
       status: 'negotiating',
       notes: `${curated.tagline}\nLocation: ${curated.baseLocation}\nTypical Rate: ${curated.pricingHeadline}\nApproved: ${curated.estateApprovedVenues.join(', ')}`,
       deliverablesString: curated.inclusions.slice(0, 4).join(', '),
+      quoteExpiresAt: '',
+      quoteUrl: curated.websiteUrl || '',
+      categoryDetails: {},
+      eventBreakdown: [],
+      addOns: [],
     });
     setInspectingVendor(null);
     setIsModalOpen(true);
@@ -205,6 +229,9 @@ export default function VendorsPage() {
       .map((s) => s.trim())
       .filter(Boolean);
 
+    const cleanedEventBreakdown = formData.eventBreakdown.filter((r) => r.eventName.trim());
+    const cleanedAddOns = formData.addOns.filter((a) => a.name.trim());
+
     const payload = {
       name: formData.name,
       category: formData.category,
@@ -216,6 +243,11 @@ export default function VendorsPage() {
       status: formData.status,
       notes: formData.notes,
       deliverables,
+      quoteExpiresAt: formData.quoteExpiresAt || undefined,
+      quoteUrl: formData.quoteUrl.trim() || undefined,
+      categoryDetails: formData.categoryDetails,
+      eventBreakdown: cleanedEventBreakdown,
+      addOns: cleanedAddOns,
       curatedVendorId: editingVendor?.curatedVendorId,
     };
 
@@ -972,6 +1004,18 @@ export default function VendorsPage() {
                         </div>
                       )}
 
+                      {/* Category-Specific Quote & Package Details */}
+                      <VendorCategoryDetailsCard
+                        vendor={vendor}
+                        currencySymbol={currencySymbol}
+                        onToggleAddOn={(addOnId) => {
+                          const updatedAddOns = (vendor.addOns || []).map((a) =>
+                            a.id === addOnId ? { ...a, selected: !a.selected } : a
+                          );
+                          updateVendor(vendor.id, { addOns: updatedAddOns });
+                        }}
+                      />
+
                       {/* Deliverables Checklist */}
                       {vendor.deliverables.length > 0 && (
                         <div className="mt-4">
@@ -1298,7 +1342,7 @@ export default function VendorsPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={editingVendor ? 'Edit Vendor Details' : 'Add Wedding Professional / Vendor'}
-        maxWidth="lg"
+        maxWidth="2xl"
       >
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           <div>
@@ -1308,7 +1352,7 @@ export default function VendorsPage() {
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g. Moghul Caterers or Nirali Decor"
+              placeholder="e.g. Urban Phulkari Films, Moghul Caterers, or Nirali Decor"
               className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-amber-500"
             />
           </div>
@@ -1364,10 +1408,9 @@ export default function VendorsPage() {
               />
             </div>
             <div>
-              <label className="font-semibold text-stone-700 block mb-1">Phone Number *</label>
+              <label className="font-semibold text-stone-700 block mb-1">Phone Number</label>
               <input
                 type="text"
-                required
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 placeholder="(732) 555-0199"
@@ -1409,6 +1452,26 @@ export default function VendorsPage() {
               className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-amber-500"
             />
           </div>
+
+          {/* Dynamic Category-Specific Quote & Package Specs */}
+          <VendorCategoryDetailsEditor
+            category={formData.category}
+            quoteExpiresAt={formData.quoteExpiresAt}
+            quoteUrl={formData.quoteUrl}
+            categoryDetails={formData.categoryDetails}
+            eventBreakdown={formData.eventBreakdown}
+            addOns={formData.addOns}
+            onChangeQuoteExpiresAt={(val) => setFormData({ ...formData, quoteExpiresAt: val })}
+            onChangeQuoteUrl={(val) => setFormData({ ...formData, quoteUrl: val })}
+            onChangeDetail={(key, value) =>
+              setFormData({
+                ...formData,
+                categoryDetails: { ...formData.categoryDetails, [key]: value },
+              })
+            }
+            onChangeEventBreakdown={(rows) => setFormData({ ...formData, eventBreakdown: rows })}
+            onChangeAddOns={(items) => setFormData({ ...formData, addOns: items })}
+          />
 
           <div>
             <label className="font-semibold text-stone-700 block mb-1">

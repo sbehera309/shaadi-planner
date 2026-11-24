@@ -155,6 +155,23 @@ export interface BudgetItem {
   paymentSchedule?: PaymentMilestone[];
 }
 
+export interface VendorAddOn {
+  id: string;
+  name: string;
+  price: number;
+  notes?: string;
+  selected?: boolean;
+}
+
+export interface VendorEventCoverage {
+  id: string;
+  eventName: string;
+  hours?: string;
+  teamSize?: string;
+  rate?: string;
+  priceLabel?: string;
+}
+
 export interface Vendor {
   id: string;
   weddingId: string;
@@ -179,8 +196,13 @@ export interface Vendor {
   depositPaid: number;
   status: 'shortlisted' | 'contacted' | 'negotiating' | 'confirmed' | 'completed';
   contractUrl?: string;
+  quoteUrl?: string;
+  quoteExpiresAt?: string;
   notes: string;
   deliverables: string[];
+  categoryDetails?: Record<string, string | boolean>;
+  eventBreakdown?: VendorEventCoverage[];
+  addOns?: VendorAddOn[];
   curatedVendorId?: string;
   installments?: PaymentInstallment[];
   paymentSchedule?: PaymentMilestone[];
