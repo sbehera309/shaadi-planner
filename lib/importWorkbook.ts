@@ -211,7 +211,10 @@ export async function parseWeddingExcelFile(file: File): Promise<ImportedWedding
     const sheet = workbook.Sheets[guestSheetName];
     const rawRows: any[] = XLSX.utils.sheet_to_json(sheet);
     const parsedGuests: Guest[] = rawRows
-      .filter((r) => r['Guest Name'] || r['name'])
+      .filter((r) => {
+        const nm = String(r['Guest Name'] || r['name'] || '').trim();
+        return nm && !nm.toUpperCase().startsWith('TOTAL');
+      })
       .map((r, idx) => {
         const name = String(r['Guest Name'] || r['name']).trim();
         const rawSide = String(r['Family Side'] || r['side'] || '').toLowerCase();
@@ -248,6 +251,26 @@ export async function parseWeddingExcelFile(file: File): Promise<ImportedWedding
           });
         }
 
+        const rawTier = String(r['Invite Tier'] || r['Tier'] || r['tier'] || '').toUpperCase();
+        const tier: Guest['tier'] = rawTier.includes('A')
+          ? 'A'
+          : rawTier.includes('B')
+          ? 'B'
+          : rawTier.includes('C')
+          ? 'C'
+          : undefined;
+        const rawColor = String(r['Card Color'] || r['cardColor'] || '').toLowerCase().trim();
+        const validColors = ['default', 'emerald', 'amber', 'sky', 'purple', 'rose'] as const;
+        const cardColor: Guest['cardColor'] = (validColors as readonly string[]).includes(rawColor)
+          ? (rawColor as Guest['cardColor'])
+          : tier === 'A'
+          ? 'emerald'
+          : tier === 'B'
+          ? 'amber'
+          : tier === 'C'
+          ? 'purple'
+          : undefined;
+
         return {
           id: `imp-g-${idx}-${Date.now()}`,
           weddingId: 'wedding-1',
@@ -255,7 +278,9 @@ export async function parseWeddingExcelFile(file: File): Promise<ImportedWedding
           phone: String(r['Phone Number'] || r['phone'] || ''),
           email: r['Email Address'] || r['email'] || undefined,
           side,
-          familyGroup: String(r['Family Group / Household'] || r['Household'] || r['familyGroup'] || name),
+          familyGroup: String(
+            r['Guest Group'] || r['Family Group / Household'] || r['Household'] || r['familyGroup'] || name
+          ),
           adultsCount: Math.max(1, adults),
           kidsCount: Math.max(0, kids),
           dietaryPreference,
@@ -264,6 +289,8 @@ export async function parseWeddingExcelFile(file: File): Promise<ImportedWedding
           hotelAssigned: r['Hotel Assigned'] || r['hotelAssigned'] || undefined,
           roomNumber: r['Room Number'] || r['roomNumber'] || undefined,
           notes: r['Notes'] || r['notes'] || undefined,
+          ...(tier ? { tier } : {}),
+          ...(cardColor ? { cardColor } : {}),
           eventRsvps,
         };
       });
@@ -280,10 +307,13 @@ export async function parseWeddingExcelFile(file: File): Promise<ImportedWedding
     const sheet = workbook.Sheets[vendorSheetName];
     const rawRows: any[] = XLSX.utils.sheet_to_json(sheet);
     const parsedVendors: Vendor[] = rawRows
-      .filter((r) => r['Vendor Company Name'] || r['Vendor Name'] || r['name'])
+      .filter((r) => {
+        const nm = String(r['Vendor Company Name'] || r['Vendor Name'] || r['name'] || '').trim();
+        return nm && !nm.toUpperCase().startsWith('TOTAL');
+      })
       .map((r, idx) => {
         const name = r['Vendor Company Name'] || r['Vendor Name'] || r['name'] || `Vendor ${idx + 1}`;
-        const agreed = Number(String(r['Agreed Total Fee ($)'] || r['Agreed Total'] || r['agreedAmount'] || 0).replace(/[^0-9.]+/g, '')) || 0;
+        const agreed = Number(String(r['Agreed / Quoted Fee ($)'] || r['Agreed Total Fee ($)'] || r['Agreed Total'] || r['agreedAmount'] || 0).replace(/[^0-9.]+/g, '')) || 0;
         const deposit = Number(String(r['Deposit Paid ($)'] || r['Deposit Paid'] || r['depositPaid'] || 0).replace(/[^0-9.]+/g, '')) || 0;
 
         const rawStatus = String(r['Booking Status'] || r['status'] || '').toLowerCase();
@@ -302,14 +332,16 @@ export async function parseWeddingExcelFile(file: File): Promise<ImportedWedding
         else if (rawCategory.includes('Mehendi') || rawCategory.includes('Mehndi')) category = 'Mehendi Artist';
         else if (rawCategory.includes('MUA') || rawCategory.includes('Makeup') || rawCategory.includes('Hair')) category = 'Bridal MUA & Hair';
         else if (rawCategory.includes('Photo') || rawCategory.includes('Video') || rawCategory.includes('Cinematog')) category = 'Photographer & Cinematographer';
-        else if (rawCategory.includes('DJ') || rawCategory.includes('Choreo') || rawCategory.includes('Music')) category = 'Choreographer & DJ';
+        else if (rawCategory.includes('DJ') || rawCategory.includes('Choreo') || rawCategory.includes('Light') || rawCategory.includes('AV') || rawCategory.includes('Music')) category = 'Choreographer & DJ';
         else if (rawCategory.includes('Mandap') || rawCategory.includes('Decor') || rawCategory.includes('Flor')) category = 'Mandap & Floral Decorator';
         else if (rawCategory.includes('Catering') || rawCategory.includes('Food')) category = 'Catering';
         else if (rawCategory.includes('Attire') || rawCategory.includes('Outfit') || rawCategory.includes('Trousseau')) category = 'Trousseau / Attire';
-        else if (rawCategory.includes('Light') || rawCategory.includes('AV')) category = 'Lighting & AV Production';
         else if (rawCategory.includes('Transport') || rawCategory.includes('Car') || rawCategory.includes('Horse') || rawCategory.includes('Baraat')) category = 'Baraat & Farewell Transport';
         else if (rawCategory.includes('Musician') || rawCategory.includes('Shehnai') || rawCategory.includes('Dhol')) category = 'Live Musicians (Nathswaram/Shehnai)';
         else if (rawCategory.includes('Planner') || rawCategory.includes('Coordinator')) category = 'Wedding Planner & Coordinator';
+
+        const quoteExpiresAt = r['Quote Expires On'] ? String(r['Quote Expires On']).trim() : undefined;
+        const quoteUrl = r['Quote Book URL'] ? String(r['Quote Book URL']).trim() : undefined;
 
         return {
           id: `imp-v-${idx}-${Date.now()}`,
@@ -323,7 +355,9 @@ export async function parseWeddingExcelFile(file: File): Promise<ImportedWedding
           agreedAmount: agreed,
           depositPaid: deposit,
           deliverables,
-          notes: r['Internal Notes & Sound Curfew Terms'] || r['Notes'] || '',
+          ...(quoteExpiresAt ? { quoteExpiresAt } : {}),
+          ...(quoteUrl ? { quoteUrl } : {}),
+          notes: r['Internal Notes & Terms'] || r['Internal Notes & Sound Curfew Terms'] || r['Notes'] || '',
         };
       });
 

@@ -38,6 +38,8 @@ export const ExcelSyncModal: React.FC<ExcelSyncModalProps> = ({
     shagunRecords,
     rooms,
     venues,
+    officialSangeetVenue,
+    seatingPlan,
     importFullWeddingData,
   } = useWedding();
 
@@ -60,6 +62,8 @@ export const ExcelSyncModal: React.FC<ExcelSyncModalProps> = ({
       shagunRecords,
       rooms,
       venues,
+      officialSangeetVenue,
+      seatingPlan,
     });
   };
 
@@ -151,10 +155,10 @@ export const ExcelSyncModal: React.FC<ExcelSyncModalProps> = ({
               <FileSpreadsheet className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
               <div>
                 <h4 className="font-bold text-emerald-950 text-sm">
-                  Complete 8-Sheet Master Wedding Workbook
+                  Complete 10-Sheet Formula-Powered Master Workbook
                 </h4>
                 <p className="text-[11px] text-emerald-900 leading-relaxed mt-0.5">
-                  Downloads a fully formatted Microsoft Excel (.xlsx) file. Compatible with Google Sheets, Apple Numbers, and Excel. You can freely edit offline or share with parents and your wedding coordinator!
+                  Downloads a Microsoft Excel (.xlsx) workbook with live cross-sheet <code>SUM</code>/<code>SUMIF</code> formulas, currency formatting, auto-fitted columns, and filter dropdowns—ready for Excel, Google Sheets, and Apple Numbers.
                 </p>
               </div>
             </div>
@@ -165,35 +169,43 @@ export const ExcelSyncModal: React.FC<ExcelSyncModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
                 <div className="p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span><strong>1. Wedding Overview:</strong> Dates, Venue & Budget</span>
+                  <span><strong>1. Wedding Overview:</strong> Live Formula KPIs, Venues &amp; Tiers</span>
                 </div>
                 <div className="p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span><strong>2. Itinerary & Timings:</strong> {events.length} Ceremonies & Vows</span>
+                  <span><strong>2. Itinerary &amp; Timings:</strong> {events.length} Ceremonies &amp; Checklists</span>
                 </div>
                 <div className="p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span><strong>3. Budget & Splits:</strong> {budgetItems.length} Expenses & Ledger</span>
+                  <span><strong>3. Budget &amp; Splits:</strong> {budgetItems.length} Expenses &amp; Live Totals</span>
                 </div>
                 <div className="p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span><strong>4. Guest List:</strong> {guests.length} Guests & RSVPs</span>
+                  <span><strong>4. Payment Milestones:</strong> Paid vs. Upcoming Installments</span>
                 </div>
                 <div className="p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span><strong>5. Vendor CRM:</strong> {vendors.length} Vendors & Contracts</span>
+                  <span><strong>5. Guest List &amp; RSVPs:</strong> {guests.length} Guests, Groups &amp; Tier A/B/C</span>
                 </div>
                 <div className="p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span><strong>6. Wedding Gifts:</strong> {shagunRecords.length} Shagun Records</span>
+                  <span><strong>6. Reception Seating Chart:</strong> {seatingPlan?.tables?.length || 0} Tables &amp; Floor Zones</span>
                 </div>
                 <div className="p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span><strong>7. Rooms & Logistics:</strong> Hotel allocations & airport transits</span>
+                  <span><strong>7. Vendors &amp; Contracts:</strong> {vendors.length} Vendors, Quote Specs &amp; Add-Ons</span>
                 </div>
                 <div className="p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span><strong>8. Venues & Site Tours:</strong> {venues.length} Venues & Scouting</span>
+                  <span><strong>8. Wedding Gifts:</strong> {shagunRecords.length} Shagun Records</span>
+                </div>
+                <div className="p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span><strong>9. Rooms &amp; Logistics:</strong> {rooms.length} Hotel Blocks &amp; Pickups</span>
+                </div>
+                <div className="p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span><strong>10. Venues &amp; Site Tours:</strong> {venues.length} Scouted Venues</span>
                 </div>
               </div>
             </div>

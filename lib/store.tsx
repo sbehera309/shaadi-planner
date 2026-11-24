@@ -757,29 +757,32 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const resolvedOwnerEmail = ownerEmail || (user.email || '').toLowerCase();
         const collaboratorEmails = collaborators.map((c) => c.email.toLowerCase().trim());
 
-        const cloudData = {
-          profile: wedding,
-          events,
-          guests,
-          customGuestGroups,
-          seatingPlan,
-          budgetItems,
-          vendors,
-          shagunRecords,
-          rooms,
-          venues,
-          tourPlan,
-          officialSangeetVenue,
-          scenarioSelection,
-          collaborators,
-          collaboratorEmails,
-          ownerUid: resolvedOwnerUid,
-          ownerEmail: resolvedOwnerEmail,
-          userId: resolvedOwnerUid,
-          userEmail: resolvedOwnerEmail,
-          lastEditedBy: user.email || '',
-          updatedAt: new Date().toISOString(),
-        };
+        // Deep-strip all `undefined` values before writing to Firestore (Firestore rejects `undefined` anywhere in payload!)
+        const cloudData = JSON.parse(
+          JSON.stringify({
+            profile: wedding,
+            events,
+            guests,
+            customGuestGroups,
+            seatingPlan,
+            budgetItems,
+            vendors,
+            shagunRecords,
+            rooms,
+            venues,
+            tourPlan,
+            officialSangeetVenue,
+            scenarioSelection,
+            collaborators,
+            collaboratorEmails,
+            ownerUid: resolvedOwnerUid,
+            ownerEmail: resolvedOwnerEmail,
+            userId: resolvedOwnerUid,
+            userEmail: resolvedOwnerEmail,
+            lastEditedBy: user.email || '',
+            updatedAt: new Date().toISOString(),
+          })
+        );
 
         const targetWeddingId = activeWeddingDocId || wedding?.id;
 

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useWedding } from '@/lib/store';
 import { Vendor, CuratedVendor, VendorAddOn, VendorEventCoverage } from '@/lib/types';
 import { PRELOADED_CURATED_VENDORS } from '@/lib/preloadedVendors';
@@ -55,7 +56,74 @@ const CATEGORY_TABS: { label: string; value: string }[] = [
 
 const REGION_OPTIONS = ['All', 'NJ', 'NY', 'PA', 'CT', 'DE'] as const;
 
-export default function VendorsPage() {
+type VendorSectionKey = 'catering' | 'decor' | 'dj' | 'photo' | 'other';
+
+const OTHER_VENDOR_CATEGORIES: Vendor['category'][] = [
+  'Pandit Ji',
+  'Bridal MUA & Hair',
+  'Mehendi Artist',
+  'Baraat & Farewell Transport',
+  'Live Musicians (Nathswaram/Shehnai)',
+  'Trousseau / Attire',
+  'Wedding Planner & Coordinator',
+];
+
+const VENDOR_SECTION_CONFIG: Record<
+  VendorSectionKey,
+  {
+    title: string;
+    subtitle: string;
+    categories: Vendor['category'][];
+    defaultCategory: Vendor['category'];
+    addButtonLabel: string;
+  }
+> = {
+  catering: {
+    title: 'Catering & Sweets',
+    subtitle: 'Compare Indian caterers, per-plate rates, live chaat/dosa stations, and venue royalty approvals.',
+    categories: ['Catering'],
+    defaultCategory: 'Catering',
+    addButtonLabel: 'Add Catering Vendor',
+  },
+  decor: {
+    title: 'Mandap & Floral Decor',
+    subtitle: 'Track Mandap designers, floral quotes (Essential / Refined / Grand), stage flips, and centerpiece packages.',
+    categories: ['Mandap & Floral Decorator'],
+    defaultCategory: 'Mandap & Floral Decorator',
+    addButtonLabel: 'Add Decor Vendor',
+  },
+  dj: {
+    title: 'DJ, Lighting & AV Production',
+    subtitle: 'Compare DJ/MC crews, Baraat mobile sound, Dhol players, ballroom uplighting, LED walls, and cold sparklers.',
+    categories: ['Choreographer & DJ', 'Lighting & AV Production'],
+    defaultCategory: 'Choreographer & DJ',
+    addButtonLabel: 'Add DJ / Lighting Vendor',
+  },
+  photo: {
+    title: 'Photography & Videography',
+    subtitle: 'Compare photo & cinema packages, coverage hours, crew size, RAW photos, films, and add-ons like Same Day Edit.',
+    categories: ['Photographer & Cinematographer'],
+    defaultCategory: 'Photographer & Cinematographer',
+    addButtonLabel: 'Add Photo / Video Vendor',
+  },
+  other: {
+    title: 'Other Vendors',
+    subtitle: 'Pandit Ji / Priest, Bridal Hair & Makeup, Mehendi Artist, Baraat & Vidai Cars, Live Musicians, Attire & Planners.',
+    categories: OTHER_VENDOR_CATEGORIES,
+    defaultCategory: 'Pandit Ji',
+    addButtonLabel: 'Add Vendor',
+  },
+};
+
+function VendorsPageInner() {
+  const searchParams = useSearchParams();
+  const rawSection = searchParams.get('section');
+  const activeSection: VendorSectionKey | null =
+    rawSection && rawSection in VENDOR_SECTION_CONFIG
+      ? (rawSection as VendorSectionKey)
+      : null;
+  const sectionConfig = activeSection ? VENDOR_SECTION_CONFIG[activeSection] : null;
+
   const { wedding, vendors, addVendor, updateVendor, deleteVendor } = useWedding();
   const [activeTab, setActiveTab] = useState<'directory' | 'my_vendors'>('directory');
 
@@ -66,6 +134,12 @@ export default function VendorsPage() {
   const [sortBy, setSortBy] = useState<'recommended' | 'price_asc' | 'price_desc'>('recommended');
   const [showShortlistedOnly, setShowShortlistedOnly] = useState<boolean>(false);
   const [addedSuccessId, setAddedSuccessId] = useState<string | null>(null);
+
+  // Reset sub-category filter whenever the user switches sidebar vendor sections
+  useEffect(() => {
+    setSelectedCategory('All');
+    setSearchQuery('');
+  }, [activeSection]);
 
   // Tab 2 Status Filter
   const [statusFilter, setStatusFilter] = useState<'all' | 'shortlisted' | 'negotiating' | 'contacted' | 'confirmed' | 'completed'>('all');
@@ -155,7 +229,7 @@ export default function VendorsPage() {
     setEditingVendor(null);
     setFormData({
       name: '',
-      category: 'Photographer & Cinematographer',
+      category: sectionConfig?.defaultCategory || 'Photographer & Cinematographer',
       contactPerson: '',
       phone: '',
       email: '',
@@ -283,6 +357,10 @@ export default function VendorsPage() {
           return false;
         }
       }
+      // Active Sidebar Section Filter (Catering / Decor / DJ / Photo / Other)
+      if (sectionConfig && !sectionConfig.categories.includes(v.category)) {
+        return false;
+      }
       // Category Filter (treat legacy Lighting & AV Production as part of Choreographer & DJ)
       if (selectedCategory !== 'All') {
         const normalizedCat =
@@ -318,37 +396,60 @@ export default function VendorsPage() {
       }
       return 0; // default order
     });
-  }, [selectedCategory, selectedRegion, searchQuery, sortBy, showShortlistedOnly, vendors]);
+  }, [sectionConfig, selectedCategory, selectedRegion, searchQuery, sortBy, showShortlistedOnly, vendors]);
 
-  // Aggregate stats for user's personal vendors & shortlist
-  const shortlistedVendors = useMemo(() => vendors.filter((v) => v.status === 'shortlisted'), [vendors]);
+  // Vendors scoped to the active sidebar section (or all if no ?section= param)
+  const sectionVendors = useMemo(() => {
+    if (!sectionConfig) return vendors;
+    return vendors.filter((v) => sectionConfig.categories.includes(v.category));
+  }, [vendors, sectionConfig]);
+
+  // Aggregate stats for user's personal vendors & shortlist (scoped to active section)
+  const shortlistedVendors = useMemo(() => sectionVendors.filter((v) => v.status === 'shortlisted'), [sectionVendors]);
   const shortlistedCount = shortlistedVendors.length;
-  const committedVendors = useMemo(() => vendors.filter((v) => v.status !== 'shortlisted'), [vendors]);
+  const committedVendors = useMemo(() => sectionVendors.filter((v) => v.status !== 'shortlisted'), [sectionVendors]);
   const totalAgreed = committedVendors.reduce((sum, v) => sum + (v.agreedAmount || 0), 0);
   const totalDeposits = committedVendors.reduce((sum, v) => sum + (v.depositPaid || 0), 0);
   const totalBalanceDue = totalAgreed - totalDeposits;
 
   // Filter personal vendors by status in Tab 2
   const filteredMyVendors = useMemo(() => {
-    if (statusFilter === 'all') return vendors;
-    return vendors.filter((v) => v.status === statusFilter);
-  }, [vendors, statusFilter]);
+    if (statusFilter === 'all') return sectionVendors;
+    return sectionVendors.filter((v) => v.status === statusFilter);
+  }, [sectionVendors, statusFilter]);
+
+  // Visible category filter pills (only show sub-pills when viewing 'other' or 'all')
+  const visibleCategoryTabs = useMemo(() => {
+    if (!activeSection) return CATEGORY_TABS;
+    if (activeSection === 'other') {
+      return [
+        { label: 'All Other Vendors', value: 'All' },
+        { label: 'Pandit Ji / Priest', value: 'Pandit Ji' },
+        { label: 'Bridal MUA & Hair', value: 'Bridal MUA & Hair' },
+        { label: 'Mehendi Artist', value: 'Mehendi Artist' },
+        { label: '🚗 Baraat & Vidai Cars', value: 'Baraat & Farewell Transport' },
+      ];
+    }
+    return [];
+  }, [activeSection]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl font-bold font-serif text-stone-900">
-              Desi Wedding Vendor Intelligence & Contracts
+              {sectionConfig ? sectionConfig.title : 'Desi Wedding Vendor Intelligence & Contracts'}
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
               NJ • NY • PA Tri-State
             </span>
           </div>
           <p className="text-xs text-stone-500 mt-1">
-            Researched historical rates, package breakdowns, estate credentials, and contract negotiation data for premier South Asian wedding professionals.
+            {sectionConfig
+              ? sectionConfig.subtitle
+              : 'Researched historical rates, package breakdowns, estate credentials, and contract negotiation data for premier South Asian wedding professionals.'}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -357,7 +458,7 @@ export default function VendorsPage() {
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-rose-700 text-white font-semibold text-xs shadow-md shadow-rose-900/20 hover:opacity-95"
           >
             <Plus className="w-4 h-4" />
-            <span>Add Custom Vendor</span>
+            <span>{sectionConfig ? sectionConfig.addButtonLabel : 'Add Custom Vendor'}</span>
           </button>
         </div>
       </div>
@@ -373,8 +474,10 @@ export default function VendorsPage() {
           }`}
         >
           <Sparkles className="w-4 h-4 shrink-0" />
-          <span className="sm:hidden">Directory ({PRELOADED_CURATED_VENDORS.length})</span>
-          <span className="hidden sm:inline">Explore Curated Vendors Directory ({PRELOADED_CURATED_VENDORS.length})</span>
+          <span className="sm:hidden">Directory ({filteredVendors.length})</span>
+          <span className="hidden sm:inline">
+            {sectionConfig ? `Explore ${sectionConfig.title}` : 'Explore Curated Vendors Directory'} ({filteredVendors.length})
+          </span>
           {shortlistedCount > 0 && (
             <span className="px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-bold">
               {shortlistedCount}
@@ -390,8 +493,10 @@ export default function VendorsPage() {
           }`}
         >
           <Briefcase className="w-4 h-4 shrink-0" />
-          <span className="sm:hidden">My Vendors ({vendors.length})</span>
-          <span className="hidden sm:inline">My Shortlist & Booked Vendors ({vendors.length})</span>
+          <span className="sm:hidden">My Vendors ({sectionVendors.length})</span>
+          <span className="hidden sm:inline">
+            My Shortlist &amp; Booked ({sectionVendors.length})
+          </span>
           {committedVendors.length > 0 && (
             <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] ${
               activeTab === 'my_vendors' ? 'bg-amber-700 text-white' : 'bg-stone-200 text-stone-700'
@@ -428,8 +533,9 @@ export default function VendorsPage() {
           <div className="bg-white rounded-2xl border border-stone-200 p-3.5 sm:p-4 shadow-xs space-y-3 sm:space-y-4">
             {/* Category Pills & Shortlisted Quick Toggle */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 sm:mx-0 sm:px-0 py-0.5">
-                {CATEGORY_TABS.map((tab) => (
+              {visibleCategoryTabs.length > 0 ? (
+                <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 sm:mx-0 sm:px-0 py-0.5">
+                  {visibleCategoryTabs.map((tab) => (
                   <button
                     key={tab.value}
                     onClick={() => setSelectedCategory(tab.value)}
@@ -443,6 +549,11 @@ export default function VendorsPage() {
                   </button>
                 ))}
               </div>
+              ) : (
+                <div className="text-xs font-semibold text-stone-500">
+                  Showing {filteredVendors.length} curated {sectionConfig?.title.toLowerCase()} options
+                </div>
+              )}
 
               {/* Shortlist Filter Toggle */}
               <button
@@ -1549,5 +1660,13 @@ export default function VendorsPage() {
         );
       })()}
     </div>
+  );
+}
+
+export default function VendorsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-xs text-stone-500">Loading vendors...</div>}>
+      <VendorsPageInner />
+    </Suspense>
   );
 }

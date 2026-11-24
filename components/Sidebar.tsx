@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import {
   LayoutDashboard,
   CalendarDays,
@@ -18,6 +18,10 @@ import {
   Compass,
   FileSpreadsheet,
   Building2,
+  UtensilsCrossed,
+  Flower2,
+  Music,
+  Camera,
 } from 'lucide-react';
 import { useWedding } from '@/lib/store';
 import { EditWeddingModal } from './EditWeddingModal';
@@ -29,15 +33,38 @@ interface SidebarProps {
   onMobileClose?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose }) => {
+const SidebarInner: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose }) => {
   const pathname = usePathname();
-  const { wedding, collaborators, userRole } = useWedding();
+  const searchParams = useSearchParams();
+  const activeVendorSection = pathname === '/dashboard/vendors' ? searchParams.get('section') || 'all' : null;
+  const { wedding, vendors, collaborators, userRole } = useWedding();
 
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
   const [isExcelModalOpen, setIsExcelModalOpen] = React.useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = React.useState(false);
 
-  const navSections = [
+  const vendorCounts = React.useMemo(() => {
+    const counts = { catering: 0, decor: 0, dj: 0, photo: 0, other: 0 };
+    vendors.forEach((v) => {
+      if (v.category === 'Catering') counts.catering++;
+      else if (v.category === 'Mandap & Floral Decorator') counts.decor++;
+      else if (v.category === 'Choreographer & DJ' || v.category === 'Lighting & AV Production') counts.dj++;
+      else if (v.category === 'Photographer & Cinematographer') counts.photo++;
+      else counts.other++;
+    });
+    return counts;
+  }, [vendors]);
+
+  const navSections: Array<{
+    heading: string;
+    items: Array<{
+      label: string;
+      href: string;
+      icon: React.ComponentType<{ className?: string }>;
+      sectionKey?: string;
+      badgeCount?: number;
+    }>;
+  }> = [
     {
       heading: 'Plan',
       items: [
@@ -47,10 +74,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose })
       ],
     },
     {
+      heading: 'Vendors',
+      items: [
+        { label: 'Catering', href: '/dashboard/vendors?section=catering', icon: UtensilsCrossed, sectionKey: 'catering', badgeCount: vendorCounts.catering },
+        { label: 'Mandap & Decor', href: '/dashboard/vendors?section=decor', icon: Flower2, sectionKey: 'decor', badgeCount: vendorCounts.decor },
+        { label: 'DJ, Lighting & AV', href: '/dashboard/vendors?section=dj', icon: Music, sectionKey: 'dj', badgeCount: vendorCounts.dj },
+        { label: 'Photo & Video', href: '/dashboard/vendors?section=photo', icon: Camera, sectionKey: 'photo', badgeCount: vendorCounts.photo },
+        { label: 'Other Vendors', href: '/dashboard/vendors?section=other', icon: Briefcase, sectionKey: 'other', badgeCount: vendorCounts.other },
+      ],
+    },
+    {
       heading: 'People & Money',
       items: [
         { label: 'Budget & Payments', href: '/dashboard/budget', icon: WalletCards },
-        { label: 'Vendor Directory', href: '/dashboard/vendors', icon: Briefcase },
         { label: 'Guests & RSVPs', href: '/dashboard/guests', icon: Users },
       ],
     },
@@ -141,21 +177,36 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose })
               {section.heading}
             </div>
             {section.items.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = item.sectionKey
+                ? pathname === '/dashboard/vendors' && activeVendorSection === item.sectionKey
+                : pathname === item.href;
               const Icon = item.icon;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => isMobile && onMobileClose?.()}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 active:scale-[0.98] ${
+                  className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 active:scale-[0.98] ${
                     isActive
                       ? 'bg-gradient-to-r from-amber-500/20 to-rose-600/20 text-amber-300 border-l-4 border-amber-400 pl-2'
                       : 'text-stone-300 hover:bg-stone-800/80 hover:text-white'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-amber-400' : 'text-stone-400'}`} />
-                  <span>{item.label}</span>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-amber-400' : 'text-stone-400'}`} />
+                    <span className="truncate">{item.label}</span>
+                  </div>
+                  {typeof item.badgeCount === 'number' && item.badgeCount > 0 && (
+                    <span
+                      className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold shrink-0 ${
+                        isActive
+                          ? 'bg-amber-400/25 text-amber-200'
+                          : 'bg-stone-800 text-stone-400'
+                      }`}
+                    >
+                      {item.badgeCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -256,3 +307,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose })
     </>
   );
 };
+
+export const Sidebar: React.FC<SidebarProps> = (props) => (
+  <Suspense fallback={null}>
+    <SidebarInner {...props} />
+  </Suspense>
+);
