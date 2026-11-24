@@ -122,6 +122,7 @@ export async function parseWeddingExcelFile(file: File): Promise<ImportedWedding
         else if (rawType.includes('phera') || rawType.includes('vivah') || rawType.includes('mandap')) eventType = 'pheras';
         else if (rawType.includes('baraat')) eventType = 'baraat';
         else if (rawType.includes('reception')) eventType = 'reception';
+        else if (rawType.includes('after')) eventType = 'after_party';
         else if (rawType.includes('roka')) eventType = 'roka';
 
         const vowsWindow =

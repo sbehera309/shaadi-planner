@@ -97,6 +97,12 @@ const getEventColorClasses = (type: WeddingEvent['type']) => {
         dot: 'bg-indigo-600',
         badge: 'bg-indigo-50 text-indigo-900 border-indigo-200',
       };
+    case 'after_party':
+      return {
+        pill: 'bg-violet-100 text-violet-950 border-violet-300 hover:bg-violet-200/80',
+        dot: 'bg-violet-700',
+        badge: 'bg-violet-50 text-violet-900 border-violet-200',
+      };
     case 'roka':
       return {
         pill: 'bg-pink-100 text-pink-950 border-pink-300 hover:bg-pink-200/80',
@@ -124,6 +130,7 @@ const QUICK_EVENT_PRESETS: Array<{
   { type: 'mehendi', name: 'Mehendi & Chai', startTime: '14:00', endTime: '18:00', dressCode: 'Pastels / Floral Festive' },
   { type: 'pheras', name: 'Baraat & Wedding Ceremony', startTime: '09:00', endTime: '13:30', dressCode: 'Traditional Indian Formal' },
   { type: 'reception', name: 'Cocktail Hour & Reception', startTime: '18:30', endTime: '23:30', dressCode: 'Black Tie / Indian Evening Glam' },
+  { type: 'after_party', name: 'After-Party', startTime: '23:30', endTime: '02:00', dressCode: 'Comfy / Casual / Sneakers & Loungewear' },
   { type: 'custom', name: 'Welcome Dinner / Custom Event', startTime: '18:00', endTime: '21:30', dressCode: 'Smart Festive' },
 ];
 

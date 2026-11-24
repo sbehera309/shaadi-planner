@@ -25,6 +25,7 @@ export type SubEventType =
   | 'pheras' 
   | 'vidaai' 
   | 'reception' 
+  | 'after_party' 
   | 'custom';
 
 export type RequirementCategory =

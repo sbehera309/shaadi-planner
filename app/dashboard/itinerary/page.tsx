@@ -654,6 +654,7 @@ export default function ItineraryPage() {
                 <option value="pheras">Shubh Vivah (Pheras / Mandap)</option>
                 <option value="baraat">Baraat</option>
                 <option value="reception">Reception</option>
+                <option value="after_party">After-Party</option>
                 <option value="custom">Custom Ritual</option>
               </select>
             </div>
