@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useWedding } from '@/lib/store';
 import { RoomAllocation } from '@/lib/types';
 import { Modal } from '@/components/Modal';
+import { HotelRoomBlockGuide } from '@/components/HotelRoomBlockGuide';
 import {
   Hotel,
   Plus,
@@ -75,6 +76,25 @@ export default function LogisticsPage() {
     setIsModalOpen(false);
   };
 
+  const handleStartHotelBlock = (
+    hotelName: string,
+    checkInDate: string,
+    checkOutDate: string,
+    notes: string
+  ) => {
+    setEditingRoom(null);
+    setFormData({
+      hotelName,
+      roomNumber: 'Room Block',
+      roomType: 'Deluxe',
+      capacity: 4,
+      checkInDate,
+      checkOutDate,
+      notes,
+    });
+    setIsModalOpen(true);
+  };
+
   // Guests needing transit pickup
   const pickupGuests = guests.filter((g) => g.needsPickup);
 
@@ -98,6 +118,12 @@ export default function LogisticsPage() {
           <span>Add Room / Villa</span>
         </button>
       </div>
+
+      {/* Hotel Room Block Finder (auto-expanded until a hotel is added) */}
+      <HotelRoomBlockGuide
+        hasRoomsAdded={rooms.length > 0}
+        onStartHotelBlock={handleStartHotelBlock}
+      />
 
       {/* Transit Pickups Section */}
       <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-xs">
