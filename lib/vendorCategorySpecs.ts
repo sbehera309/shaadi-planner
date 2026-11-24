@@ -82,20 +82,24 @@ export const VENDOR_CATEGORY_SPECS: Record<Vendor['category'], VendorCategorySpe
   },
 
   'Choreographer & DJ': {
-    sectionTitle: 'DJ, MC & Entertainment Specs',
-    sectionHint: 'Track crew size, Baraat mobile sound, Dhol players, lighting, and special effects.',
+    sectionTitle: 'DJ, Lighting & AV Production Specs',
+    sectionHint: 'Track DJ/MC crew, Baraat mobile sound, Dhol players, uplighting, LED walls/screens, pinspotting, and special FX.',
     supportsEventBreakdown: true,
     supportsAddOns: true,
-    sampleAddOnHint: 'e.g. Cold Sparklers ($800), Dancing on a Cloud ($650), Extra Dhol Player ($450)',
+    sampleAddOnHint: 'e.g. LED Video Wall ($2,800), Cold Sparklers ($800), Dancing on a Cloud ($650), Extra Dhol Player ($450)',
     fields: [
-      { key: 'crewSize', label: 'Crew Included (DJ / MC / Tech)', shortLabel: 'Crew', type: 'text', placeholder: 'e.g. 1 DJ + 1 Bilingual MC + 1 Lighting Tech' },
+      { key: 'crewSize', label: 'Crew Included (DJ / MC / Lighting Tech)', shortLabel: 'Crew', type: 'text', placeholder: 'e.g. 1 DJ + 1 Bilingual MC + 1 Lighting/VJ Tech' },
       { key: 'hoursIncluded', label: 'Total Performance Hours', shortLabel: 'Hours', type: 'text', placeholder: 'e.g. Sangeet (4h) + Baraat (1.5h) + Reception (5h)' },
-      { key: 'soundSetup', label: 'Sound & Audio Equipment', shortLabel: 'Audio', type: 'text', placeholder: 'e.g. Ceremony lapel mics + Reception line array' },
+      { key: 'soundSetup', label: 'Sound & Audio Equipment', shortLabel: 'Audio', type: 'text', placeholder: 'e.g. Ceremony lapel mics + Reception QSC/JBL line array' },
+      { key: 'uplightsCount', label: 'Uplights & Color Wash', shortLabel: 'Uplights', type: 'text', placeholder: 'e.g. 24 wireless amber/warm white uplights' },
+      { key: 'screensOrLed', label: 'LED Video Wall / Projector Screens', shortLabel: 'LED / Screens', type: 'text', placeholder: 'e.g. 16ft×9ft P2.9 LED wall or Dual 10ft screens' },
       { key: 'includesBaraatSound', label: 'Baraat Mobile Sound Truck/Cart', shortLabel: 'Baraat Sound', type: 'boolean' },
       { key: 'includesDhol', label: 'Live Dhol Player Included', shortLabel: 'Dhol Included', type: 'boolean' },
       { key: 'includesUplighting', label: 'Ballroom Uplighting Included', shortLabel: 'Uplighting', type: 'boolean' },
-      { key: 'includesDanceFloorLighting', label: 'Intelligent Dance Floor Lighting', shortLabel: 'Dance Lighting', type: 'boolean' },
-      { key: 'includesColdSparks', label: 'Cold Sparklers / Cloud FX', shortLabel: 'Special FX', type: 'boolean' },
+      { key: 'includesDanceFloorLighting', label: 'Intelligent Moving-Head Dance Lighting', shortLabel: 'Dance Lighting', type: 'boolean' },
+      { key: 'includesPinspotting', label: 'Cake & Centerpiece Pinspotting', shortLabel: 'Pinspotting', type: 'boolean' },
+      { key: 'includesMonogram', label: 'Custom Monogram / Gobo', shortLabel: 'Monogram Gobo', type: 'boolean' },
+      { key: 'includesColdSparks', label: 'Cold Sparklers / Dancing on a Cloud FX', shortLabel: 'Special FX', type: 'boolean' },
     ],
   },
 
@@ -221,5 +225,8 @@ export const VENDOR_CATEGORY_SPECS: Record<Vendor['category'], VendorCategorySpe
 };
 
 export const getVendorCategorySpec = (category: Vendor['category']): VendorCategorySpecConfig => {
+  if (category === 'Lighting & AV Production') {
+    return VENDOR_CATEGORY_SPECS['Choreographer & DJ'];
+  }
   return VENDOR_CATEGORY_SPECS[category] || VENDOR_CATEGORY_SPECS['Wedding Planner & Coordinator'];
 };

@@ -881,8 +881,8 @@ export const PRELOADED_CURATED_VENDORS: CuratedVendor[] = [
   {
     id: 'platinum-roadshow-amit',
     name: 'Platinum Roadshow (Amit Kotecha)',
-    category: 'Lighting & AV Production',
-    tagline: 'Concert-Grade LED Video Walls & High-Impact Visual Engineering',
+    category: 'Choreographer & DJ',
+    tagline: 'Multi-DJ Entertainment, Concert-Grade LED Video Walls & Lighting Production',
     baseLocation: 'South Plainfield, NJ / PA',
     serviceRegions: ['NJ', 'PA', 'NY', 'DE'],
     priceTier: '$$$$',

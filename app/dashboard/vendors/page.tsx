@@ -45,8 +45,7 @@ const CATEGORY_TABS: { label: string; value: string }[] = [
   { label: 'All Categories', value: 'All' },
   { label: 'Catering & Sweets', value: 'Catering' },
   { label: 'Mandap & Decor', value: 'Mandap & Floral Decorator' },
-  { label: 'DJ, MC & Production', value: 'Choreographer & DJ' },
-  { label: 'Lighting & AV', value: 'Lighting & AV Production' },
+  { label: 'DJ, Lighting & AV', value: 'Choreographer & DJ' },
   { label: 'Photo & Cinema', value: 'Photographer & Cinematographer' },
   { label: 'Bridal MUA & Hair', value: 'Bridal MUA & Hair' },
   { label: 'Mehendi Artist', value: 'Mehendi Artist' },
@@ -178,7 +177,7 @@ export default function VendorsPage() {
     setEditingVendor(vendor);
     setFormData({
       name: vendor.name,
-      category: vendor.category,
+      category: vendor.category === 'Lighting & AV Production' ? 'Choreographer & DJ' : vendor.category,
       contactPerson: vendor.contactPerson,
       phone: vendor.phone,
       email: vendor.email || '',
@@ -284,9 +283,13 @@ export default function VendorsPage() {
           return false;
         }
       }
-      // Category Filter
-      if (selectedCategory !== 'All' && v.category !== selectedCategory) {
-        return false;
+      // Category Filter (treat legacy Lighting & AV Production as part of Choreographer & DJ)
+      if (selectedCategory !== 'All') {
+        const normalizedCat =
+          v.category === 'Lighting & AV Production' ? 'Choreographer & DJ' : v.category;
+        if (normalizedCat !== selectedCategory) {
+          return false;
+        }
       }
       // Region Filter
       if (selectedRegion !== 'All' && !v.serviceRegions.includes(selectedRegion as any)) {
@@ -1370,8 +1373,7 @@ export default function VendorsPage() {
               >
                 <option value="Catering">Catering & Sweet Halwai</option>
                 <option value="Mandap & Floral Decorator">Mandap & Floral Decorator</option>
-                <option value="Choreographer & DJ">Choreographer, Dhol & DJ</option>
-                <option value="Lighting & AV Production">Lighting & AV Production</option>
+                <option value="Choreographer & DJ">DJ, MC, Dhol & Lighting / AV Production</option>
                 <option value="Photographer & Cinematographer">Photographer & Cinematographer</option>
                 <option value="Bridal MUA & Hair">Bridal MUA & Hair</option>
                 <option value="Mehendi Artist">Mehendi Artist</option>
