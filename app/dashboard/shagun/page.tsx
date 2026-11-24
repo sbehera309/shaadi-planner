@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useWedding } from '@/lib/store';
 import { ShagunRecord, WeddingSide } from '@/lib/types';
 import { Modal } from '@/components/Modal';
+import { PrivateFinancialLock } from '@/components/PrivateFinancialLock';
 import {
   Gift,
   Plus,
@@ -18,12 +19,16 @@ import {
 } from 'lucide-react';
 
 export default function ShagunPage() {
-  const { wedding, shagunRecords, addShagunRecord, updateShagunRecord, deleteShagunRecord, toggleShagunThankYou } =
+  const { wedding, shagunRecords, isReadOnly, addShagunRecord, updateShagunRecord, deleteShagunRecord, toggleShagunThankYou } =
     useWedding();
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<ShagunRecord | null>(null);
+
+  if (isReadOnly) {
+    return <PrivateFinancialLock sectionName="Wedding Gifts (Shagun)" />;
+  }
 
   // Form State
   const [formData, setFormData] = useState({

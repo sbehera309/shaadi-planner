@@ -116,8 +116,8 @@ export const CollaboratorBanner: React.FC = () => {
         <div className="flex items-center gap-2">
           <Eye className="w-4 h-4 text-blue-600 shrink-0" />
           <span>
-            Viewing <strong>{coupleName} Wedding Plan</strong> (<strong>View-Only Access</strong>). Ask{' '}
-            {ownerEmail || 'the couple'} for Editor access to make changes.
+            Viewing <strong>{coupleName} Wedding Plan</strong> (<strong>View-Only Access</strong>). Budgets, contract prices &amp; payments are hidden for privacy — ask{' '}
+            {ownerEmail || 'the couple'} for Editor access to view finances or make changes.
           </span>
         </div>
         <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold text-[10px] uppercase">

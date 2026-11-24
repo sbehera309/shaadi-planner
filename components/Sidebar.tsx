@@ -37,7 +37,7 @@ const SidebarInner: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose }) =
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeVendorSection = pathname === '/dashboard/vendors' ? searchParams.get('section') || 'all' : null;
-  const { wedding, vendors, collaborators, userRole } = useWedding();
+  const { wedding, vendors, collaborators, userRole, isReadOnly } = useWedding();
 
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
   const [isExcelModalOpen, setIsExcelModalOpen] = React.useState(false);
@@ -84,16 +84,16 @@ const SidebarInner: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose }) =
       ],
     },
     {
-      heading: 'People & Money',
+      heading: isReadOnly ? 'Guests' : 'People & Money',
       items: [
-        { label: 'Budget & Payments', href: '/dashboard/budget', icon: WalletCards },
+        ...(!isReadOnly ? [{ label: 'Budget & Payments', href: '/dashboard/budget', icon: WalletCards }] : []),
         { label: 'Guests & RSVPs', href: '/dashboard/guests', icon: Users },
       ],
     },
     {
       heading: 'Extras',
       items: [
-        { label: 'Gifts', href: '/dashboard/shagun', icon: Gift },
+        ...(!isReadOnly ? [{ label: 'Gifts', href: '/dashboard/shagun', icon: Gift }] : []),
         { label: 'Rooms & Logistics', href: '/dashboard/logistics', icon: Hotel },
         { label: 'Horoscope & Kundali', href: '/dashboard/horoscope', icon: Compass },
       ],
@@ -235,22 +235,24 @@ const SidebarInner: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose }) =
           </button>
         )}
 
-        <button
-          type="button"
-          onClick={() => {
-            if (isMobile) onMobileClose?.();
-            setIsExcelModalOpen(true);
-          }}
-          className="w-full flex items-center justify-between p-2.5 rounded-xl bg-stone-800/80 hover:bg-stone-800 text-stone-200 border border-stone-700/60 text-xs font-semibold transition-all group"
-        >
-          <div className="flex items-center gap-2">
-            <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Excel & Sheets Sync</span>
-          </div>
-          <span className="text-[10px] text-stone-400 group-hover:text-white font-mono bg-stone-700/50 px-1.5 py-0.5 rounded">
-            .xlsx
-          </span>
-        </button>
+        {!isReadOnly && (
+          <button
+            type="button"
+            onClick={() => {
+              if (isMobile) onMobileClose?.();
+              setIsExcelModalOpen(true);
+            }}
+            className="w-full flex items-center justify-between p-2.5 rounded-xl bg-stone-800/80 hover:bg-stone-800 text-stone-200 border border-stone-700/60 text-xs font-semibold transition-all group"
+          >
+            <div className="flex items-center gap-2">
+              <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>Excel &amp; Sheets Sync</span>
+            </div>
+            <span className="text-[10px] text-stone-400 group-hover:text-white font-mono bg-stone-700/50 px-1.5 py-0.5 rounded">
+              .xlsx
+            </span>
+          </button>
+        )}
 
         {wedding && wedding.isConfigured && wedding.slug && (
           <Link

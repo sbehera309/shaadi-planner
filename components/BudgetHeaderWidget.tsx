@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useWedding } from '@/lib/store';
 import { useShortlistBudget } from '@/lib/useShortlistBudget';
 import { AnimatedBudgetNumber } from './AnimatedBudgetNumber';
 import { ShortlistBudgetModal } from './ShortlistBudgetModal';
 import { Wallet, Sparkles, ChevronDown, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export const BudgetHeaderWidget: React.FC = () => {
+  const { isReadOnly } = useWedding();
   const {
     targetBudget,
     committedCost,
@@ -22,6 +24,9 @@ export const BudgetHeaderWidget: React.FC = () => {
   } = useShortlistBudget();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Privacy guard: View-Only collaborators cannot see budget or pricing
+  if (isReadOnly) return null;
 
   // If budget is not configured or 0
   const isBudgetUnset = targetBudget === 0;

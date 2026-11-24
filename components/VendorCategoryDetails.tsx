@@ -350,12 +350,14 @@ export const VendorCategoryDetailsEditor: React.FC<VendorCategoryDetailsEditorPr
 interface VendorCategoryDetailsCardProps {
   vendor: Vendor;
   currencySymbol: string;
+  hidePricing?: boolean;
   onToggleAddOn?: (addOnId: string) => void;
 }
 
 export const VendorCategoryDetailsCard: React.FC<VendorCategoryDetailsCardProps> = ({
   vendor,
   currencySymbol,
+  hidePricing = false,
   onToggleAddOn,
 }) => {
   const spec = getVendorCategorySpec(vendor.category);
@@ -456,9 +458,9 @@ export const VendorCategoryDetailsCard: React.FC<VendorCategoryDetailsCardProps>
                   {ev.hours && <span>{ev.hours}</span>}
                   {ev.teamSize && <span className="text-stone-400">•</span>}
                   {ev.teamSize && <span>{ev.teamSize}</span>}
-                  {ev.rate && <span className="text-stone-400">•</span>}
-                  {ev.rate && <span className="text-stone-500">{ev.rate}</span>}
-                  {ev.priceLabel && (
+                  {!hidePricing && ev.rate && <span className="text-stone-400">•</span>}
+                  {!hidePricing && ev.rate && <span className="text-stone-500">{ev.rate}</span>}
+                  {!hidePricing && ev.priceLabel && (
                     <span className="font-mono font-bold text-stone-900 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
                       {ev.priceLabel}
                     </span>
@@ -477,7 +479,7 @@ export const VendorCategoryDetailsCard: React.FC<VendorCategoryDetailsCardProps>
             <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
               Optional Add-Ons
             </span>
-            {selectedAddOnsTotal > 0 && (
+            {!hidePricing && selectedAddOnsTotal > 0 && (
               <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
                 Selected: +{currencySymbol}
                 {selectedAddOnsTotal.toLocaleString()}
@@ -489,7 +491,8 @@ export const VendorCategoryDetailsCard: React.FC<VendorCategoryDetailsCardProps>
               <button
                 key={item.id}
                 type="button"
-                onClick={() => onToggleAddOn && onToggleAddOn(item.id)}
+                disabled={hidePricing}
+                onClick={() => !hidePricing && onToggleAddOn && onToggleAddOn(item.id)}
                 className={`w-full text-left flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg border text-[11px] transition-colors ${
                   item.selected
                     ? 'bg-emerald-50/70 border-emerald-300 text-emerald-950'
@@ -509,10 +512,12 @@ export const VendorCategoryDetailsCard: React.FC<VendorCategoryDetailsCardProps>
                     </span>
                   )}
                 </div>
-                <span className="font-mono font-bold shrink-0">
-                  +{currencySymbol}
-                  {(item.price || 0).toLocaleString()}
-                </span>
+                {!hidePricing && (
+                  <span className="font-mono font-bold shrink-0">
+                    +{currencySymbol}
+                    {(item.price || 0).toLocaleString()}
+                  </span>
+                )}
               </button>
             ))}
           </div>

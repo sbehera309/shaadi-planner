@@ -124,7 +124,7 @@ function VendorsPageInner() {
       : null;
   const sectionConfig = activeSection ? VENDOR_SECTION_CONFIG[activeSection] : null;
 
-  const { wedding, vendors, addVendor, updateVendor, deleteVendor } = useWedding();
+  const { wedding, vendors, isReadOnly, addVendor, updateVendor, deleteVendor } = useWedding();
   const [activeTab, setActiveTab] = useState<'directory' | 'my_vendors'>('directory');
 
   // Directory Filters
@@ -497,7 +497,7 @@ function VendorsPageInner() {
           <span className="hidden sm:inline">
             My Shortlist &amp; Booked ({sectionVendors.length})
           </span>
-          {committedVendors.length > 0 && (
+          {!isReadOnly && committedVendors.length > 0 && (
             <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] ${
               activeTab === 'my_vendors' ? 'bg-amber-700 text-white' : 'bg-stone-200 text-stone-700'
             }`}>
@@ -844,7 +844,8 @@ function VendorsPageInner() {
       {/* ========================================================================= */}
       {activeTab === 'my_vendors' && (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-200">
-          {/* Summary Stat Bar: 4 Metrics */}
+          {/* Summary Stat Bar: 4 Metrics (hidden for View-Only collaborators for privacy) */}
+          {!isReadOnly && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-xs interactive-card">
               <div className="text-[10px] sm:text-[11px] font-bold text-stone-400 uppercase tracking-wider truncate">
@@ -902,9 +903,10 @@ function VendorsPageInner() {
               </div>
             </div>
           </div>
+          )}
 
-          {/* Real-Time Shortlist Budget Impact Banner */}
-          {shortlistedCount > 0 && (
+          {/* Real-Time Shortlist Budget Impact Banner (hidden for View-Only) */}
+          {!isReadOnly && shortlistedCount > 0 && (
             <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-300/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-amber-500 text-stone-950 flex items-center justify-center font-bold shrink-0 shadow-2xs">
@@ -1125,7 +1127,9 @@ function VendorsPageInner() {
                       <VendorCategoryDetailsCard
                         vendor={vendor}
                         currencySymbol={currencySymbol}
+                        hidePricing={isReadOnly}
                         onToggleAddOn={(addOnId) => {
+                          if (isReadOnly) return;
                           const updatedAddOns = (vendor.addOns || []).map((a) =>
                             a.id === addOnId ? { ...a, selected: !a.selected } : a
                           );
@@ -1151,8 +1155,21 @@ function VendorsPageInner() {
                       )}
                     </div>
 
-                    {/* Bottom Financial & Action Row */}
-                    {isShortlist ? (
+                    {/* Bottom Financial & Action Row (hidden for View-Only collaborators for privacy) */}
+                    {isReadOnly ? (
+                      vendor.phone ? (
+                        <div className="mt-5 pt-3 border-t border-stone-100 flex items-center justify-between text-xs text-stone-500">
+                          <span className="text-[11px] font-medium">Pricing hidden (View-Only)</span>
+                          <a
+                            href={`tel:${vendor.phone}`}
+                            className="inline-flex items-center gap-1 text-stone-700 font-semibold hover:text-amber-800"
+                          >
+                            <Phone className="w-3.5 h-3.5" />
+                            <span>{vendor.phone}</span>
+                          </a>
+                        </div>
+                      ) : null
+                    ) : isShortlist ? (
                       <div className="mt-6 pt-4 border-t border-stone-100 flex flex-wrap items-center justify-between gap-3 text-xs">
                         <div>
                           <div className="text-amber-800 font-bold text-[11px] uppercase tracking-wider flex items-center gap-1">

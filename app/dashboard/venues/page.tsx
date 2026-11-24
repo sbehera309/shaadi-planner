@@ -108,6 +108,7 @@ export default function VenuesPage() {
     setOfficialVenue,
     saveTourPlan,
     officialSangeetVenue,
+    isReadOnly,
   } = useWedding();
 
   const [activeTab, setActiveTab] = useState<'curated' | 'my-venues' | 'tour-planner' | 'sangeet'>('curated');
@@ -1077,44 +1078,48 @@ export default function VenuesPage() {
               <h2 className="text-base sm:text-lg font-bold font-serif text-stone-900 truncate mt-0.5">
                 {officialVenue.name}
               </h2>
-              <p className="text-xs text-stone-600 mt-0.5">
-                Contract Total:{' '}
-                <strong className="text-stone-900">
-                  ${(officialVenue.contractAgreedAmount || officialVenue.pricing.estimatedTotalCost || 0).toLocaleString()}
-                </strong>
-                {officialVenue.paymentSchedule && officialVenue.paymentSchedule.length > 0 && (
-                  <>
-                    {' '}•{' '}
-                    <strong className="text-emerald-700">
-                      {officialVenue.paymentSchedule.filter((m) => m.status === 'paid').length}/
-                      {officialVenue.paymentSchedule.length} payments paid
-                    </strong>
-                  </>
-                )}
-              </p>
+              {!isReadOnly && (
+                <p className="text-xs text-stone-600 mt-0.5">
+                  Contract Total:{' '}
+                  <strong className="text-stone-900">
+                    ${(officialVenue.contractAgreedAmount || officialVenue.pricing.estimatedTotalCost || 0).toLocaleString()}
+                  </strong>
+                  {officialVenue.paymentSchedule && officialVenue.paymentSchedule.length > 0 && (
+                    <>
+                      {' '}•{' '}
+                      <strong className="text-emerald-700">
+                        {officialVenue.paymentSchedule.filter((m) => m.status === 'paid').length}/
+                        {officialVenue.paymentSchedule.length} payments paid
+                      </strong>
+                    </>
+                  )}
+                </p>
+              )}
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() =>
-              setContractModalTarget({
-                type: 'venue',
-                id: officialVenue.id,
-                title: officialVenue.name,
-                initialTotalCost:
-                  officialVenue.contractAgreedAmount ||
-                  officialVenue.pricing.estimatedTotalCost ||
-                  0,
-                initialNotes: officialVenue.contractNotes || officialVenue.notes,
-                initialSchedule: officialVenue.paymentSchedule,
-              })
-            }
-            className="px-4 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs shadow-xs transition-all inline-flex items-center justify-center gap-2 shrink-0"
-          >
-            <CreditCard className="w-4 h-4 text-amber-400" />
-            <span>Edit Contract Cost &amp; Payment Timeline</span>
-          </button>
+          {!isReadOnly && (
+            <button
+              type="button"
+              onClick={() =>
+                setContractModalTarget({
+                  type: 'venue',
+                  id: officialVenue.id,
+                  title: officialVenue.name,
+                  initialTotalCost:
+                    officialVenue.contractAgreedAmount ||
+                    officialVenue.pricing.estimatedTotalCost ||
+                    0,
+                  initialNotes: officialVenue.contractNotes || officialVenue.notes,
+                  initialSchedule: officialVenue.paymentSchedule,
+                })
+              }
+              className="px-4 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs shadow-xs transition-all inline-flex items-center justify-center gap-2 shrink-0"
+            >
+              <CreditCard className="w-4 h-4 text-amber-400" />
+              <span>Edit Contract Cost &amp; Payment Timeline</span>
+            </button>
+          )}
         </div>
       )}
 

@@ -71,6 +71,7 @@ export default function DashboardOverviewPage() {
     venues,
     officialSangeetVenue,
     tourPlan,
+    isReadOnly,
     loadSampleTemplate,
   } = useWedding();
 
@@ -275,7 +276,7 @@ export default function DashboardOverviewPage() {
                     </div>
                     <div className="text-xs text-stone-300 truncate">
                       {hasFinalizedVenue
-                        ? officialVenue && (officialVenue.contractAgreedAmount || officialVenue.pricing.estimatedTotalCost) > 0
+                        ? !isReadOnly && officialVenue && (officialVenue.contractAgreedAmount || officialVenue.pricing.estimatedTotalCost) > 0
                           ? `Contract: ${formatCurr(officialVenue.contractAgreedAmount || officialVenue.pricing.estimatedTotalCost)}${wedding.city ? ` • ${wedding.city}` : ''}`
                           : wedding.city || 'Venue confirmed'
                         : venues.length > 0
@@ -284,36 +285,38 @@ export default function DashboardOverviewPage() {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {hasFinalizedVenue && officialVenue && (
+                {!isReadOnly && (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {hasFinalizedVenue && officialVenue && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setContractModalTarget({
+                            type: 'venue',
+                            id: officialVenue.id,
+                            title: officialVenue.name,
+                            initialTotalCost:
+                              officialVenue.contractAgreedAmount ||
+                              officialVenue.pricing.estimatedTotalCost ||
+                              0,
+                            initialNotes: officialVenue.contractNotes || officialVenue.notes,
+                            initialSchedule: officialVenue.paymentSchedule,
+                          })
+                        }
+                        className="px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-amber-200 font-bold text-xs border border-white/15 transition-colors shrink-0"
+                      >
+                        Contract &amp; Pay
+                      </button>
+                    )}
                     <button
                       type="button"
-                      onClick={() =>
-                        setContractModalTarget({
-                          type: 'venue',
-                          id: officialVenue.id,
-                          title: officialVenue.name,
-                          initialTotalCost:
-                            officialVenue.contractAgreedAmount ||
-                            officialVenue.pricing.estimatedTotalCost ||
-                            0,
-                          initialNotes: officialVenue.contractNotes || officialVenue.notes,
-                          initialSchedule: officialVenue.paymentSchedule,
-                        })
-                      }
-                      className="px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-amber-200 font-bold text-xs border border-white/15 transition-colors shrink-0"
+                      onClick={() => setIsVenuePickerOpen(true)}
+                      className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs shadow-sm transition-colors shrink-0"
                     >
-                      Contract &amp; Pay
+                      {hasFinalizedVenue ? 'Change' : 'Set Venue'}
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setIsVenuePickerOpen(true)}
-                    className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs shadow-sm transition-colors shrink-0"
-                  >
-                    {hasFinalizedVenue ? 'Change' : 'Set Venue'}
-                  </button>
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* Card 2: Flexible Celebration Schedule */}
@@ -334,7 +337,8 @@ export default function DashboardOverviewPage() {
                         : 'Dates flexible — drag events onto calendar'}
                     </div>
                     <div className="text-xs text-stone-300 truncate">
-                      {scheduledEventsCount} of {events.length} ceremonies scheduled • {totalHeadcount} guests • {formatCurr(totalTargetBudget)} target
+                      {scheduledEventsCount} of {events.length} ceremonies scheduled • {totalHeadcount} guests
+                      {!isReadOnly ? ` • ${formatCurr(totalTargetBudget)} target` : ''}
                     </div>
                   </div>
                 </div>
@@ -797,8 +801,8 @@ export default function DashboardOverviewPage() {
         </section>
       )}
 
-      {/* UPCOMING PAYMENT REMINDERS (auto-appears when milestones are scheduled) */}
-      {wedding && wedding.isConfigured && (
+      {/* UPCOMING PAYMENT REMINDERS (hidden for View-Only collaborators for privacy) */}
+      {wedding && wedding.isConfigured && !isReadOnly && (
         <UpcomingPaymentsWidget
           onOpenContractModal={(target) => setContractModalTarget(target)}
           maxItems={4}
@@ -813,13 +817,16 @@ export default function DashboardOverviewPage() {
               Wedding Pulse & Core Logistics
             </h2>
             <p className="text-xs text-stone-500">
-              Real-time summary of budget commitments in USD, guest counts, and gifts
+              {isReadOnly
+                ? 'Real-time summary of guest counts, vendors, and hotel blocks'
+                : 'Real-time summary of budget commitments in USD, guest counts, and gifts'}
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {/* Metric 1: Budget */}
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${isReadOnly ? 'lg:grid-cols-2' : 'lg:grid-cols-4'} gap-5`}>
+          {/* Metric 1: Budget (Editors & Owners only) */}
+          {!isReadOnly && (
           <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs hover:shadow-md transition-shadow interactive-card">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-stone-600">
@@ -853,6 +860,7 @@ export default function DashboardOverviewPage() {
               </div>
             </div>
           </div>
+          )}
 
           {/* Metric 2: Guests */}
           <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs hover:shadow-md transition-shadow interactive-card">
@@ -887,7 +895,8 @@ export default function DashboardOverviewPage() {
             </div>
           </div>
 
-          {/* Metric 3: Gifts (Renamed from Shagun Lifafas) */}
+          {/* Metric 3: Gifts (Editors & Owners only) */}
+          {!isReadOnly && (
           <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs hover:shadow-md transition-shadow interactive-card">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-stone-600">
@@ -912,6 +921,7 @@ export default function DashboardOverviewPage() {
               </div>
             </div>
           </div>
+          )}
 
           {/* Metric 4: Vendors & Hotel Rooms */}
           <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs hover:shadow-md transition-shadow interactive-card">
@@ -960,27 +970,31 @@ export default function DashboardOverviewPage() {
             <ArrowUpRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-rose-600" />
           </Link>
 
-          <Link
-            href="/dashboard/budget"
-            className="p-3 rounded-2xl bg-white border border-stone-200 hover:border-amber-300 hover:bg-amber-50/30 transition-all flex items-center justify-between text-xs font-semibold text-stone-800 group"
-          >
-            <div className="flex items-center gap-2">
-              <Wallet className="w-4 h-4 text-amber-600" />
-              <span>Budget</span>
-            </div>
-            <ArrowUpRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-amber-600" />
-          </Link>
+          {!isReadOnly && (
+            <Link
+              href="/dashboard/budget"
+              className="p-3 rounded-2xl bg-white border border-stone-200 hover:border-amber-300 hover:bg-amber-50/30 transition-all flex items-center justify-between text-xs font-semibold text-stone-800 group"
+            >
+              <div className="flex items-center gap-2">
+                <Wallet className="w-4 h-4 text-amber-600" />
+                <span>Budget</span>
+              </div>
+              <ArrowUpRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-amber-600" />
+            </Link>
+          )}
 
-          <Link
-            href="/dashboard/shagun"
-            className="p-3 rounded-2xl bg-white border border-stone-200 hover:border-emerald-300 hover:bg-emerald-50/30 transition-all flex items-center justify-between text-xs font-semibold text-stone-800 group"
-          >
-            <div className="flex items-center gap-2">
-              <Gift className="w-4 h-4 text-emerald-600" />
-              <span>Gifts</span>
-            </div>
-            <ArrowUpRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-emerald-600" />
-          </Link>
+          {!isReadOnly && (
+            <Link
+              href="/dashboard/shagun"
+              className="p-3 rounded-2xl bg-white border border-stone-200 hover:border-emerald-300 hover:bg-emerald-50/30 transition-all flex items-center justify-between text-xs font-semibold text-stone-800 group"
+            >
+              <div className="flex items-center gap-2">
+                <Gift className="w-4 h-4 text-emerald-600" />
+                <span>Gifts</span>
+              </div>
+              <ArrowUpRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-emerald-600" />
+            </Link>
+          )}
 
           <Link
             href="/dashboard/horoscope"
@@ -993,17 +1007,19 @@ export default function DashboardOverviewPage() {
             <ArrowUpRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-purple-600" />
           </Link>
 
-          <button
-            type="button"
-            onClick={() => setIsExcelModalOpen(true)}
-            className="p-3 rounded-2xl bg-white border border-stone-200 hover:border-emerald-400 hover:bg-emerald-50/30 transition-all flex items-center justify-between text-xs font-semibold text-stone-800 group text-left"
-          >
-            <div className="flex items-center gap-2">
-              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-              <span>Excel Sync</span>
-            </div>
-            <ArrowUpRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-emerald-600" />
-          </button>
+          {!isReadOnly && (
+            <button
+              type="button"
+              onClick={() => setIsExcelModalOpen(true)}
+              className="p-3 rounded-2xl bg-white border border-stone-200 hover:border-emerald-400 hover:bg-emerald-50/30 transition-all flex items-center justify-between text-xs font-semibold text-stone-800 group text-left"
+            >
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                <span>Excel Sync</span>
+              </div>
+              <ArrowUpRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-emerald-600" />
+            </button>
+          )}
 
           {wedding && wedding.isConfigured && wedding.slug ? (
             <Link

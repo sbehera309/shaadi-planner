@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useWedding } from '@/lib/store';
 import { BudgetItem, PaymentInstallment, PaymentPayer } from '@/lib/types';
 import { Modal } from '@/components/Modal';
+import { PrivateFinancialLock } from '@/components/PrivateFinancialLock';
 import { RecordPaymentModal } from '@/components/RecordPaymentModal';
 import {
   ContractAndPaymentsModal,
@@ -176,7 +177,7 @@ const DESI_EXPENSE_PRESETS: DesiExpensePreset[] = [
 ];
 
 export default function BudgetPage() {
-  const { wedding, budgetItems, addBudgetItem, updateBudgetItem, deleteBudgetItem } = useWedding();
+  const { wedding, budgetItems, isReadOnly, addBudgetItem, updateBudgetItem, deleteBudgetItem } = useWedding();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedSplit, setSelectedSplit] = useState<string>('all');
   const [presetTraditionFilter, setPresetTraditionFilter] = useState<'all' | 'traditional_desi' | 'south_indian'>('all');
@@ -429,6 +430,10 @@ export default function BudgetPage() {
     const matchSplit = selectedSplit === 'all' || item.paidBy === selectedSplit;
     return matchCat && matchSplit;
   });
+
+  if (isReadOnly) {
+    return <PrivateFinancialLock sectionName="Budget & Payments" />;
+  }
 
   return (
     <div className="space-y-6">
