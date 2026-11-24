@@ -202,6 +202,26 @@ const STORAGE_KEYS = {
   SEATING_PLAN: 'shaadi_v5_seating_plan',
 };
 
+const dedupeEventIds = (rawEvents: WeddingEvent[]): { events: WeddingEvent[]; hadDuplicates: boolean } => {
+  const seen = new Set<string>();
+  let hadDuplicates = false;
+  const fixed = rawEvents.map((ev, idx) => {
+    let id = ev.id || `e-auto-${idx}`;
+    if (seen.has(id)) {
+      hadDuplicates = true;
+      let candidate = `${id}-${ev.type || idx}`;
+      let suffix = 1;
+      while (seen.has(candidate)) {
+        candidate = `${id}-${ev.type || idx}-${suffix++}`;
+      }
+      id = candidate;
+    }
+    seen.add(id);
+    return id === ev.id ? ev : { ...ev, id };
+  });
+  return { events: fixed, hadDuplicates };
+};
+
 export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [wedding, setWedding] = useState<WeddingProfile | null>(initialWeddingProfile);
@@ -271,7 +291,12 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       } else {
         setWedding(null);
       }
-      if (savedEvents) setEvents(JSON.parse(savedEvents));
+      if (savedEvents) {
+        const parsedEvents = JSON.parse(savedEvents);
+        if (Array.isArray(parsedEvents)) {
+          setEvents(dedupeEventIds(parsedEvents).events);
+        }
+      }
       if (savedGuests) setGuests(JSON.parse(savedGuests));
       if (savedBudget) setBudgetItems(JSON.parse(savedBudget));
       if (savedVendors) setVendors(JSON.parse(savedVendors));
@@ -326,7 +351,10 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     isApplyingRemoteRef.current = true;
 
     if (remoteData.profile) setWedding(remoteData.profile);
-    if (Array.isArray(remoteData.events)) setEvents(remoteData.events);
+    const cleanedEvents = Array.isArray(remoteData.events)
+      ? dedupeEventIds(remoteData.events)
+      : null;
+    if (cleanedEvents) setEvents(cleanedEvents.events);
     if (Array.isArray(remoteData.guests)) setGuests(remoteData.guests);
     if (Array.isArray(remoteData.customGuestGroups)) setCustomGuestGroups(remoteData.customGuestGroups);
     if (remoteData.seatingPlan !== undefined) setSeatingPlan(remoteData.seatingPlan);
@@ -349,7 +377,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Update local cache for offline availability
     try {
       if (remoteData.profile) localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(remoteData.profile));
-      if (remoteData.events) localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(remoteData.events));
+      if (cleanedEvents) localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(cleanedEvents.events));
       if (remoteData.guests) localStorage.setItem(STORAGE_KEYS.GUESTS, JSON.stringify(remoteData.guests));
       if (remoteData.budgetItems) localStorage.setItem(STORAGE_KEYS.BUDGET, JSON.stringify(remoteData.budgetItems));
       if (remoteData.vendors) localStorage.setItem(STORAGE_KEYS.VENDORS, JSON.stringify(remoteData.vendors));
@@ -951,7 +979,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addEvent = (eventData: Omit<WeddingEvent, 'id' | 'weddingId'>) => {
     const newEvent: WeddingEvent = {
       ...eventData,
-      id: `e-${Date.now()}`,
+      id: `e-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       weddingId: wedding?.id || 'w-current',
     };
     setEvents((prev) => [...prev, newEvent]);
