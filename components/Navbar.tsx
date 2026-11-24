@@ -15,7 +15,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
-  const { wedding, isDemoMode, resetToDefaultData, isCloudSynced, isSyncing, lastSyncedAt, cloudSyncError, forceCloudSync, collaborators, userRole, isReadOnly } = useWedding();
+  const { wedding, events, isDemoMode, resetToDefaultData, isCloudSynced, isSyncing, lastSyncedAt, cloudSyncError, forceCloudSync, collaborators, userRole, isReadOnly } = useWedding();
   const { user, logout, isFirebaseConfigured } = useAuth();
   const [copied, setCopied] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -23,12 +23,43 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
-  // Calculate days left
+  // Parse YYYY-MM-DD strictly in local time to prevent UTC off-by-one day shifts
+  const parseLocalIsoDate = (iso?: string): Date | null => {
+    if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso.trim())) return null;
+    const [y, m, d] = iso.trim().split('-').map(Number);
+    return new Date(y, m - 1, d);
+  };
+
+  // Resolve the main Wedding Ceremony date (Pheras / Baraat / Wedding / Reception), falling back to wedding.endDate or wedding.startDate
+  const mainWeddingDateStr = React.useMemo(() => {
+    const validDatedEvents = events.filter(
+      (e) => e.date && /^\d{4}-\d{2}-\d{2}$/.test(e.date.trim())
+    );
+    const ceremonyEvent =
+      validDatedEvents.find(
+        (e) =>
+          e.type === 'pheras' ||
+          e.type === 'baraat' ||
+          e.name.toLowerCase().includes('wedding') ||
+          e.name.toLowerCase().includes('ceremony') ||
+          e.name.toLowerCase().includes('phera')
+      ) ||
+      validDatedEvents.find(
+        (e) => e.type === 'reception' || e.name.toLowerCase().includes('reception')
+      );
+
+    if (ceremonyEvent?.date) return ceremonyEvent.date.trim();
+    return wedding?.endDate || wedding?.startDate || '';
+  }, [events, wedding]);
+
+  const mainWeddingDate = parseLocalIsoDate(mainWeddingDateStr);
+
+  // Calculate days left until the main Wedding Ceremony
   const calculateDaysLeft = () => {
-    if (!wedding || !wedding.startDate) return 0;
-    const target = new Date(wedding.startDate).getTime();
-    const today = new Date().getTime();
-    const diff = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+    if (!mainWeddingDate) return 0;
+    const now = new Date();
+    const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const diff = Math.ceil((mainWeddingDate.getTime() - todayLocal) / (1000 * 60 * 60 * 24));
     return diff > 0 ? diff : 0;
   };
 
@@ -59,11 +90,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
             <Menu className="w-5 h-5" />
           </button>
 
-          {wedding && wedding.isConfigured && wedding.startDate ? (
+          {wedding && wedding.isConfigured && mainWeddingDate ? (
             <div className="flex items-center gap-1.5 sm:gap-2 text-stone-600 text-xs sm:text-sm min-w-0 truncate">
               <Calendar className="w-4 h-4 text-amber-600 shrink-0" />
               <span className="font-semibold text-stone-900 truncate">
-                {new Date(wedding.startDate).toLocaleDateString('en-US', {
+                {mainWeddingDate.toLocaleDateString('en-US', {
                   month: 'short',
                   day: 'numeric',
                 })}
@@ -93,7 +124,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
         {/* Right: Countdown, Cloud Sync badge, Auth button & Actions */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           {/* Countdown Pill: visible on tablet/desktop to preserve mobile space */}
-          {wedding && wedding.isConfigured && wedding.startDate && (
+          {wedding && wedding.isConfigured && mainWeddingDate && (
             <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-900 shrink-0">
               <span>⏳</span>
               <span>{daysLeft} Days to Shubh Vivah</span>
