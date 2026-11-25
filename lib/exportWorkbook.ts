@@ -12,6 +12,7 @@ import {
   ReceptionFloorPlan,
 } from './types';
 import { getVendorCategorySpec } from './vendorCategorySpecs';
+import { formatMinutesTo12h, parseTimeToMinutes } from './timelinePresets';
 
 export interface ExportWeddingData {
   wedding: WeddingProfile | null;
@@ -259,6 +260,53 @@ export function exportWeddingToExcel({
   const wsItinerary = XLSX.utils.aoa_to_sheet(itineraryAoa);
   enhanceSheet(wsItinerary, itineraryAoa, { autoFilter: true });
   XLSX.utils.book_append_sheet(wb, wsItinerary, 'Itinerary & Timings');
+
+  // =========================================================================
+  // SHEET 2B: EVENT RUN-OF-SHOW TIMELINES
+  // =========================================================================
+  const timelineHeaders = [
+    'Event Name',
+    'Event Date',
+    'Step #',
+    'Start Time',
+    'End Time',
+    'Duration (min)',
+    'Category',
+    'Timeline Piece',
+    'Song / DJ Cue',
+    'Lead / Vendor',
+    'Notes',
+  ];
+
+  const timelineRows: any[][] = [];
+  events.forEach((ev) => {
+    const segs = ev.runOfShow || [];
+    let cursor = parseTimeToMinutes(ev.startTime);
+    segs.forEach((seg, idx) => {
+      const dur = Math.max(1, seg.durationMinutes || 5);
+      const startLbl = formatMinutesTo12h(cursor);
+      const endLbl = formatMinutesTo12h(cursor + dur);
+      cursor += dur;
+      timelineRows.push([
+        ev.name,
+        ev.date || 'TBD',
+        idx + 1,
+        startLbl,
+        endLbl,
+        dur,
+        seg.category.toUpperCase(),
+        seg.title,
+        seg.songOrCue || '',
+        seg.leadPerson || '',
+        seg.notes || '',
+      ]);
+    });
+  });
+
+  const timelineAoa = [timelineHeaders, ...timelineRows];
+  const wsTimelines = XLSX.utils.aoa_to_sheet(timelineAoa);
+  enhanceSheet(wsTimelines, timelineAoa, { autoFilter: true });
+  XLSX.utils.book_append_sheet(wb, wsTimelines, 'Event Timelines');
 
   // =========================================================================
   // SHEET 3: BUDGET & FAMILY SPLITS (LIVE FORMULAS)

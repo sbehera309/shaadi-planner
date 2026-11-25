@@ -46,6 +46,26 @@ export interface EventChecklistItem {
   subItems?: { id: string; title: string; completed: boolean }[];
 }
 
+export type TimelineSegmentCategory =
+  | 'entrance'
+  | 'ritual'
+  | 'food'
+  | 'speech'
+  | 'dance'
+  | 'photo'
+  | 'music'
+  | 'logistics';
+
+export interface TimelineSegment {
+  id: string;
+  title: string;
+  durationMinutes: number;
+  category: TimelineSegmentCategory;
+  songOrCue?: string;
+  leadPerson?: string;
+  notes?: string;
+}
+
 export interface WeddingEvent {
   id: string;
   weddingId: string;
@@ -65,6 +85,7 @@ export interface WeddingEvent {
   coordinatorName: string;
   coordinatorPhone: string;
   checklist: EventChecklistItem[];
+  runOfShow?: TimelineSegment[];
   hotelBlockName?: string; // e.g. "Hyatt Regency / Westin Hotel Room Block"
   hasWelcomeBags?: boolean;
   hasWelcomeDinner?: boolean;

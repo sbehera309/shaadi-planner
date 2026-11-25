@@ -22,6 +22,7 @@ import {
   Flower2,
   Music,
   Camera,
+  ListOrdered,
 } from 'lucide-react';
 import { useWedding } from '@/lib/store';
 import { EditWeddingModal } from './EditWeddingModal';
@@ -71,6 +72,7 @@ const SidebarInner: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose }) =
         { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
         { label: 'Venues & Contracts', href: '/dashboard/venues', icon: Building2 },
         { label: 'Itinerary & Timings', href: '/dashboard/itinerary', icon: CalendarDays },
+        { label: 'Event Timelines', href: '/dashboard/timelines', icon: ListOrdered },
       ],
     },
     {
