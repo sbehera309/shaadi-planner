@@ -61,6 +61,8 @@ export interface TimelineSegment {
   title: string;
   durationMinutes: number;
   category: TimelineSegmentCategory;
+  location?: string;
+  participants?: string;
   songOrCue?: string;
   leadPerson?: string;
   notes?: string;

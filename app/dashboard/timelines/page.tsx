@@ -76,8 +76,10 @@ export default function EventTimelinesPage() {
 
   // Custom piece form
   const [customTitle, setCustomTitle] = useState('');
-  const [customDuration, setCustomDuration] = useState(10);
+  const [customDuration, setCustomDuration] = useState(5);
   const [customCategory, setCustomCategory] = useState<TimelineSegmentCategory>('entrance');
+  const [customLocation, setCustomLocation] = useState('');
+  const [customParticipants, setCustomParticipants] = useState('');
   const [customSong, setCustomSong] = useState('');
   const [customLead, setCustomLead] = useState('');
   const [copiedTimeline, setCopiedTimeline] = useState(false);
@@ -150,6 +152,8 @@ export default function EventTimelinesPage() {
       title: preset.title,
       durationMinutes: preset.durationMinutes,
       category: preset.category,
+      location: preset.location || '',
+      participants: preset.participants || '',
       leadPerson: preset.leadPerson || '',
       songOrCue: preset.songOrCue || '',
       notes: preset.notes || '',
@@ -171,12 +175,16 @@ export default function EventTimelinesPage() {
       title: customTitle.trim(),
       durationMinutes: Math.max(1, customDuration || 5),
       category: customCategory,
+      location: customLocation.trim(),
+      participants: customParticipants.trim(),
       songOrCue: customSong.trim(),
       leadPerson: customLead.trim(),
       notes: '',
     };
     saveSegments([...segments, newSeg]);
     setCustomTitle('');
+    setCustomLocation('');
+    setCustomParticipants('');
     setCustomSong('');
     setCustomLead('');
   };
@@ -263,6 +271,8 @@ export default function EventTimelinesPage() {
 
     const lines = computedSegments.map((seg, i) => {
       const extras = [
+        seg.location ? `Location: ${seg.location}` : '',
+        seg.participants ? `Involved: ${seg.participants}` : '',
         seg.leadPerson ? `Lead: ${seg.leadPerson}` : '',
         seg.songOrCue ? `Cue/Song: ${seg.songOrCue}` : '',
         seg.notes ? `Note: ${seg.notes}` : '',
@@ -642,11 +652,32 @@ export default function EventTimelinesPage() {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                       <input
                                         type="text"
+                                        value={editDraft.location || ''}
+                                        onChange={(e) =>
+                                          setEditDraft({ ...editDraft, location: e.target.value })
+                                        }
+                                        placeholder="Location (e.g. Foyer, Grand Ballroom, Pre-Function)"
+                                        className="px-3 py-1.5 rounded-xl border border-stone-300 bg-white"
+                                      />
+                                      <input
+                                        type="text"
+                                        value={editDraft.participants || ''}
+                                        onChange={(e) =>
+                                          setEditDraft({ ...editDraft, participants: e.target.value })
+                                        }
+                                        placeholder="Involved / Names (e.g. Parents, Bridesmaids, MOH & Brother)"
+                                        className="px-3 py-1.5 rounded-xl border border-stone-300 bg-white"
+                                      />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                      <input
+                                        type="text"
                                         value={editDraft.songOrCue || ''}
                                         onChange={(e) =>
                                           setEditDraft({ ...editDraft, songOrCue: e.target.value })
                                         }
-                                        placeholder="Song / DJ Cue (e.g. Kala Chashma 0:30)"
+                                        placeholder="Song / YouTube link + timestamp (e.g. 0:48)"
                                         className="px-3 py-1.5 rounded-xl border border-stone-300 bg-white"
                                       />
                                       <input
@@ -707,20 +738,31 @@ export default function EventTimelinesPage() {
                                           >
                                             {catMeta.label}
                                           </span>
+                                          {seg.location && (
+                                            <span className="inline-flex items-center gap-0.5 px-2 py-0.2 rounded-full bg-white border border-stone-200 text-[10px] font-semibold text-stone-600">
+                                              <MapPin className="w-2.5 h-2.5 text-amber-600" />
+                                              <span>{seg.location}</span>
+                                            </span>
+                                          )}
                                         </div>
 
-                                        {(seg.songOrCue || seg.leadPerson) && (
+                                        {(seg.participants || seg.songOrCue || seg.leadPerson) && (
                                           <div className="flex flex-wrap items-center gap-2.5 text-[11px] text-stone-600">
+                                            {seg.participants && (
+                                              <span className="inline-flex items-center gap-1 text-stone-800 font-semibold">
+                                                <User className="w-3 h-3 shrink-0 text-rose-500" />
+                                                <span>{seg.participants}</span>
+                                              </span>
+                                            )}
                                             {seg.songOrCue && (
-                                              <span className="inline-flex items-center gap-1 text-purple-800 font-medium">
+                                              <span className="inline-flex items-center gap-1 text-purple-800 font-medium break-all">
                                                 <Music className="w-3 h-3 shrink-0" />
                                                 <span>{seg.songOrCue}</span>
                                               </span>
                                             )}
                                             {seg.leadPerson && (
-                                              <span className="inline-flex items-center gap-1 text-stone-600">
-                                                <User className="w-3 h-3 shrink-0 text-stone-400" />
-                                                <span>{seg.leadPerson}</span>
+                                              <span className="inline-flex items-center gap-1 text-stone-500">
+                                                <span>Lead: {seg.leadPerson}</span>
                                               </span>
                                             )}
                                           </div>
@@ -740,9 +782,14 @@ export default function EventTimelinesPage() {
                                         {!isReadOnly && (
                                           <button
                                             type="button"
-                                            onClick={() => handleAdjustDuration(seg.id, -5)}
+                                            onClick={() =>
+                                              handleAdjustDuration(
+                                                seg.id,
+                                                seg.durationMinutes <= 10 ? -1 : -5
+                                              )
+                                            }
                                             className="px-1.5 py-1 hover:bg-stone-100 text-stone-500"
-                                            title="-5 minutes"
+                                            title={seg.durationMinutes <= 10 ? '-1 minute' : '-5 minutes'}
                                           >
                                             −
                                           </button>
@@ -753,9 +800,14 @@ export default function EventTimelinesPage() {
                                         {!isReadOnly && (
                                           <button
                                             type="button"
-                                            onClick={() => handleAdjustDuration(seg.id, 5)}
+                                            onClick={() =>
+                                              handleAdjustDuration(
+                                                seg.id,
+                                                seg.durationMinutes < 10 ? 1 : 5
+                                              )
+                                            }
                                             className="px-1.5 py-1 hover:bg-stone-100 text-stone-500"
-                                            title="+5 minutes"
+                                            title={seg.durationMinutes < 10 ? '+1 minute' : '+5 minutes'}
                                           >
                                             +
                                           </button>
@@ -892,16 +944,33 @@ export default function EventTimelinesPage() {
                     <div className="grid grid-cols-2 gap-2">
                       <input
                         type="text"
+                        value={customLocation}
+                        onChange={(e) => setCustomLocation(e.target.value)}
+                        placeholder="Location (e.g. Foyer, Ballroom)"
+                        className="px-2.5 py-1.5 rounded-xl border border-stone-200 bg-stone-50/70"
+                      />
+                      <input
+                        type="text"
+                        value={customParticipants}
+                        onChange={(e) => setCustomParticipants(e.target.value)}
+                        placeholder="Involved names (opt.)"
+                        className="px-2.5 py-1.5 rounded-xl border border-stone-200 bg-stone-50/70"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
                         value={customSong}
                         onChange={(e) => setCustomSong(e.target.value)}
-                        placeholder="Song / DJ cue (opt.)"
+                        placeholder="Song / YouTube + time (opt.)"
                         className="px-2.5 py-1.5 rounded-xl border border-stone-200 bg-stone-50/70"
                       />
                       <input
                         type="text"
                         value={customLead}
                         onChange={(e) => setCustomLead(e.target.value)}
-                        placeholder="Lead person (opt.)"
+                        placeholder="Lead / Vendor (opt.)"
                         className="px-2.5 py-1.5 rounded-xl border border-stone-200 bg-stone-50/70"
                       />
                     </div>
